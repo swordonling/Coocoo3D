@@ -1,0 +1,43 @@
+﻿<Page
+    x:Class="Coocoo3D.PropertiesPages.CommonPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Coocoo3D.PropertiesPages"
+    xmlns:mu="using:Microsoft.UI.Xaml.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <ScrollViewer Padding="0,0,20,0">
+            <StackPanel Orientation="Vertical">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.ColumnSpan="3" Text="摄像机"/>
+                    <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="X" Value="{x:Bind VPX,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VPY,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VPZ,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="2" Grid.Column="0" Header="X" Value="{x:Bind VRX,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="2" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="2" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" Minimum="0.1" Maximum="179.9" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
+                </Grid>
+                <TextBlock x:Name="ViewFrameRate"/>
+                <ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>
+                <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

@@ -1,0 +1,25 @@
+﻿<Page
+    x:Class="Coocoo3D.PropertiesPages.SoftwareInfoPropertiesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Coocoo3D.PropertiesPages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <RichTextBlock>
+            <Paragraph FontSize="20">
+                <Bold>关于软件</Bold>
+            </Paragraph>
+            <Paragraph>
+                Coocoo3D
+                <LineBreak/>
+                Copyright ©2020 sselecirPyM
+                <LineBreak/>
+                All right reserved.
+            </Paragraph>
+        </RichTextBlock>
+    </Grid>
+</Page>
