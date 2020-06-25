@@ -18,6 +18,8 @@ namespace Coocoo3D.Components
     {
         public MMDMesh mesh;
         public List<MMDMatLit> Materials = new List<MMDMatLit>();
+        public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
+        public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
         public PObject pObject;
         public ConstantBuffer lightingDataBuffer = new ConstantBuffer();
@@ -55,6 +57,7 @@ namespace Coocoo3D.Components
         public void SetPose(MMDMorphStateComponent morphStateComponent)
         {
             ComputeVertexMorph(morphStateComponent);
+            ComputeMaterialMorph(morphStateComponent);
         }
 
         private void ComputeVertexMorph(MMDMorphStateComponent morphStateComponent)
@@ -89,6 +92,54 @@ namespace Coocoo3D.Components
             }
         }
 
+        private void ComputeMaterialMorph(MMDMorphStateComponent morphStateComponent)
+        {
+            for (int i = 0; i < computedMaterialsData.Count; i++)
+            {
+                computedMaterialsData[i] = materialsBaseData[i];
+            }
+            for (int i = 0; i < morphStateComponent.morphs.Count; i++)
+            {
+                if (morphStateComponent.morphs[i].Type == MorphType.Material && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                {
+                    MorphMaterialStruct[] morphMaterialStructs = morphStateComponent.morphs[i].MorphMaterials;
+                    float computedWeight = morphStateComponent.computedWeights[i];
+                    for (int j = 0; j < morphMaterialStructs.Length; j++)
+                    {
+                        MorphMaterialStruct morphMaterialStruct = morphMaterialStructs[j];
+                        int k = morphMaterialStruct.MaterialIndex;
+                        MMDMatLit.InnerStruct struct1 = computedMaterialsData[k];
+                        if (morphMaterialStruct.MorphMethon == MorphMaterialMorphMethon.Add)
+                        {
+                            struct1.AmbientColor += morphMaterialStruct.Ambient * computedWeight;
+                            struct1.DiffuseColor += morphMaterialStruct.Diffuse * computedWeight;
+                            struct1.EdgeColor += morphMaterialStruct.EdgeColor * computedWeight;
+                            struct1.EdgeSize += morphMaterialStruct.EdgeSize * computedWeight;
+                            struct1.SpecularColor += morphMaterialStruct.Specular * computedWeight;
+                            struct1.SubTexture += morphMaterialStruct.SubTexture * computedWeight;
+                            struct1.Texture += morphMaterialStruct.Texture * computedWeight;
+                            struct1.ToonTexture += morphMaterialStruct.ToonTexture * computedWeight;
+                        }
+                        else if (morphMaterialStruct.MorphMethon == MorphMaterialMorphMethon.Mul)
+                        {
+                            struct1.AmbientColor = Vector3.Lerp(struct1.AmbientColor, struct1.AmbientColor * morphMaterialStruct.Ambient, computedWeight);
+                            struct1.DiffuseColor = Vector4.Lerp(struct1.DiffuseColor, struct1.DiffuseColor * morphMaterialStruct.Diffuse, computedWeight);
+                            struct1.EdgeColor = Vector4.Lerp(struct1.EdgeColor, struct1.EdgeColor * morphMaterialStruct.EdgeColor, computedWeight);
+                            struct1.EdgeSize = struct1.EdgeSize * morphMaterialStruct.EdgeSize * computedWeight + struct1.EdgeSize * (1 - computedWeight);
+                            struct1.SpecularColor = Vector4.Lerp(struct1.SpecularColor, struct1.SpecularColor * morphMaterialStruct.Specular, computedWeight);
+                            struct1.SubTexture = Vector4.Lerp(struct1.SubTexture, struct1.SubTexture * morphMaterialStruct.SubTexture, computedWeight);
+                            struct1.Texture = Vector4.Lerp(struct1.Texture, struct1.Texture * morphMaterialStruct.Texture, computedWeight);
+                            struct1.ToonTexture = Vector4.Lerp(struct1.ToonTexture, struct1.ToonTexture * morphMaterialStruct.ToonTexture, computedWeight);
+                        }
+
+                        computedMaterialsData[k] = struct1;
+                        Materials[k].innerStruct = struct1;
+                        Materials[k].GpuUsable = false;
+                    }
+                }
+            }
+        }
+
         public void UpdateGPUResources(GraphicsContext graphicsContext, Matrix4x4 world, IList<Lighting> lightings)
         {
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetLightingData);
@@ -102,7 +153,7 @@ namespace Coocoo3D.Components
                 {
                     Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[i].rotateMatrix), pBufferData, true);
                     Marshal.StructureToPtr(lightings[i].Color, pBufferData + 16, true);
-                    Marshal.StructureToPtr(Matrix4x4.Transpose( lightings[i].vpMatrix), pBufferData + 32, true);
+                    Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[i].vpMatrix), pBufferData + 32, true);
                 }
                 pBufferData += 96;
             }
@@ -133,7 +184,6 @@ namespace Coocoo3D.Components
                 }
             }
         }
-
 
         public void RenderDepth(GraphicsContext graphicsContext, MMDBoneComponent boneComponent, PresentData presentData)
         {
@@ -222,6 +272,39 @@ namespace Coocoo3D.Components
             return true;
         }
     }
+    public class MMDMatLit
+    {
+        public const int c_materialDataSize = 128;
+        public bool GpuUsable = false;
+
+        public Texture2D tex;
+        public string Name;
+        public string NameEN;
+        public int indexCount;
+        public int texIndex;
+        public int toonIndex;
+        public MMDSupport.DrawFlags DrawFlags;
+        public Vector4 DiffuseColor { get => innerStruct.DiffuseColor; set => innerStruct.DiffuseColor = value; }
+        public Vector4 SpecularColor { get => innerStruct.SpecularColor; set => innerStruct.SpecularColor = value; }
+        public Vector3 AmbientColor { get => innerStruct.AmbientColor; set => innerStruct.AmbientColor = value; }
+        public float EdgeScale { get => innerStruct.EdgeSize; set => innerStruct.EdgeSize = value; }
+        public Vector4 EdgeColor { get => innerStruct.EdgeColor; set => innerStruct.EdgeColor = value; }
+        public ConstantBuffer matBuf = new ConstantBuffer();
+
+        public InnerStruct innerStruct;
+        public struct InnerStruct
+        {
+            public Vector4 DiffuseColor;
+            public Vector4 SpecularColor;
+            public Vector3 AmbientColor;
+            public float EdgeSize;
+            public Vector4 EdgeColor;
+
+            public Vector4 Texture;
+            public Vector4 SubTexture;
+            public Vector4 ToonTexture;
+        }
+    }
 }
 namespace Coocoo3D.FileFormat
 {
@@ -262,8 +345,10 @@ namespace Coocoo3D.FileFormat
                 };
 
                 mat.AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f));
-                mat.matBuf = ConstantBuffer.Load(deviceResources, MMDMatLit.c_materialDataSize);
+                mat.matBuf.Reload(deviceResources, MMDMatLit.c_materialDataSize);
                 rendererComponent.Materials.Add(mat);
+                rendererComponent.materialsBaseData.Add(mat.innerStruct);
+                rendererComponent.computedMaterialsData.Add(mat.innerStruct);
             }
 
             int morphCount = modelResource.Morphs.Count;

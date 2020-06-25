@@ -69,7 +69,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		float3 lightDir = normalize(Lightings[i].LightDir);
 		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
 		float3 halfAngle = normalize(viewDir + lightDir);
-		specularStrength += saturate(pow(saturate(dot(halfAngle, norm)), 64)*lightStrength*_SpecularColor.rgb*inShadow)*_SpecularColor.a;
+		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
 		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
 	}
 	for (int i = 1; i < 4; i++)
@@ -77,7 +77,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		float3 lightDir = normalize(Lightings[i].LightDir);
 		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
 		float3 halfAngle = normalize(viewDir + lightDir);
-		specularStrength += saturate(pow(saturate(dot(halfAngle, norm)), 64)*lightStrength*_SpecularColor.rgb)*_SpecularColor.a;
+		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
 		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
 	}
 	strength += _AmbientColor;

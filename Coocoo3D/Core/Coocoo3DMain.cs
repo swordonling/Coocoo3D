@@ -29,8 +29,8 @@ namespace Coocoo3D.Core
         public MediaElement mediaElement;
         public Scene CurrentScene;
 
-        private ObservableCollection<MMD3DEntity> Entities { get => CurrentScene.Entities; }
-        private ObservableCollection<Lighting> Lightings { get => CurrentScene.Lightings; }
+        private List<MMD3DEntity> Entities { get => CurrentScene.Entities; }
+        private List<Lighting> Lightings { get => CurrentScene.Lightings; }
         private ObservableCollection<ISceneObject> sceneObjects { get => CurrentScene.sceneObjects; }
         public List<MMD3DEntity> SelectedEntities = new List<MMD3DEntity>();
         public List<Lighting> SelectedLighting = new List<Lighting>();

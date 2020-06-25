@@ -84,6 +84,15 @@ namespace Coocoo3D.PropertiesPages
             }
             appBody.RenderFrame();
         }
+
+        private void ViewSceneObjects_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
+        {
+            if(args.DropResult==Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move)
+            {
+                appBody.CurrentScene.SortObjects();
+                appBody.RequireRender();
+            }
+        }
     }
     public class SceneObjectTemplateSelector : DataTemplateSelector
     {

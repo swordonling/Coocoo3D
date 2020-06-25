@@ -16,8 +16,8 @@ namespace Coocoo3D.Core
             AppBody = appBody;
         }
         Coocoo3DMain AppBody;
-        public ObservableCollection<MMD3DEntity> Entities = new ObservableCollection<MMD3DEntity>();
-        public ObservableCollection<Lighting> Lightings = new ObservableCollection<Lighting>();
+        public List<MMD3DEntity> Entities = new List<MMD3DEntity>();
+        public List<Lighting> Lightings = new List<Lighting>();
         public ObservableCollection<ISceneObject> sceneObjects = new ObservableCollection<ISceneObject>();
 
         public void AddSceneObject(MMD3DEntity entity)
@@ -34,6 +34,25 @@ namespace Coocoo3D.Core
             {
                 Lightings.Add(lighting);
                 sceneObjects.Add(lighting);
+            }
+        }
+        public void SortObjects()
+        {
+            lock (AppBody.deviceResources)
+            {
+                Entities.Clear();
+                Lightings.Clear();
+                for(int i=0;i<sceneObjects.Count;i++)
+                {
+                    if(sceneObjects[i] is MMD3DEntity entity)
+                    {
+                        Entities.Add(entity);
+                    }
+                    else if(sceneObjects[i] is Lighting lighting)
+                    {
+                        Lightings.Add(lighting);
+                    }
+                }
             }
         }
     }

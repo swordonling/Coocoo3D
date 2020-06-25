@@ -217,8 +217,8 @@ namespace Coocoo3D.MMDSupport
     }
     public enum MorphMaterialMorphMethon
     {
-        mul = 0,
-        add = 1
+        Mul = 0,
+        Add = 1
     }
 
     public class MMDEntry

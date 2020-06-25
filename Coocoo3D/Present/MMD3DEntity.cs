@@ -87,39 +87,6 @@ namespace Coocoo3D.Present
             return Name;
         }
     }
-    public class MMDMatLit
-    {
-        public const int c_materialDataSize = 128;
-        public bool GpuUsable = false;
-
-        public Texture2D tex;
-        public string Name;
-        public string NameEN;
-        public int indexCount;
-        public int texIndex;
-        public int toonIndex;
-        public MMDSupport.DrawFlags DrawFlags;
-        public Vector4 DiffuseColor { get => innerStruct.DiffuseColor; set => innerStruct.DiffuseColor = value; }
-        public Vector4 SpecularColor { get => innerStruct.SpecularColor; set => innerStruct.SpecularColor = value; }
-        public Vector3 AmbientColor { get => innerStruct.AmbientColor; set => innerStruct.AmbientColor = value; }
-        public float EdgeScale { get => innerStruct.EdgeScale; set => innerStruct.EdgeScale = value; }
-        public Vector4 EdgeColor { get => innerStruct.EdgeColor; set => innerStruct.EdgeColor = value; }
-        public ConstantBuffer matBuf;
-
-        public InnerStruct innerStruct;
-        public struct InnerStruct
-        {
-            public Vector4 DiffuseColor;
-            public Vector4 SpecularColor;
-            public Vector3 AmbientColor;
-            public float EdgeScale;
-            public Vector4 EdgeColor;
-
-            public Vector4 Texture;
-            public Vector4 SubTexture;
-            public Vector4 ToonTexture;
-        }
-    }
 }
 namespace Coocoo3D.FileFormat
 {

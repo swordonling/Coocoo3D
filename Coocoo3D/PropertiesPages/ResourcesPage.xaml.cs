@@ -108,6 +108,13 @@ namespace Coocoo3D.PropertiesPages
                 await SetFolder();
             }
         }
+        private async void FolderRefresh_Click(object sender, RoutedEventArgs e)
+        {
+            if (viewFolderStack.Count > 0)
+            {
+                await SetFolder();
+            }
+        }
         async Task SetFolder()
         {
             viewResource.ItemsSource = await viewFolderStack.Last().GetItemsAsync();
