@@ -11,10 +11,8 @@ namespace Coocoo3DGraphics
 		property bool Ready;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		static PObject^ Load(VertexShader^ vertexShader, PixelShader^ pixelShader);
-		void Reload(VertexShader^ vertexShader, PixelShader^ pixelShader);
-		static PObject^ Load(VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
-		void Reload(VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
+		void Reload(DeviceResources^ deviceResources,VertexShader^ vertexShader, PixelShader^ pixelShader);
+		void Reload(DeviceResources^ deviceResources,VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
 		void Reload(PObject^ pObject);
 		property VertexShader^ m_vertexShader;
 		property PixelShader^ m_pixelShader;

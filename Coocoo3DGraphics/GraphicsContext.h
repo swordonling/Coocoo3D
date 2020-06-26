@@ -17,7 +17,7 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		static GraphicsContext^ Load(DeviceResources^ deviceResources);
-		void Reload(DeviceResources^ deviceResourecs);
+		void Reload(DeviceResources^ deviceResources);
 		void SetMaterial(Material^ material);
 		void SetPObject(PObject^ pobject);
 		void SetPObjectDepthOnly(PObject^ pobject);

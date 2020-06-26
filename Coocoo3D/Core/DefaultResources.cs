@@ -42,8 +42,8 @@ namespace Coocoo3D.Core
             BlendStateAlpha.Reload(deviceResources);
             DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
 
-            TextureLoading.ReloadPure(deviceResources, 1, 1,new System.Numerics.Vector4(0,1,1,1));
-            TextureError.ReloadPure(deviceResources, 1, 1,new System.Numerics.Vector4(1,0,1,1));
+            TextureLoading.ReloadPure(deviceResources, 1, 1, new System.Numerics.Vector4(0, 1, 1, 1));
+            TextureError.ReloadPure(deviceResources, 1, 1, new System.Numerics.Vector4(1, 0, 1, 1));
 
             await ReloadVertexShader(VSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMD.cso");
             await ReloadVertexShader2(particleVertexShader, deviceResources, "ms-appx:///Coocoo3DGraphics/VSParticleStandard.cso");
@@ -61,13 +61,13 @@ namespace Coocoo3D.Core
             await ReloadTexture2D(ui0Texture, deviceResources, "ms-appx:///Assets/Textures/UI_0.png");
 
 
-            PObjectMMD.Reload(VSMMD, PSMMD);
-            PObjectMMDLoading.Reload(VSMMD, PSMMDLoading);
-            PObjectMMDError.Reload(VSMMD, PSMMDError);
+            PObjectMMD.Reload(deviceResources, VSMMD, PSMMD);
+            PObjectMMDLoading.Reload(deviceResources, VSMMD, PSMMDLoading);
+            PObjectMMDError.Reload(deviceResources, VSMMD, PSMMDError);
 
-            PObjectParticle.Reload(particleVertexShader, particleGeometryShader, particlePixelShader);
+            PObjectParticle.Reload(deviceResources, particleVertexShader, particleGeometryShader, particlePixelShader);
 
-            uiPObject.Reload(VSUIStandard, uiGeometryShader, uiPixelShader);
+            uiPObject.Reload(deviceResources, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
 

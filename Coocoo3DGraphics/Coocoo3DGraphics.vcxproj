@@ -275,7 +275,6 @@
     <ClInclude Include="DirectXHelper.h" />
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="GraphicsBuffer.h" />
-    <ClInclude Include="GraphicsCommandList.h" />
     <ClInclude Include="GraphicsContext.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MMDMesh.h" />
@@ -293,7 +292,6 @@
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="GraphicsBuffer.cpp" />
-    <ClCompile Include="GraphicsCommandList.cpp" />
     <ClCompile Include="GraphicsContext.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="MMDMesh.cpp" />

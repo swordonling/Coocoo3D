@@ -186,12 +186,12 @@ namespace Coocoo3D.UI
                             {
                                 if (vertexShader != null && geometryShader != null && pixelShader != null)
                                 {
-                                    pObject.Reload(vertexShader, geometryShader, pixelShader);
+                                    pObject.Reload(deviceResources, vertexShader, geometryShader, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else if (vertexShader != null && pixelShader != null)
                                 {
-                                    pObject.Reload(vertexShader, pixelShader);
+                                    pObject.Reload(deviceResources, vertexShader, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else

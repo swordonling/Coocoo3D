@@ -29,9 +29,6 @@
     </ClCompile>
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="BlendState.cpp" />
-    <ClCompile Include="GraphicsCommandList.cpp">
-      <Filter>Device</Filter>
-    </ClCompile>
     <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="GraphicsBuffer.cpp" />
     <ClCompile Include="Coocoo3DSmallPack.cpp" />
@@ -56,9 +53,6 @@
     </ClInclude>
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="BlendState.h" />
-    <ClInclude Include="GraphicsCommandList.h">
-      <Filter>Device</Filter>
-    </ClInclude>
     <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="GraphicsBuffer.h" />
     <ClInclude Include="Coocoo3DSmallPack.h" />

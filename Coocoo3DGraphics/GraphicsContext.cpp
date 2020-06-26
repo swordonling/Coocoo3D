@@ -10,9 +10,9 @@ GraphicsContext ^ GraphicsContext::Load(DeviceResources ^ deviceResources)
 	return graphicsContext;
 }
 
-void GraphicsContext::Reload(DeviceResources ^ deviceResourecs)
+void GraphicsContext::Reload(DeviceResources ^ deviceResources)
 {
-	m_deviceResources = deviceResourecs;
+	m_deviceResources = deviceResources;
 }
 
 void GraphicsContext::SetMaterial(Material ^ material)
