@@ -159,14 +159,14 @@ namespace Coocoo3D.Components
             pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetTransformMatrixData);
             Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
 
-            graphicsContext.UpdateResource(EntityDataBuffer, DataUploadBuffer, c_offsetTransformMatrixData);
+            graphicsContext.UpdateResource(EntityDataBuffer, DataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
 
 
             for (int i = 0; i < Materials.Count; i++)
             {
                 IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetMaterialData);
                 Marshal.StructureToPtr(Materials[i].innerStruct, ptr, true);
-                graphicsContext.UpdateResource(Materials[i].matBuf, DataUploadBuffer, c_offsetMaterialData);
+                graphicsContext.UpdateResource(Materials[i].matBuf, DataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
             }
 
             if (meshNeedUpdate)
@@ -178,11 +178,9 @@ namespace Coocoo3D.Components
 
         public void RenderDepth(GraphicsContext graphicsContext, MMDBoneComponent boneComponent, PresentData presentData)
         {
-            graphicsContext.VSSetConstantBuffer(boneComponent.boneMatrices, 1);
-            graphicsContext.VSSetConstantBuffer(EntityDataBuffer, 0);
-            graphicsContext.GSSetConstantBuffer(EntityDataBuffer, 0);
-            graphicsContext.VSSetConstantBuffer(presentData.DataBuffer, 3);
-            graphicsContext.GSSetConstantBuffer(presentData.DataBuffer, 3);
+            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, boneComponent.boneMatrices, 1);
+            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, EntityDataBuffer, 0);
+            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, presentData.DataBuffer, 3);
             graphicsContext.SetMesh(mesh);
             graphicsContext.SetPObjectDepthOnly(pObject);
 
@@ -191,7 +189,7 @@ namespace Coocoo3D.Components
             {
                 indexCountAll += Materials[i].indexCount;
             }
-            graphicsContext.DrawIndexed(indexCountAll,0 , 0);
+            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
         }
 
         public void Render(GraphicsContext graphicsContext, DefaultResources defaultResources, MMDBoneComponent boneComponent, PresentData presentData)
@@ -206,24 +204,24 @@ namespace Coocoo3D.Components
                     if (Materials[i].texIndex != -1)
                         tex1 = texs[Materials[i].texIndex];
                     if (tex1 != null)
-                        graphicsContext.PSSetSRV(tex1, 0);
+                        graphicsContext.SetSRV(PObjectType.mmd, tex1, 0);
                     else
-                        graphicsContext.PSSetSRV(defaultResources.TextureError, 0);
+                        graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 0);
                     if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
                     {
                         Texture2D tex2 = texs[Materials[i].toonIndex];
                         if (tex2 != null)
-                            graphicsContext.PSSetSRV(tex2, 1);
+                            graphicsContext.SetSRV(PObjectType.mmd, tex2, 1);
                         else
-                            graphicsContext.PSSetSRV(defaultResources.TextureError, 1);
+                            graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
                     }
                     else
-                        graphicsContext.PSSetSRV(defaultResources.TextureError, 1);
+                        graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
                 }
                 else
                 {
-                    graphicsContext.PSSetSRV(defaultResources.TextureError, 1);
-                    graphicsContext.PSSetSRV(defaultResources.TextureError, 0);
+                    graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
+                    graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 0);
                 }
                 graphicsContext.SetMMDRender1CBResources(boneComponent.boneMatrices, EntityDataBuffer, presentData.DataBuffer, Materials[i].matBuf);
                 if (Materials[i].DrawFlags.HasFlag(DrawFlags.DrawDoubleFace))
@@ -284,18 +282,12 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static MMDRendererComponent LoadRendererComponent(DeviceResources deviceResources, PMXFormat modelResource)
-        {
-            MMDRendererComponent rendererComponent = new MMDRendererComponent();
-            rendererComponent.Reload(deviceResources, modelResource);
-            return rendererComponent;
-        }
-
-        public static void Reload(this MMDRendererComponent rendererComponent, DeviceResources deviceResources, PMXFormat modelResource)
+        public static void Reload(this MMDRendererComponent rendererComponent, DeviceResources deviceResources, MainCaches mainCaches, PMXFormat modelResource)
         {
             rendererComponent.ReloadBase();
             rendererComponent.EntityDataBuffer.Reload(deviceResources, MMDRendererComponent.c_transformMatrixDataSize + MMDRendererComponent.c_lightingDataSize);
-            rendererComponent.mesh = modelResource.GetMesh(deviceResources);
+            rendererComponent.mesh = modelResource.GetMesh();
+            mainCaches.AddMeshToLoadList(rendererComponent.mesh);
             rendererComponent.meshPosDataUploadBuffer = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosDataUploadBuffer = GCHandle.Alloc(rendererComponent.meshPosDataUploadBuffer);
 

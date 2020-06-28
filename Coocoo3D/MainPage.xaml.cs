@@ -76,18 +76,18 @@ namespace Coocoo3D
             });
         }
 
-        private async void Test_Click(object sender, RoutedEventArgs e)
-        {
-            FileOpenPicker picker = new FileOpenPicker();
-            picker.FileTypeFilter.Add("*");
-            var file = await picker.PickSingleFileAsync();
-            if (file == null) return;
+        //private async void Test_Click(object sender, RoutedEventArgs e)
+        //{
+        //    FileOpenPicker picker = new FileOpenPicker();
+        //    picker.FileTypeFilter.Add("*");
+        //    var file = await picker.PickSingleFileAsync();
+        //    if (file == null) return;
 
-            Stream texStream = (await file.OpenReadAsync()).AsStreamForRead();
-            byte[] texBytes = new byte[texStream.Length];
-            texStream.Read(texBytes, 0, (int)texStream.Length);
-            var tex = Texture2D.LoadFromImage(appBody.deviceResources, texBytes);
-        }
+        //    Stream texStream = (await file.OpenReadAsync()).AsStreamForRead();
+        //    byte[] texBytes = new byte[texStream.Length];
+        //    texStream.Read(texBytes, 0, (int)texStream.Length);
+        //    var tex = Texture2D.LoadFromImage(appBody.deviceResources, texBytes);
+        //}
         private async void OpenFolder_Click(object sender, RoutedEventArgs e)
         {
             await UI.UISharedCode.OpenResourceFolder(appBody);

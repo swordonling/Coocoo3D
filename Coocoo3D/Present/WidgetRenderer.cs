@@ -31,7 +31,7 @@ namespace Coocoo3D.Present
             gch_indexData.Free();
         }
 
-        public void Init(DeviceResources deviceResources, DefaultResources defaultResources, IDictionary<string, Texture2D> caches)
+        public void Init(MainCaches mainCaches, DefaultResources defaultResources, IDictionary<string, Texture2D> caches)
         {
             boneRenderMaterial = Material.Load(defaultResources.uiPObject);
             boneRenderMaterial.SetTexture(defaultResources.ui0Texture, 0);
@@ -41,12 +41,12 @@ namespace Coocoo3D.Present
                 Marshal.WriteInt32(ptr, i);
                 ptr += 4;
             }
-            particleMesh = MMDMesh.Load(deviceResources, vertexData, indexData, c_perVertexSize, 4, PrimitiveTopology._POINTLIST);
+            particleMesh = MMDMesh.Load1( vertexData, null, indexData, c_perVertexSize, 0, 4, PrimitiveTopology._POINTLIST);
+            mainCaches.AddMeshToLoadList(particleMesh);
         }
 
-        public void RenderBoneVisual(DeviceResources deviceResources, Camera camera, MMD3DEntity entity)
+        public void RenderBoneVisual( GraphicsContext graphicsContext, Camera camera, MMD3DEntity entity)
         {
-            GraphicsContext graphicsContext = GraphicsContext.Load(deviceResources);
             graphicsContext.SetMaterial(boneRenderMaterial);
 
             var bones = entity.boneComponent.bones;
@@ -70,7 +70,7 @@ namespace Coocoo3D.Present
                 }
             }
             graphicsContext.UpdateVertices(particleMesh, vertexData);
-            graphicsContext.GSSetConstantBuffer(entity.rendererComponent.EntityDataBuffer, 0);
+            graphicsContext.SetConstantBuffer(PObjectType.ui3d,entity.rendererComponent.EntityDataBuffer, 0);
             graphicsContext.SetMesh(particleMesh);
             graphicsContext.SetMaterial(boneRenderMaterial);
             //graphicsContext.DrawIndexed(visibleBoneCount * 1, 0, 0);

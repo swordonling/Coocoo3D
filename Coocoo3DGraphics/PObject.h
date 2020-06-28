@@ -19,7 +19,8 @@ namespace Coocoo3DGraphics
 	public enum struct PObjectType
 	{
 		mmd = 0,
-		ui = 1,
+		mmdDepth = 1,
+		ui3d = 2,
 	};
 	public ref class PObject sealed
 	{

@@ -41,7 +41,7 @@ namespace Coocoo3D.Present
         {
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(PresentDataUploadBuffer, 0);
             Marshal.StructureToPtr(innerStruct, pBufferData, true);
-            graphicsContext.UpdateResource(DataBuffer, PresentDataUploadBuffer);
+            graphicsContext.UpdateResource(DataBuffer, PresentDataUploadBuffer, c_presentDataSize);
         }
 
         public void Reload(DeviceResources deviceResources)

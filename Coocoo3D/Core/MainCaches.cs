@@ -20,6 +20,22 @@ namespace Coocoo3D.Core
 
         public Dictionary<string, PMXFormat> pmxCaches = new Dictionary<string, PMXFormat>();
 
-        public List<Coocoo3DSmallPack> textureLoadList = new List<Coocoo3DSmallPack>();
+        public List<Texture2D> textureLoadList = new List<Texture2D>();
+        public List<MMDMesh> mmdMeshLoadList = new List<MMDMesh>();
+
+        public void AddMeshToLoadList(MMDMesh mesh)
+        {
+            lock (mmdMeshLoadList)
+            {
+                mmdMeshLoadList.Add(mesh);
+            }
+        }
+        public void AddTextureToLoadList(Texture2D texture)
+        {
+            lock (textureLoadList)
+            {
+                textureLoadList.Add(texture);
+            }
+        }
     }
 }

@@ -269,7 +269,6 @@
   <ItemGroup>
     <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="ConstantBuffer.h" />
-    <ClInclude Include="Coocoo3DSmallPack.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXHelper.h" />
     <ClInclude Include="GeometryShader.h" />
@@ -280,13 +279,13 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="PixelShader.h" />
     <ClInclude Include="PObject.h" />
+    <ClInclude Include="RenderTexture2D.h" />
     <ClInclude Include="Texture2D.h" />
     <ClInclude Include="VertexShader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
-    <ClCompile Include="Coocoo3DSmallPack.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="GraphicsBuffer.cpp" />
@@ -305,6 +304,7 @@
     </ClCompile>
     <ClCompile Include="PixelShader.cpp" />
     <ClCompile Include="PObject.cpp" />
+    <ClCompile Include="RenderTexture2D.cpp" />
     <ClCompile Include="Texture2D.cpp" />
     <ClCompile Include="VertexShader.cpp" />
   </ItemGroup>

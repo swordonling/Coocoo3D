@@ -41,14 +41,17 @@ namespace Coocoo3D.Components
                 var _curve = Utility.CubicBezierCurve.Load(interpolator.ax, interpolator.ay, interpolator.bx, interpolator.by);
                 return _curve.Sample(_a);
             }
-            var ri = keyFrameRight.rInterpolator;
-            float amount = _getAmount(ri, (frame - keyFrameLeft.Frame) / (keyFrameRight.Frame - keyFrameLeft.Frame));
+            float t = (frame - keyFrameLeft.Frame) / (keyFrameRight.Frame - keyFrameLeft.Frame);
+            float amountR = _getAmount(keyFrameRight.rInterpolator, t);
+            float amountX = _getAmount(keyFrameRight.xInterpolator, t);
+            float amountY = _getAmount(keyFrameRight.yInterpolator, t);
+            float amountZ = _getAmount(keyFrameRight.zInterpolator, t);
 
 
             BoneKeyFrame newKeyFrame = new BoneKeyFrame();
             newKeyFrame.Frame = (int)MathF.Round(frame);
-            newKeyFrame.rotation = Quaternion.Slerp(keyFrameLeft.rotation, keyFrameRight.rotation, amount);
-            newKeyFrame.translation = Vector3.Lerp(keyFrameLeft.translation, keyFrameRight.translation, amount);
+            newKeyFrame.rotation = Quaternion.Slerp(keyFrameLeft.rotation, keyFrameRight.rotation, amountR);
+            newKeyFrame.translation = new Vector3(amountX, amountY, amountZ) * keyFrameRight.translation + new Vector3(1 - amountX, 1 - amountY, 1 - amountZ) * keyFrameLeft.translation;
             return newKeyFrame;
 
         }
@@ -75,7 +78,7 @@ namespace Coocoo3D.Components
 
             MorphKeyFrame newKeyFrame = new MorphKeyFrame();
             newKeyFrame.Frame = (int)MathF.Round(frame);
-            newKeyFrame.Weight = (1 - amount) * keyFrameLeft.Weight +  amount* keyFrameRight.Weight;
+            newKeyFrame.Weight = (1 - amount) * keyFrameLeft.Weight + amount * keyFrameRight.Weight;
             return newKeyFrame;
         }
     }

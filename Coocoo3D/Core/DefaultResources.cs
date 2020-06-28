@@ -24,7 +24,7 @@ namespace Coocoo3D.Core
         public PObject PObjectMMDError = new PObject();
         public PObject uiPObject = new PObject();
 
-        public Texture2D DepthStencil0 = new Texture2D();
+        public RenderTexture2D DepthStencil0 = new RenderTexture2D();
 
         public Texture2D ui0Texture = new Texture2D();
 
@@ -33,13 +33,14 @@ namespace Coocoo3D.Core
 
         public bool Initilized = false;
         public Task LoadTask;
-        public async Task ReloadDefalutResources(DeviceResources deviceResources)
+        public async Task ReloadDefalutResources(DeviceResources deviceResources,MainCaches mainCaches)
         {
-            ;
             DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
 
             TextureLoading.ReloadPure(deviceResources, 1, 1, new System.Numerics.Vector4(0, 1, 1, 1));
             TextureError.ReloadPure(deviceResources, 1, 1, new System.Numerics.Vector4(1, 0, 1, 1));
+            mainCaches.AddTextureToLoadList(TextureLoading);
+            mainCaches.AddTextureToLoadList(TextureError);
 
             await ReloadVertexShader(VSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMD.cso");
             await ReloadVertexShader(VSUIStandard, deviceResources, "ms-appx:///Coocoo3DGraphics/VSUIStandard.cso");
@@ -52,14 +53,14 @@ namespace Coocoo3D.Core
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
             await ReloadPixelShader(uiPixelShader, deviceResources, "ms-appx:///Coocoo3DGraphics/PSUIStandard.cso");
 
-            await ReloadTexture2D(ui0Texture, deviceResources, "ms-appx:///Assets/Textures/UI_0.png");
+            await ReloadTexture2D(ui0Texture, deviceResources,mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
 
 
             PObjectMMD.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMD);
             PObjectMMDLoading.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMDLoading);
             PObjectMMDError.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMDError);
 
-            uiPObject.Reload(deviceResources, PObjectType.ui, VSUIStandard, uiGeometryShader, uiPixelShader);
+            uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
 
@@ -76,9 +77,10 @@ namespace Coocoo3D.Core
         {
             geometryShader.Reload(deviceResources, await ReadAllBytes(uri));
         }
-        private async Task ReloadTexture2D(Texture2D texture2D, DeviceResources deviceResources, string uri)
+        private async Task ReloadTexture2D(Texture2D texture2D, DeviceResources deviceResources,MainCaches mainCaches, string uri)
         {
-            texture2D.ReloadFromImage(deviceResources, await ReadAllBytes(uri));
+            texture2D.ReloadFromImage1(deviceResources, await ReadAllBytes(uri));
+            mainCaches.AddTextureToLoadList(texture2D);
         }
         private async Task<byte[]> ReadAllBytes(string uri)
         {

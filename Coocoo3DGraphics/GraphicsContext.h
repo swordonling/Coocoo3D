@@ -5,6 +5,7 @@
 #include "MMDMesh.h"
 #include "Material.h"
 #include "Texture2D.h"
+#include "RenderTexture2D.h"
 #include "GraphicsBuffer.h"
 #include "ConstantBuffer.h"
 #include "ComputeShader.h"
@@ -21,24 +22,22 @@ namespace Coocoo3DGraphics
 		void SetPObject(PObject^ pobject, CullMode cullMode, BlendState blendState);
 		void SetPObjectDepthOnly(PObject^ pobject);
 		void SetComputeShader(ComputeShader^ computeShader);
-		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data);
-		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, int dataOffset);
-		void UpdateResource(GraphicsBuffer^ buffer, const Platform::Array<byte>^data);
+		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
+		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
-		void VSSetSRV(Texture2D^ texture, int slot);
-		void PSSetSRV(Texture2D^ texture, int slot);
-		void VSSetConstantBuffer(ConstantBuffer^ buffer, int slot);
-		void GSSetConstantBuffer(ConstantBuffer^ buffer, int slot);
-		void PSSetConstantBuffer(ConstantBuffer^ buffer, int slot);
-		void Dispathch(int x, int y, int z);
+		void SetSRV(PObjectType type, Texture2D^ texture, int slot);
+		void SetSRV_RT(PObjectType type, RenderTexture2D^ texture, int slot);
+		void SetConstantBuffer(PObjectType type, ConstantBuffer^ buffer, int slot);
 		void SetMMDRender1CBResources(ConstantBuffer^ boneData, ConstantBuffer^ entityData, ConstantBuffer^ presentData, ConstantBuffer^ materialData);
 		void Draw(int indexCount, int startIndexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
+		void UploadMesh(MMDMesh^ mesh);
+		void UploadTexture(Texture2D^ texture);
 		void SetMesh(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
-		void SetAndClearDSV(Texture2D^ texture);
+		void SetAndClearDSV(RenderTexture2D^ texture);
 		void ClearDepthStencil();
 		void BeginCommand();
 		void EndCommand();

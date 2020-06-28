@@ -9,10 +9,9 @@ void PObject::Reload(DeviceResources^ deviceResources, PObjectType type, VertexS
 	m_pixelShader = pixelShader;
 
 
-
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
 		CreateVertexShader(vertexShader->byteCode->GetBufferPointer(), vertexShader->byteCode->GetBufferSize(), nullptr, &m_vertexShader));
-	if(type==PObjectType::mmd)
+	if (type == PObjectType::mmd)
 	{
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
 		{
@@ -27,7 +26,7 @@ void PObject::Reload(DeviceResources^ deviceResources, PObjectType type, VertexS
 		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
 			CreateInputLayout(vertexDesc, ARRAYSIZE(vertexDesc), vertexShader->byteCode->GetBufferPointer(), vertexShader->byteCode->GetBufferSize(), &m_inputLayout));
 	}
-	else if(type==PObjectType::ui)
+	else if (type == PObjectType::ui3d)
 	{
 		static const D3D11_INPUT_ELEMENT_DESC vertexDesc[] =
 		{

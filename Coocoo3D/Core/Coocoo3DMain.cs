@@ -88,8 +88,8 @@ namespace Coocoo3D.Core
 
             defaultResources.LoadTask = Task.Run(async () =>
             {
-                await defaultResources.ReloadDefalutResources(deviceResources);
-                widgetRenderer.Init(deviceResources, defaultResources, mainCaches.textureCaches);
+                await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
+                widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
@@ -125,11 +125,6 @@ namespace Coocoo3D.Core
             }
             else for (int i = 0; i < Entities.Count; i++)
                     Entities[i].SetMotionTime(PlayTime);
-
-            for (int i = 0; i < Entities.Count; i++)
-            {
-                graphicsContext.UpdateResource(Entities[i].boneComponent.boneMatrices, Entities[i].boneComponent.boneMatricesData);
-            }
         }
         bool rendering = false;
         public void RequireRender(bool updateEntities = false)
@@ -146,7 +141,8 @@ namespace Coocoo3D.Core
             FrameUpdated?.Invoke(this, null);
         }
 
-        List<Coocoo3DSmallPack> packProcessing = new List<Coocoo3DSmallPack>();
+        List<Texture2D> textureProcessing = new List<Texture2D>();
+        List<MMDMesh> meshProcessing = new List<MMDMesh>();
         private bool RenderFrame2()
         {
             if (DateTime.Now - LatestRenderTime > FrameInterval && !rendering)
@@ -162,15 +158,29 @@ namespace Coocoo3D.Core
                     {
                         if (mainCaches.textureLoadList.Count > 0)
                         {
-                            packProcessing.AddRange(mainCaches.textureLoadList);
+                            textureProcessing.AddRange(mainCaches.textureLoadList);
                             mainCaches.textureLoadList.Clear();
                         }
                     }
-                    for (int i = 0; i < packProcessing.Count; i++)
+                    lock (mainCaches.mmdMeshLoadList)
                     {
-                        (packProcessing[i].property1 as Texture2D).Reload(deviceResources, packProcessing[i]);
+                        if (mainCaches.mmdMeshLoadList.Count > 0)
+                        {
+                            meshProcessing.AddRange(mainCaches.mmdMeshLoadList);
+                            mainCaches.mmdMeshLoadList.Clear();
+                        }
                     }
-                    packProcessing.Clear();
+                    graphicsContext.BeginCommand();
+                    for (int i = 0; i < textureProcessing.Count; i++)
+                    {
+                        graphicsContext.UploadTexture(textureProcessing[i]);
+                    }
+                    for (int i = 0; i < meshProcessing.Count; i++)
+                    {
+                        graphicsContext.UploadMesh(meshProcessing[i]);
+                    }
+                    textureProcessing.Clear();
+                    meshProcessing.Clear();
 
                     if (Playing)
                         PlayTime += deltaTime;
@@ -192,10 +202,12 @@ namespace Coocoo3D.Core
                     for (int i = 0; i < Lightings.Count; i++)
                         Lightings[i].UpdateLightingData(graphicsContext, settings.ExtendShadowMapRange, camera);
                     for (int i = 0; i < Entities.Count; i++)
-                        Entities[i].UpdateGpuResources(deviceResources, Lightings);
-                    if (defaultResources.Initilized)
+                        Entities[i].UpdateGpuResources(graphicsContext, Lightings);
+
+
+                    if (Entities.Count > 0)
                     {
-                        graphicsContext.PSSetSRV(null, 3);
+                        graphicsContext.SetSRV(PObjectType.mmd, null, 3);
                         graphicsContext.SetAndClearDSV(defaultResources.DepthStencil0);
                         if (Lightings.Count > 0)
                         {
@@ -204,13 +216,14 @@ namespace Coocoo3D.Core
                             for (int i = 0; i < Entities.Count; i++)
                                 Entities[i].RenderDepth(graphicsContext, defaultResources, presentDatas[1]);
                         }
+                        graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
+                        graphicsContext.SetSRV_RT(PObjectType.mmd, defaultResources.DepthStencil0, 3);
+                    }
+                    else
+                    {
+                        graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
                     }
 
-                    graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
-                    if (defaultResources.Initilized)
-                    {
-                        graphicsContext.PSSetSRV(defaultResources.DepthStencil0, 3);
-                    }
                     for (int i = 0; i < Entities.Count; i++)
                         Entities[i].Render(graphicsContext, defaultResources, Lightings, presentDatas[0]);
 
@@ -220,9 +233,10 @@ namespace Coocoo3D.Core
                         for (int i = 0; i < SelectedEntities.Count; i++)
                         {
                             if (SelectedEntities[i].ComponentReady)
-                                widgetRenderer.RenderBoneVisual(deviceResources, camera, SelectedEntities[i]);
+                                widgetRenderer.RenderBoneVisual(graphicsContext, camera, SelectedEntities[i]);
                         }
                     }
+                    graphicsContext.EndCommand();
                     RenderCount++;
                     deviceResources.Present(false);
                     rendering = false;
@@ -236,6 +250,7 @@ namespace Coocoo3D.Core
             }
         }
         #endregion
+
         public void ForceAudioAsync() => AudioAsync(PlayTime, Playing);
         TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);
         private void AudioAsync(float time, bool playing)

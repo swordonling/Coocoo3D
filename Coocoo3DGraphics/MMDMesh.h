@@ -50,17 +50,13 @@ namespace Coocoo3DGraphics
 	public ref class MMDMesh sealed
 	{
 	public:
-		static MMDMesh^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ indexData, int vertexStride, int indexStride);
-		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ indexData, int vertexStride, int indexStride);
-		static MMDMesh^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ indexData, int vertexStride, int indexStride, PrimitiveTopology pt);
-		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ indexData, int vertexStride, int indexStride, PrimitiveTopology pt);
-		static MMDMesh^ Load1(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
-		void Reload1(DeviceResources^ deviceResources, const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		static MMDMesh^ Load1( const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		//在上传GPU之前是无法使用的。使用GraphicsContext::void UploadMesh(MMDMesh^ mesh)上传。
+		void Reload1( const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
 		virtual ~MMDMesh();
-		//存储一些额外的数据，便于重建。手动为它赋值。
+
 		property Platform::Array<byte>^ m_verticeData;
 		property Platform::Array<byte>^ m_verticeData2;
-		//存储一些额外的数据，便于重建。手动为它赋值。
 		property Platform::Array<byte>^ m_indexData;
 		property int m_indexCount;
 		property int m_vertexCount;

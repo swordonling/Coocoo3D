@@ -54,17 +54,16 @@ namespace Coocoo3D.Present
             rendererComponent.SetPose(morphStateComponent);
         }
 
-        public void UpdateGpuResources(DeviceResources deviceResources, IList<Lighting> lightings)
+        public void UpdateGpuResources(GraphicsContext graphicsContext, IList<Lighting> lightings)
         {
             Matrix4x4 matWorld = Matrix4x4.CreateFromQuaternion(Rotation) * Matrix4x4.CreateTranslation(Position);
-            GraphicsContext graphicsContext = GraphicsContext.Load(deviceResources);
             rendererComponent.UpdateGPUResources(graphicsContext, matWorld, lightings);
             if (!boneComponent.GpuUsable)
             {
                 boneComponent.ComputeMatricesData();
                 boneComponent.GpuUsable = true;
             }
-            graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData);
+            graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize);
         }
 
         public void RenderDepth(GraphicsContext graphicsContext, DefaultResources defaultResources, PresentData presentData)
@@ -136,13 +135,10 @@ namespace Coocoo3D.FileFormat
             }
         }
         ///<summary>Reoad2()后可用</summary>
-        public MMDMesh GetMesh(DeviceResources deviceResources)
+        public MMDMesh GetMesh()
         {
             MMDMesh meshInstance;
-            meshInstance = MMDMesh.Load1(deviceResources, verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._TRIANGLELIST);
-            meshInstance.m_verticeData = verticesData;
-            meshInstance.m_verticeData2 = verticesData2;
-            meshInstance.m_indexData = indexsData;
+            meshInstance = MMDMesh.Load1(verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._TRIANGLELIST);
             return meshInstance;
         }
         ~PMXFormat()
@@ -155,13 +151,7 @@ namespace Coocoo3D.FileFormat
     }
     public static partial class PMXFormatExtension
     {
-        public static MMD3DEntity LoadEntity(DeviceResources deviceResources, PMXFormat modelResource, DefaultResources defaultResources, List<Texture2D> textures)
-        {
-            MMD3DEntity entity = new MMD3DEntity();
-            entity.Reload(deviceResources, modelResource, defaultResources, textures);
-            return entity;
-        }
-        public static void Reload(this MMD3DEntity entity, DeviceResources deviceResources, PMXFormat modelResource, DefaultResources defaultResources, List<Texture2D> textures)
+        public static void Reload2(this MMD3DEntity entity, DeviceResources deviceResources, MainCaches mainCaches, PMXFormat modelResource)
         {
             entity.ReloadBase();
             entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);
@@ -172,26 +162,7 @@ namespace Coocoo3D.FileFormat
             entity.boneComponent.Reload(modelResource);
             entity.boneComponent.boneMatrices.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
 
-            entity.rendererComponent.Reload(deviceResources, modelResource);
-            entity.ComponentReady = true;
-
-            entity.rendererComponent.pObject = defaultResources.PObjectMMD;
-            entity.rendererComponent.texs = new List<Texture2D>(textures);
-            entity.RenderReady = true;
-        }
-
-        public static void Reload2(this MMD3DEntity entity, DeviceResources deviceResources, PMXFormat modelResource)
-        {
-            entity.ReloadBase();
-            entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);
-            entity.Description = string.Format("{0}\n{1}", modelResource.Description, modelResource.DescriptionEN);
-            entity.motionComponent.ReloadEmpty();
-
-            entity.morphStateComponent.Reload(modelResource);
-            entity.boneComponent.Reload(modelResource);
-            entity.boneComponent.boneMatrices.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
-
-            entity.rendererComponent.Reload(deviceResources, modelResource);
+            entity.rendererComponent.Reload(deviceResources, mainCaches, modelResource);
             entity.ComponentReady = true;
         }
     }

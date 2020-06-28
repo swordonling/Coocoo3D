@@ -30,7 +30,7 @@
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="GraphicsBuffer.cpp" />
-    <ClCompile Include="Coocoo3DSmallPack.cpp" />
+    <ClCompile Include="RenderTexture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -53,7 +53,7 @@
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="GraphicsBuffer.h" />
-    <ClInclude Include="Coocoo3DSmallPack.h" />
+    <ClInclude Include="RenderTexture2D.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">

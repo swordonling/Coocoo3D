@@ -42,7 +42,7 @@ namespace Coocoo3D.UI
             }
             if (!pmx.Ready && pmx.LoadTask != null) await pmx.LoadTask;
             MMD3DEntity entity = new MMD3DEntity();
-            entity.Reload2(appBody.deviceResources, pmx);
+            entity.Reload2(appBody.deviceResources, appBody.mainCaches, pmx);
             entity.rendererComponent.pObject = appBody.defaultResources.PObjectMMD;
             var texturesTemp = new List<Texture2D>();
             foreach (var vTex in pmx.Textures)
@@ -184,14 +184,9 @@ namespace Coocoo3D.UI
                             }
                             lock (appBody.deviceResources)
                             {
-                                if (vertexShader != null && geometryShader != null && pixelShader != null)
+                                if (vertexShader != null && pixelShader != null)
                                 {
                                     pObject.Reload(deviceResources, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
-                                    pObject.Ready = true;
-                                }
-                                else if (vertexShader != null && pixelShader != null)
-                                {
-                                    pObject.Reload(deviceResources, PObjectType.mmd, vertexShader, null, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else
@@ -203,7 +198,10 @@ namespace Coocoo3D.UI
                         }
                         catch
                         {
-                            pObject.Reload(appBody.defaultResources.PObjectMMDError);
+                            lock (appBody.deviceResources)
+                            {
+                                pObject.Reload(appBody.defaultResources.PObjectMMDError);
+                            }
                             pObject.LoadTask = null;
                         }
                     });
@@ -252,12 +250,11 @@ namespace Coocoo3D.UI
                                     byte[] texBytes = new byte[texStream.Length];
                                     texStream.Read(texBytes, 0, (int)texStream.Length);
                                     texStream.Dispose();
-                                    var pack = Texture2D.LoadImage(appBody.deviceResources, texBytes);
-                                    pack.property1 = tex;
+                                    tex.ReloadFromImage1(appBody.deviceResources, texBytes);
                                     tex.Ready = true;
                                     lock (appBody.mainCaches.textureLoadList)
                                     {
-                                        appBody.mainCaches.textureLoadList.Add(pack);
+                                        appBody.mainCaches.textureLoadList.Add(tex);
                                     }
                                 }
                                 if (texFile.FileType.Equals(".tga", StringComparison.CurrentCultureIgnoreCase))
