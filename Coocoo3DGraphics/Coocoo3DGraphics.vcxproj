@@ -267,7 +267,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BlendState.h" />
     <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="Coocoo3DSmallPack.h" />
@@ -285,7 +284,6 @@
     <ClInclude Include="VertexShader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BlendState.cpp" />
     <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="Coocoo3DSmallPack.cpp" />

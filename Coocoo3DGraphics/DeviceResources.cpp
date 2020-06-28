@@ -75,7 +75,6 @@ Coocoo3DGraphics::DeviceResources::DeviceResources() :
 {
 	CreateDeviceIndependentResources();
 	CreateDeviceResources();
-	CreateOtherResources();
 }
 
 // 配置不依赖于 Direct3D 设备的资源。
@@ -474,29 +473,6 @@ void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
 	m_d2dContext->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 }
 
-//其他资源
-void Coocoo3DGraphics::DeviceResources::CreateOtherResources()
-{
-	auto desc = D3D11_RASTERIZER_DESC();
-	desc.FillMode = D3D11_FILL_SOLID;
-	desc.CullMode = D3D11_CULL_BACK;
-	desc.FrontCounterClockwise = FALSE;
-	desc.DepthBias = D3D11_DEFAULT_DEPTH_BIAS;
-	desc.DepthBiasClamp = D3D11_DEFAULT_DEPTH_BIAS_CLAMP;
-	desc.SlopeScaledDepthBias = D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-	desc.DepthClipEnable = TRUE;
-	desc.ScissorEnable = FALSE;
-	desc.MultisampleEnable = FALSE;
-	desc.AntialiasedLineEnable = FALSE;
-
-	desc.CullMode = D3D11_CULL_NONE;
-	m_d3dDevice->CreateRasterizerState(&desc, &m_RasterizerStateCullNone);
-	desc.CullMode = D3D11_CULL_FRONT;
-	m_d3dDevice->CreateRasterizerState(&desc, &m_RasterizerStateCullFront);
-	desc.CullMode = D3D11_CULL_BACK;
-	m_d3dDevice->CreateRasterizerState(&desc, &m_RasterizerStateCullBack);
-}
-
 // 确定呈现器目标的尺寸及其是否将缩小。
 void Coocoo3DGraphics::DeviceResources::UpdateRenderTargetSize()
 {
@@ -644,7 +620,6 @@ void Coocoo3DGraphics::DeviceResources::HandleDeviceLost()
 	}
 
 	CreateDeviceResources();
-	CreateOtherResources();
 	m_d2dContext->SetDpi(m_dpi, m_dpi);
 	CreateWindowSizeDependentResources();
 

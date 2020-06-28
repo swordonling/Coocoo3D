@@ -55,15 +55,10 @@ namespace Coocoo3DGraphics
 		D2D1::Matrix3x2F			GetOrientationTransform2D() const		{ return m_orientationTransform2D; }
 
 
-		//附加属性
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullBack;
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullFront;
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullNone;
 	private:
 		void CreateDeviceIndependentResources();
 		void CreateDeviceResources();
 		void CreateWindowSizeDependentResources();
-		void CreateOtherResources();//其他资源
 		void UpdateRenderTargetSize();
 		DXGI_MODE_ROTATION ComputeDisplayRotation();
 

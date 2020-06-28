@@ -22,16 +22,15 @@ namespace Coocoo3D.Components
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
         public PObject pObject;
-        public ConstantBuffer lightingDataBuffer = new ConstantBuffer();
-        public ConstantBuffer transformDataBuffer = new ConstantBuffer();
-        byte[] DataUploadBuffer = new byte[c_transformMatrixDataSize * 2 + c_lightingDataSize + MMDMatLit.c_materialDataSize];
+        public ConstantBuffer EntityDataBuffer = new ConstantBuffer();
+        byte[] DataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + MMDMatLit.c_materialDataSize];
         GCHandle gch_DataUploadBuffer;
         public const int c_transformMatrixDataSize = 64;
         public const int c_lightingDataSize = 384;
 
         const int c_offsetTransformMatrixData = 0;
-        const int c_offsetLightingData = c_transformMatrixDataSize * 2;
-        const int c_offsetMaterialData = c_transformMatrixDataSize * 2 + c_lightingDataSize;
+        const int c_offsetLightingData = c_transformMatrixDataSize;
+        const int c_offsetMaterialData = c_transformMatrixDataSize + c_lightingDataSize;
         public Vector3[] meshPosDataUploadBuffer;
         public GCHandle gch_meshPosDataUploadBuffer;
         bool meshNeedUpdate;
@@ -134,7 +133,6 @@ namespace Coocoo3D.Components
 
                         computedMaterialsData[k] = struct1;
                         Materials[k].innerStruct = struct1;
-                        Materials[k].GpuUsable = false;
                     }
                 }
             }
@@ -157,78 +155,51 @@ namespace Coocoo3D.Components
                 }
                 pBufferData += 96;
             }
-            graphicsContext.UpdateResource(lightingDataBuffer, DataUploadBuffer, c_offsetLightingData);
-
 
             pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetTransformMatrixData);
             Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
 
-            if (!MemEqual(DataUploadBuffer, 0, DataUploadBuffer, c_transformMatrixDataSize, c_transformMatrixDataSize))
+            graphicsContext.UpdateResource(EntityDataBuffer, DataUploadBuffer, c_offsetTransformMatrixData);
+
+
+            for (int i = 0; i < Materials.Count; i++)
             {
-                graphicsContext.UpdateResource(transformDataBuffer, DataUploadBuffer, c_offsetTransformMatrixData);
-                Array.Copy(DataUploadBuffer, 0, DataUploadBuffer, c_transformMatrixDataSize, c_transformMatrixDataSize);
+                IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetMaterialData);
+                Marshal.StructureToPtr(Materials[i].innerStruct, ptr, true);
+                graphicsContext.UpdateResource(Materials[i].matBuf, DataUploadBuffer, c_offsetMaterialData);
             }
+
             if (meshNeedUpdate)
             {
                 graphicsContext.UpdateVertices2(mesh, meshPosDataUploadBuffer);
                 meshNeedUpdate = false;
-            }
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                if (!Materials[i].GpuUsable)
-                {
-                    IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetMaterialData);
-                    Marshal.StructureToPtr(Materials[i].innerStruct, ptr, true);
-                    graphicsContext.UpdateResource(Materials[i].matBuf, DataUploadBuffer, c_offsetMaterialData);
-                    Materials[i].GpuUsable = true;
-                }
             }
         }
 
         public void RenderDepth(GraphicsContext graphicsContext, MMDBoneComponent boneComponent, PresentData presentData)
         {
             graphicsContext.VSSetConstantBuffer(boneComponent.boneMatrices, 1);
-            graphicsContext.VSSetConstantBuffer(transformDataBuffer, 0);
-            graphicsContext.GSSetConstantBuffer(transformDataBuffer, 0);
+            graphicsContext.VSSetConstantBuffer(EntityDataBuffer, 0);
+            graphicsContext.GSSetConstantBuffer(EntityDataBuffer, 0);
             graphicsContext.VSSetConstantBuffer(presentData.DataBuffer, 3);
             graphicsContext.GSSetConstantBuffer(presentData.DataBuffer, 3);
             graphicsContext.SetMesh(mesh);
             graphicsContext.SetPObjectDepthOnly(pObject);
 
-            int indexStartLocation = 0;
+            int indexCountAll = 0;
             for (int i = 0; i < Materials.Count; i++)
             {
-                if (Materials[i].DrawFlags.HasFlag(DrawFlags.DrawDoubleFace))
-                    graphicsContext.SetCullMode(CullMode.none);
-                else
-                    graphicsContext.SetCullMode(CullMode.back);
-
-                graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
-                indexStartLocation += Materials[i].indexCount;
+                indexCountAll += Materials[i].indexCount;
             }
+            graphicsContext.DrawIndexed(indexCountAll,0 , 0);
         }
 
         public void Render(GraphicsContext graphicsContext, DefaultResources defaultResources, MMDBoneComponent boneComponent, PresentData presentData)
         {
-            graphicsContext.VSSetConstantBuffer(boneComponent.boneMatrices, 1);
-            graphicsContext.PSSetConstantBuffer(lightingDataBuffer, 1);
-            graphicsContext.VSSetConstantBuffer(transformDataBuffer, 0);
-            graphicsContext.GSSetConstantBuffer(transformDataBuffer, 0);
-            graphicsContext.PSSetConstantBuffer(transformDataBuffer, 0);
-            graphicsContext.VSSetConstantBuffer(presentData.DataBuffer, 3);
-            graphicsContext.GSSetConstantBuffer(presentData.DataBuffer, 3);
-            graphicsContext.PSSetConstantBuffer(presentData.DataBuffer, 3);
-            graphicsContext.SetBlendState(defaultResources.BlendStateAlpha);
             graphicsContext.SetMesh(mesh);
-            graphicsContext.SetPObject(pObject);
-
             int indexStartLocation = 0;
             for (int i = 0; i < Materials.Count; i++)
             {
-                if (Materials[i].DrawFlags.HasFlag(DrawFlags.DrawDoubleFace))
-                    graphicsContext.SetCullMode(CullMode.none);
-                else
-                    graphicsContext.SetCullMode(CullMode.back);
                 if (texs != null)
                 {
                     Texture2D tex1 = null;
@@ -254,7 +225,11 @@ namespace Coocoo3D.Components
                     graphicsContext.PSSetSRV(defaultResources.TextureError, 1);
                     graphicsContext.PSSetSRV(defaultResources.TextureError, 0);
                 }
-                graphicsContext.PSSetConstantBuffer(Materials[i].matBuf, 2);
+                graphicsContext.SetMMDRender1CBResources(boneComponent.boneMatrices, EntityDataBuffer, presentData.DataBuffer, Materials[i].matBuf);
+                if (Materials[i].DrawFlags.HasFlag(DrawFlags.DrawDoubleFace))
+                    graphicsContext.SetPObject(pObject, CullMode.none, BlendState.alpha);
+                else
+                    graphicsContext.SetPObject(pObject, CullMode.back, BlendState.alpha);
                 graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
                 indexStartLocation += Materials[i].indexCount;
             }
@@ -275,7 +250,6 @@ namespace Coocoo3D.Components
     public class MMDMatLit
     {
         public const int c_materialDataSize = 128;
-        public bool GpuUsable = false;
 
         public Texture2D tex;
         public string Name;
@@ -320,8 +294,7 @@ namespace Coocoo3D.FileFormat
         public static void Reload(this MMDRendererComponent rendererComponent, DeviceResources deviceResources, PMXFormat modelResource)
         {
             rendererComponent.ReloadBase();
-            rendererComponent.lightingDataBuffer.Reload(deviceResources, MMDRendererComponent.c_lightingDataSize);
-            rendererComponent.transformDataBuffer.Reload(deviceResources, MMDRendererComponent.c_transformMatrixDataSize);
+            rendererComponent.EntityDataBuffer.Reload(deviceResources, MMDRendererComponent.c_transformMatrixDataSize + MMDRendererComponent.c_lightingDataSize);
             rendererComponent.mesh = modelResource.GetMesh(deviceResources);
             rendererComponent.meshPosDataUploadBuffer = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosDataUploadBuffer = GCHandle.Alloc(rendererComponent.meshPosDataUploadBuffer);

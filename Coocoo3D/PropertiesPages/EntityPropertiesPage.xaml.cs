@@ -135,13 +135,13 @@ namespace Coocoo3D.PropertiesPages
         void UpdatePositionFromUI()
         {
             mmd3dEntity.Position = _cacheP;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
         void UpdateRotationFromUI()
         {
             _cacheRQ = EularToQuaternionYXZ(_cacheR / 180 * MathF.PI);
             mmd3dEntity.Rotation = _cacheRQ;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
 
         PropertyChangedEventArgs eaName = new PropertyChangedEventArgs("Name");

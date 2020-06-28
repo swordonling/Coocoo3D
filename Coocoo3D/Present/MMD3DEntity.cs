@@ -62,9 +62,9 @@ namespace Coocoo3D.Present
             if (!boneComponent.GpuUsable)
             {
                 boneComponent.ComputeMatricesData();
-                graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData);
                 boneComponent.GpuUsable = true;
             }
+            graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData);
         }
 
         public void RenderDepth(GraphicsContext graphicsContext, DefaultResources defaultResources, PresentData presentData)

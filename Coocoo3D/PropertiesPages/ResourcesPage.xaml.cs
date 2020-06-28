@@ -90,7 +90,7 @@ namespace Coocoo3D.PropertiesPages
                             entity.motionComponent.Reload(motionSet);
                         }
                     }
-                    appBody.RenderFrame(true);
+                    appBody.RequireRender(true);
                     HaveLoadTask = false;
                 }
                 else if (file.FileType.Equals(".ccshader", StringComparison.CurrentCultureIgnoreCase))

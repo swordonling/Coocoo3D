@@ -155,7 +155,7 @@ namespace Coocoo3D.PropertiesPages
             {
                 _cacheFOV = value * MathF.PI / 180.0f;
                 appBody.camera.Fov = value * MathF.PI / 180.0f;
-                appBody.RenderFrame();
+                appBody.RequireRender();
             }
         }
         float _cacheFOV;
@@ -165,19 +165,19 @@ namespace Coocoo3D.PropertiesPages
             {
                 _cacheDistance = value;
                 appBody.camera.Distance = value;
-                appBody.RenderFrame();
+                appBody.RequireRender();
             }
         }
         float _cacheDistance;
         void UpdatePositionFromUI()
         {
             appBody.camera.LookAtPoint = _cachePos;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
         void UpdateRotationFromUI()
         {
             appBody.camera.Angle = _cacheRot;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
 
         public bool VViewBone

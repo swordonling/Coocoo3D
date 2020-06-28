@@ -63,7 +63,11 @@ namespace Coocoo3D.Core
         public int RenderCount = 0;//
         private async void Tick(ThreadPoolTimer timer)
         {
-            await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () => FrameUpdated?.Invoke(this, null));
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
+            {
+                FrameUpdated?.Invoke(this, null);
+                ForceAudioAsync();
+            });
         }
         #endregion
         public Settings settings = new Settings();
@@ -103,7 +107,7 @@ namespace Coocoo3D.Core
                   }
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
         }
-
+        #region Render Pipeline
         private void UpdateEntities()
         {
             int threshold = 1;
@@ -128,7 +132,11 @@ namespace Coocoo3D.Core
             }
         }
         bool rendering = false;
-        public void RequireRender() => NeedRender = true;
+        public void RequireRender(bool updateEntities = false)
+        {
+            NeedUpdateEntities |= updateEntities;
+            NeedRender = true;
+        }
 
         public void RenderFrame(bool updateEntities = false)
         {
@@ -137,7 +145,8 @@ namespace Coocoo3D.Core
             //if (actualRender)
             FrameUpdated?.Invoke(this, null);
         }
-        List<MMD3DEntity> RenderList = new List<MMD3DEntity>();
+
+        List<Coocoo3DSmallPack> packProcessing = new List<Coocoo3DSmallPack>();
         private bool RenderFrame2()
         {
             if (DateTime.Now - LatestRenderTime > FrameInterval && !rendering)
@@ -149,13 +158,27 @@ namespace Coocoo3D.Core
                 LatestRenderTime = now;
                 lock (deviceResources)
                 {
+                    lock (mainCaches.textureLoadList)
+                    {
+                        if (mainCaches.textureLoadList.Count > 0)
+                        {
+                            packProcessing.AddRange(mainCaches.textureLoadList);
+                            mainCaches.textureLoadList.Clear();
+                        }
+                    }
+                    for (int i = 0; i < packProcessing.Count; i++)
+                    {
+                        (packProcessing[i].property1 as Texture2D).Reload(deviceResources, packProcessing[i]);
+                    }
+                    packProcessing.Clear();
+
                     if (Playing)
                         PlayTime += deltaTime;
                     if (Playing || NeedUpdateEntities)
                     {
                         NeedUpdateEntities = false;
                         UpdateEntities();
-                        for(int i=0;i<presentDatas.Length;i++)
+                        for (int i = 0; i < presentDatas.Length; i++)
                         {
                             presentDatas[i].PlayTime = PlayTime;
                             presentDatas[i].DeltaTime = deltaTime;
@@ -212,9 +235,9 @@ namespace Coocoo3D.Core
                 return false;
             }
         }
-
+        #endregion
         public void ForceAudioAsync() => AudioAsync(PlayTime, Playing);
-
+        TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);
         private void AudioAsync(float time, bool playing)
         {
             if (playing && PlaySpeed == 1.0f)
@@ -226,18 +249,18 @@ namespace Coocoo3D.Core
                 }
                 if (mediaElement.IsAudioOnly)
                 {
-                    if (TimeSpan.FromSeconds(PlayTime) - mediaElement.Position > 2 * FrameInterval ||
-                        mediaElement.Position - TimeSpan.FromSeconds(PlayTime) > 2 * FrameInterval)
+                    if (TimeSpan.FromSeconds(PlayTime) - mediaElement.Position > audioMaxInaccuracy ||
+                        mediaElement.Position - TimeSpan.FromSeconds(PlayTime) > audioMaxInaccuracy)
                     {
-                        mediaElement.Position = TimeSpan.FromSeconds(PlayTime) + FrameInterval;
+                        mediaElement.Position = TimeSpan.FromSeconds(PlayTime);
                     }
                 }
                 else
                 {
-                    if (TimeSpan.FromSeconds(PlayTime) - mediaElement.Position > 4 * FrameInterval ||
-                           mediaElement.Position - TimeSpan.FromSeconds(PlayTime) > 4 * FrameInterval)
+                    if (TimeSpan.FromSeconds(PlayTime) - mediaElement.Position > audioMaxInaccuracy ||
+                           mediaElement.Position - TimeSpan.FromSeconds(PlayTime) > audioMaxInaccuracy)
                     {
-                        mediaElement.Position = TimeSpan.FromSeconds(PlayTime) + FrameInterval;
+                        mediaElement.Position = TimeSpan.FromSeconds(PlayTime);
                     }
                 }
             }

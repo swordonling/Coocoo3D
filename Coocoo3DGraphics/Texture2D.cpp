@@ -233,17 +233,9 @@ void Texture2D::Initialize(DeviceResources ^ deviceResources, int width, int hei
 	tex2DDesc.Usage = D3D11_USAGE_DEFAULT;
 	tex2DDesc.CPUAccessFlags = 0;
 	tex2DDesc.BindFlags = bindFlags;
-	//if (useMipMap)
-	//{
-	//tex2DDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-	//tex2DDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-	//tex2DDesc.MipLevels = 0;
-	//}
-	//else
-	//{
+
 	tex2DDesc.MiscFlags = 0;
 	tex2DDesc.MipLevels = 1;
-	//}
 	UINT bytesPerPixel = dxgiFormatBytesPerPixel.find(format)->second;
 
 	D3D11_SUBRESOURCE_DATA subresourceData;
@@ -261,7 +253,6 @@ void Texture2D::Initialize(DeviceResources ^ deviceResources, int width, int hei
 		&m_shaderResourceView
 	));
 	m_unorderedAccessView = nullptr;
-	//deviceResources->GetD3DDeviceContext()->GenerateMips(m_shaderResourceView.Get());
 	float color[4] = { 1,0,1,1 };
 	D3D11_SAMPLER_DESC samplerDesc;
 	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;

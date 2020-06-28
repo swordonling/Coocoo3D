@@ -1,7 +1,3 @@
-cbuffer cb0 : register(b0)
-{
-	float4x4 g_mWorld;
-};
 struct LightInfo
 {
 	float3 LightDir;
@@ -9,8 +5,9 @@ struct LightInfo
 	float4 LightColor;
 	float4x4 LightSpaceMatrix;
 };
-cbuffer cb1 : register(b1)
+cbuffer cb0 : register(b0)
 {
+	float4x4 g_mWorld;
 	LightInfo Lightings[4];
 };
 cbuffer cb2 : register(b2)

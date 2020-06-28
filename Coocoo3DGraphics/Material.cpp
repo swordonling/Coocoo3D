@@ -11,7 +11,7 @@ Material ^ Material::Load(PObject ^ pobject)
 
 void Material::Reload(PObject ^ pobject)
 {
-	m_pobject = pobject;
+	m_pObject = pobject;
 	for (int i = 0; i < c_reference_max; i++)
 		references[i] = nullptr;
 }

@@ -10,8 +10,6 @@ namespace Coocoo3DGraphics
 		property Platform::String^ Path;
 		static GeometryShader^ CompileLoad(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
 		void CompileReload(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
-		static GeometryShader^ CompileLoadSO(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
-		void CompileReloadSO(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
 		static GeometryShader^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 	internal:

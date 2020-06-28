@@ -141,13 +141,13 @@ namespace Coocoo3D.PropertiesPages
         void UpdateDirectionFromUI()
         {
             lighting.Rotation = _cachePos;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
 
         void UpdateColorFromUI()
         {
             lighting.Color = _cacheColor;
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)

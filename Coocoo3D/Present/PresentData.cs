@@ -18,7 +18,7 @@ namespace Coocoo3D.Present
         public float DeltaTime { get => innerStruct.DeltaTime; set => innerStruct.DeltaTime = value; }
         public InnerStruct innerStruct;
 
-        public const int c_presentDataSize = 144;
+        public const int c_presentDataSize = 256;
         public byte[] PresentDataUploadBuffer = new byte[c_presentDataSize];
         GCHandle gch_PresentDataUploadBuffer;
         public ConstantBuffer DataBuffer = new ConstantBuffer();

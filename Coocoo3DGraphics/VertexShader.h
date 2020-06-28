@@ -12,15 +12,8 @@ namespace Coocoo3DGraphics
 		void CompileReload(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
 		static VertexShader^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		static VertexShader^ LoadParticle(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		void ReloadParticle(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		static VertexShader^ LoadSkyBox(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		void ReloadSkyBox(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		static VertexShader^ LoadUI(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		void ReloadUI(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		virtual ~VertexShader();
 	internal:
-		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
-		Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
+		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;
 	};
 }

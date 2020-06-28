@@ -4,6 +4,7 @@ namespace Coocoo3DGraphics
 	public ref class Coocoo3DSmallPack sealed
 	{
 	public:
+		property Platform::Object^ property1;
 		virtual ~Coocoo3DSmallPack();
 	internal:
 		void* pDataUnManaged = nullptr;

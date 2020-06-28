@@ -19,32 +19,32 @@ void GraphicsContext::SetMaterial(Material ^ material)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
-	if (material->m_pobject->m_vertexShader != nullptr) {
-		context->IASetInputLayout(material->m_pobject->m_vertexShader->m_inputLayout.Get());
-		context->VSSetShader(material->m_pobject->m_vertexShader->m_vertexShader.Get(), nullptr, 0);
+	if (material->m_pObject->m_vertexShader != nullptr) {
+		context->IASetInputLayout(material->m_pObject->m_inputLayout.Get());
+		context->VSSetShader(material->m_pObject->m_vertexShader.Get(), nullptr, 0);
 	}
 	else {
 		context->VSSetShader(nullptr, nullptr, 0);
 	}
-	if (material->m_pobject->m_geometryShader != nullptr) {
-		context->GSSetShader(material->m_pobject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
+	if (material->m_pObject->m_geometryShader != nullptr) {
+		context->GSSetShader(material->m_pObject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
 	}
 	else {
 		context->GSSetShader(nullptr, nullptr, 0);
 	}
-	if (material->m_pobject->m_pixelShader != nullptr) {
-		context->PSSetShader(material->m_pobject->m_pixelShader->m_pixelShader.Get(), nullptr, 0);
+	if (material->m_pObject->m_pixelShader != nullptr) {
+		context->PSSetShader(material->m_pObject->m_pixelShader->m_pixelShader.Get(), nullptr, 0);
 	}
 	else {
 		context->PSSetShader(nullptr, nullptr, 0);
 	}
 
 	if (material->cullMode == CullMode::none)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullNone.Get());
-	if (material->cullMode == CullMode::front)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullFront.Get());
-	if (material->cullMode == CullMode::back)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullBack.Get());
+		context->RSSetState(material->m_pObject->m_RasterizerStateCullNone.Get());
+	else if (material->cullMode == CullMode::front)
+		context->RSSetState(material->m_pObject->m_RasterizerStateCullFront.Get());
+	else if (material->cullMode == CullMode::back)
+		context->RSSetState(material->m_pObject->m_RasterizerStateCullBack.Get());
 	for (int i = 0; i < Material::c_reference_max; i++)
 	{
 		if (material->references[i] != nullptr&&material->references[i]->m_texture2D != nullptr) {
@@ -54,60 +54,61 @@ void GraphicsContext::SetMaterial(Material ^ material)
 	}
 }
 
-void GraphicsContext::SetPObject(PObject ^ pobject)
+void GraphicsContext::SetPObject(PObject ^ pObject, CullMode cullMode, BlendState blendState)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
-	if (pobject->m_vertexShader != nullptr) {
-		context->IASetInputLayout(pobject->m_vertexShader->m_inputLayout.Get());
-		context->VSSetShader(pobject->m_vertexShader->m_vertexShader.Get(), nullptr, 0);
+	if (pObject->m_vertexShader != nullptr) {
+		context->IASetInputLayout(pObject->m_inputLayout.Get());
+		context->VSSetShader(pObject->m_vertexShader.Get(), nullptr, 0);
 	}
 	else {
 		context->VSSetShader(nullptr, nullptr, 0);
 	}
-	if (pobject->m_geometryShader != nullptr) {
-		context->GSSetShader(pobject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
+	if (pObject->m_geometryShader != nullptr) {
+		context->GSSetShader(pObject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
 	}
 	else {
 		context->GSSetShader(nullptr, nullptr, 0);
 	}
-	if (pobject->m_pixelShader != nullptr) {
-		context->PSSetShader(pobject->m_pixelShader->m_pixelShader.Get(), nullptr, 0);
+	if (pObject->m_pixelShader != nullptr) {
+		context->PSSetShader(pObject->m_pixelShader->m_pixelShader.Get(), nullptr, 0);
 	}
 	else {
 		context->PSSetShader(nullptr, nullptr, 0);
 	}
+	if (blendState == BlendState::alpha)
+		context->OMSetBlendState(pObject->m_blendStateAlpha.Get(), nullptr, 0xffffffff);
+	else if (blendState == BlendState::none)
+		context->OMSetBlendState(pObject->m_blendStateOqaque.Get(), nullptr, 0xffffffff);
+
+	if (cullMode == CullMode::none)
+		context->RSSetState(pObject->m_RasterizerStateCullNone.Get());
+	else if (cullMode == CullMode::front)
+		context->RSSetState(pObject->m_RasterizerStateCullFront.Get());
+	else if (cullMode == CullMode::back)
+		context->RSSetState(pObject->m_RasterizerStateCullBack.Get());
 }
 
-void GraphicsContext::SetPObjectDepthOnly(PObject ^ pobject)
+void GraphicsContext::SetPObjectDepthOnly(PObject ^ pObject)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
-	if (pobject->m_vertexShader != nullptr) {
-		context->IASetInputLayout(pobject->m_vertexShader->m_inputLayout.Get());
-		context->VSSetShader(pobject->m_vertexShader->m_vertexShader.Get(), nullptr, 0);
+	if (pObject->m_vertexShader != nullptr) {
+		context->IASetInputLayout(pObject->m_inputLayout.Get());
+		context->VSSetShader(pObject->m_vertexShader.Get(), nullptr, 0);
 	}
 	else {
 		context->VSSetShader(nullptr, nullptr, 0);
 	}
-	if (pobject->m_geometryShader != nullptr) {
-		context->GSSetShader(pobject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
+	if (pObject->m_geometryShader != nullptr) {
+		context->GSSetShader(pObject->m_geometryShader->m_geometryShader.Get(), nullptr, 0);
 	}
 	else {
 		context->GSSetShader(nullptr, nullptr, 0);
 	}
 	context->PSSetShader(nullptr, nullptr, 0);
-}
-
-void GraphicsContext::SetCullMode(CullMode cullMode)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	if (cullMode == CullMode::none)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullNone.Get());
-	if (cullMode == CullMode::front)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullFront.Get());
-	if (cullMode == CullMode::back)
-		context->RSSetState(m_deviceResources->m_RasterizerStateCullBack.Get());
+	context->RSSetState(pObject->m_RasterizerStateCullNone.Get());
 }
 
 void GraphicsContext::SetComputeShader(ComputeShader ^ computeShader)
@@ -162,19 +163,6 @@ void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windo
 	//context->Unmap(mesh->m_vertexBuffer2.Get(), 0);
 }
 
-void GraphicsContext::CSSetSRV(GraphicsBuffer ^ buffer, int slot)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	context->CSSetShaderResources(slot, 1, buffer->m_shaderResourceView.GetAddressOf());
-}
-
-void GraphicsContext::CSSetSRV(Texture2D ^ texture, int slot)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	context->CSSetShaderResources(slot, 1, texture->m_shaderResourceView.GetAddressOf());
-	context->CSSetSamplers(slot, 1, texture->m_samplerState.GetAddressOf());
-}
-
 void GraphicsContext::VSSetSRV(Texture2D ^ texture, int slot)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
@@ -196,17 +184,6 @@ void GraphicsContext::PSSetSRV(Texture2D ^ texture, int slot)
 		context->PSSetShaderResources(slot, 1, srv);
 		context->PSSetSamplers(slot, 1, ss);
 	}
-}
-
-void GraphicsContext::CSSetUAV(Texture2D ^ texture, int slot)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-}
-
-void GraphicsContext::CSSetConstantBuffer(ConstantBuffer ^ buffer, int slot)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	context->CSSetConstantBuffers(slot, 1, buffer->m_buffer.GetAddressOf());
 }
 
 void GraphicsContext::VSSetConstantBuffer(ConstantBuffer ^ buffer, int slot)
@@ -231,6 +208,22 @@ void GraphicsContext::Dispathch(int x, int y, int z)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 	context->Dispatch(x, y, z);
+}
+
+void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer ^ boneData, ConstantBuffer ^ entityData, ConstantBuffer ^ presentData, ConstantBuffer ^ materialData)
+{
+	auto context = m_deviceResources->GetD3DDeviceContext();
+	context->VSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
+	context->GSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
+	context->PSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
+
+	context->VSSetConstantBuffers(1, 1, boneData->m_buffer.GetAddressOf());
+
+	context->PSSetConstantBuffers(2, 1, materialData->m_buffer.GetAddressOf());
+
+	context->VSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
+	context->GSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
+	context->PSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
 }
 
 void GraphicsContext::Draw(int indexCount, int startIndexLocation)
@@ -285,14 +278,18 @@ void GraphicsContext::SetAndClearDSV(Texture2D^ texture)
 	context->ClearDepthStencilView(texture->m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
-void GraphicsContext::SetBlendState(BlendState ^ blendState)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	context->OMSetBlendState(blendState->m_blendState.Get(), nullptr, 0xffffffff);
-}
-
 void GraphicsContext::ClearDepthStencil()
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
 	context->ClearDepthStencilView(m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+}
+
+void GraphicsContext::BeginCommand()
+{
+
+}
+
+void GraphicsContext::EndCommand()
+{
+
 }

@@ -19,5 +19,7 @@ namespace Coocoo3D.Core
         public Dictionary<string, PObject> pObjectShadowCaches = new Dictionary<string, PObject>();
 
         public Dictionary<string, PMXFormat> pmxCaches = new Dictionary<string, PMXFormat>();
+
+        public List<Coocoo3DSmallPack> textureLoadList = new List<Coocoo3DSmallPack>();
     }
 }

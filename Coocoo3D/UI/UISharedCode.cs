@@ -80,7 +80,7 @@ namespace Coocoo3D.UI
             appBody.Playing = false;
             appBody.ForceAudioAsync();
             appBody.PlayTime = 0;
-            appBody.RenderFrame(true);
+            appBody.RequireRender(true);
         }
         public static void NewLighting(Coocoo3DMain appBody)
         {
@@ -89,7 +89,7 @@ namespace Coocoo3D.UI
             lighting.Color = new Vector4(1, 1, 1, 1);
             lighting.Rotation = new Vector3(1.570796326794f, 0, 0);
             appBody.CurrentScene.AddSceneObject(lighting);
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
         public static void RemoveSceneObject(Coocoo3DMain appBody, Scene scene, ISceneObject sceneObject)
         {
@@ -107,7 +107,7 @@ namespace Coocoo3D.UI
                     }
                 }
             }
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
         public static async Task OpenResourceFolder(Coocoo3DMain appBody)
         {
@@ -134,7 +134,7 @@ namespace Coocoo3D.UI
             {
                 entity.motionComponent.Reload(motionSet);
             }
-            appBody.RenderFrame(true);
+            appBody.RequireRender(true);
         }
 
         public static async Task LoadShaderForEntities(Coocoo3DMain appBody, StorageFile storageFile, StorageFolder storageFolder, IList<MMD3DEntity> entities)
@@ -186,12 +186,12 @@ namespace Coocoo3D.UI
                             {
                                 if (vertexShader != null && geometryShader != null && pixelShader != null)
                                 {
-                                    pObject.Reload(deviceResources, vertexShader, geometryShader, pixelShader);
+                                    pObject.Reload(deviceResources, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else if (vertexShader != null && pixelShader != null)
                                 {
-                                    pObject.Reload(deviceResources, vertexShader, pixelShader);
+                                    pObject.Reload(deviceResources, PObjectType.mmd, vertexShader, null, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else
@@ -229,10 +229,10 @@ namespace Coocoo3D.UI
                 string relativePath = vTex.TexturePath.Replace("//", "\\");
                 relativePath = relativePath.Replace('/', '\\');
                 IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
+                string texPath = Path.Combine(storageFolder.Path, relativePath);
+                Texture2D tex = null;
                 if (storageItem is StorageFile texFile)
                 {
-                    string texPath = texFile.Path;
-                    Texture2D tex = null;
                     lock (appBody.mainCaches.textureCaches)
                     {
                         tex = appBody.mainCaches.textureCaches.GetOrCreate(texPath);
@@ -253,10 +253,11 @@ namespace Coocoo3D.UI
                                     texStream.Read(texBytes, 0, (int)texStream.Length);
                                     texStream.Dispose();
                                     var pack = Texture2D.LoadImage(appBody.deviceResources, texBytes);
-                                    lock (appBody.deviceResources)
+                                    pack.property1 = tex;
+                                    tex.Ready = true;
+                                    lock (appBody.mainCaches.textureLoadList)
                                     {
-                                        tex.Reload(appBody.deviceResources, pack);
-                                        tex.Ready = true;
+                                        appBody.mainCaches.textureLoadList.Add(pack);
                                     }
                                 }
                                 if (texFile.FileType.Equals(".tga", StringComparison.CurrentCultureIgnoreCase))
@@ -265,7 +266,6 @@ namespace Coocoo3D.UI
                                     if (item1 != null && item1 is StorageFile file)
                                     {
                                         await _LoadImage(file);
-                                        tex.Ready = true;
                                     }
                                     else lock (appBody.deviceResources)
                                         {
@@ -275,7 +275,6 @@ namespace Coocoo3D.UI
                                 else
                                 {
                                     await _LoadImage(texFile);
-                                    tex.Ready = true;
                                 }
                                 tex.LoadTask = null;
                             });
@@ -285,8 +284,6 @@ namespace Coocoo3D.UI
                 }
                 else
                 {
-                    string texPath = Path.Combine(storageFolder.Path, relativePath);
-                    Texture2D tex = null;
                     lock (appBody.mainCaches.textureCaches)
                     {
                         tex = appBody.mainCaches.textureCaches.GetOrCreate(texPath);

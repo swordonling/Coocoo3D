@@ -138,12 +138,12 @@ namespace Coocoo3D
         private void Front_Click(object sender, RoutedEventArgs e)
         {
             appBody.PlayTime = 0;
-            appBody.RenderFrame(true);
+            appBody.RequireRender(true);
         }
         private void Rear_Click(object sender, RoutedEventArgs e)
         {
             appBody.PlayTime = 9999;
-            appBody.RenderFrame(true);
+            appBody.RequireRender(true);
         }
 
 

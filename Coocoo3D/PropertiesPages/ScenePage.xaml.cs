@@ -82,7 +82,7 @@ namespace Coocoo3D.PropertiesPages
             {
                 appBody.ShowDetailPage(typeof(EmptyPropertiesPage), null);
             }
-            appBody.RenderFrame();
+            appBody.RequireRender();
         }
 
         private void ViewSceneObjects_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
