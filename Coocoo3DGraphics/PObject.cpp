@@ -57,7 +57,7 @@ void PObject::Reload(PObject ^ pObject)
 
 void PObject::Other1(DeviceResources^ deviceResources)
 {
-	auto device = deviceResources->GetD3DDevice();
+	auto d3dDevice = deviceResources->GetD3DDevice();
 	D3D11_BLEND_DESC blendDesc = { 0 };
 	blendDesc.RenderTarget[0].BlendEnable = true;
 	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
@@ -67,9 +67,8 @@ void PObject::Other1(DeviceResources^ deviceResources)
 	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	DX::ThrowIfFailed(device->CreateBlendState(&blendDesc, &m_blendStateAlpha));
+	DX::ThrowIfFailed(d3dDevice->CreateBlendState(&blendDesc, &m_blendStateAlpha));
 
-	auto d3dDevice = deviceResources->GetD3DDevice();
 	auto desc = D3D11_RASTERIZER_DESC();
 	desc.FillMode = D3D11_FILL_SOLID;
 	desc.CullMode = D3D11_CULL_BACK;

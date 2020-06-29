@@ -237,6 +237,7 @@ namespace Coocoo3D.Core
                         }
                     }
                     graphicsContext.EndCommand();
+                    graphicsContext.Execute();
                     RenderCount++;
                     deviceResources.Present(false);
                     rendering = false;

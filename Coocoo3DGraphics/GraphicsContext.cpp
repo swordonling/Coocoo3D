@@ -145,14 +145,6 @@ void GraphicsContext::SetPObjectDepthOnly(PObject ^ pObject)
 	context->RSSetState(pObject->m_RasterizerStateCullNone.Get());
 }
 
-void GraphicsContext::SetComputeShader(ComputeShader ^ computeShader)
-{
-	auto context = m_deviceResources->GetD3DDeviceContext();
-	if (computeShader->m_computeShader != nullptr) {
-		context->CSSetShader(computeShader->m_computeShader.Get(), nullptr, 1);
-	}
-}
-
 void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
 {
 	auto context = m_deviceResources->GetD3DDeviceContext();
@@ -399,6 +391,11 @@ void GraphicsContext::BeginCommand()
 }
 
 void GraphicsContext::EndCommand()
+{
+
+}
+
+void GraphicsContext::Execute()
 {
 
 }

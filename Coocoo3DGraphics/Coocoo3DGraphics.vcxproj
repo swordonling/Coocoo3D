@@ -267,12 +267,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="ComputeShader.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXHelper.h" />
     <ClInclude Include="GeometryShader.h" />
-    <ClInclude Include="GraphicsBuffer.h" />
     <ClInclude Include="GraphicsContext.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MMDMesh.h" />
@@ -284,11 +282,9 @@
     <ClInclude Include="VertexShader.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ComputeShader.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="GeometryShader.cpp" />
-    <ClCompile Include="GraphicsBuffer.cpp" />
     <ClCompile Include="GraphicsContext.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="MMDMesh.cpp" />

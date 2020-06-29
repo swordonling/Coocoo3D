@@ -10,7 +10,7 @@ namespace Coocoo3DGraphics
 		property Platform::String^ Path;
 
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
-		void ReloadPure(DeviceResources^ deviceResources, int width, int height,Windows::Foundation::Numerics::float4 color);
+		void ReloadPure(int width, int height,Windows::Foundation::Numerics::float4 color);
 		void Reload(Texture2D^ texture);
 
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。

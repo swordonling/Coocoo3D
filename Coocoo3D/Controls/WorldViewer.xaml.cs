@@ -50,6 +50,7 @@ namespace Coocoo3D.Controls
             if (_appBody == null) return;
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
+            AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
             AppBody.RenderFrame();
             swapChainPanel.SizeChanged -= SwapChainPanel_SizeChanged;
             swapChainPanel.SizeChanged += SwapChainPanel_SizeChanged;

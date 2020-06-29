@@ -6,9 +6,7 @@
 #include "Material.h"
 #include "Texture2D.h"
 #include "RenderTexture2D.h"
-#include "GraphicsBuffer.h"
 #include "ConstantBuffer.h"
-#include "ComputeShader.h"
 namespace Coocoo3DGraphics
 {
 	//是D3D的C# 接口
@@ -21,7 +19,6 @@ namespace Coocoo3DGraphics
 		void SetMaterial(Material^ material);
 		void SetPObject(PObject^ pobject, CullMode cullMode, BlendState blendState);
 		void SetPObjectDepthOnly(PObject^ pobject);
-		void SetComputeShader(ComputeShader^ computeShader);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
@@ -41,6 +38,7 @@ namespace Coocoo3DGraphics
 		void ClearDepthStencil();
 		void BeginCommand();
 		void EndCommand();
+		void Execute();
 	internal:
 		DeviceResources^ m_deviceResources;
 	};

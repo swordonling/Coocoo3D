@@ -28,8 +28,6 @@
       <Filter>Device</Filter>
     </ClCompile>
     <ClCompile Include="GeometryShader.cpp" />
-    <ClCompile Include="ComputeShader.cpp" />
-    <ClCompile Include="GraphicsBuffer.cpp" />
     <ClCompile Include="RenderTexture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -51,8 +49,6 @@
       <Filter>Device</Filter>
     </ClInclude>
     <ClInclude Include="GeometryShader.h" />
-    <ClInclude Include="ComputeShader.h" />
-    <ClInclude Include="GraphicsBuffer.h" />
     <ClInclude Include="RenderTexture2D.h" />
   </ItemGroup>
   <ItemGroup>

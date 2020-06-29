@@ -38,7 +38,7 @@ const std::map<DXGI_FORMAT, UINT>dxgiFormatBytesPerPixel =
 	{DXGI_FORMAT_B5G6R5_UNORM,2},
 };
 
-void Texture2D::ReloadPure(DeviceResources ^ deviceResources, int width, int height, Windows::Foundation::Numerics::float4 color)
+void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics::float4 color)
 {
 	m_width = width;
 	m_height = height;
