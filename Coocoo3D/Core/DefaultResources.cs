@@ -11,6 +11,7 @@ namespace Coocoo3D.Core
 {
     public class DefaultResources
     {
+        public GraphicsSignature signatureMMD = new GraphicsSignature();
         public VertexShader VSMMD = new VertexShader();
         public VertexShader VSUIStandard = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
@@ -35,6 +36,7 @@ namespace Coocoo3D.Core
         public Task LoadTask;
         public async Task ReloadDefalutResources(DeviceResources deviceResources, MainCaches mainCaches)
         {
+            signatureMMD.ReloadMMD(deviceResources);
             DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
 
             TextureLoading.ReloadPure(1, 1, new System.Numerics.Vector4(0, 1, 1, 1));
@@ -56,11 +58,11 @@ namespace Coocoo3D.Core
             await ReloadTexture2D(ui0Texture, deviceResources, mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
 
 
-            PObjectMMD.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMD);
-            PObjectMMDLoading.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMDLoading);
-            PObjectMMDError.Reload(deviceResources, PObjectType.mmd, VSMMD, null, PSMMDError);
+            PObjectMMD.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMD);
+            PObjectMMDLoading.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMDLoading);
+            PObjectMMDError.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMDError);
 
-            uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
+            //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
 

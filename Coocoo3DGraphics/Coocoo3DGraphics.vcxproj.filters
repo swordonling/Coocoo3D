@@ -11,6 +11,9 @@
     <Filter Include="Device">
       <UniqueIdentifier>{a1c8a5ff-8cd3-451b-a51e-986d9f3a0482}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{ece6b498-c945-4ae4-8551-a6ddc34e9dee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -29,6 +32,7 @@
     </ClCompile>
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="RenderTexture2D.cpp" />
+    <ClCompile Include="GraphicsSignature.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -50,6 +54,10 @@
     </ClInclude>
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="RenderTexture2D.h" />
+    <ClInclude Include="d3dx12.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphicsSignature.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">

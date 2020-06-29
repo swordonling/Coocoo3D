@@ -13,6 +13,7 @@ namespace Coocoo3DGraphics
 		static GeometryShader^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 	internal:
-		Microsoft::WRL::ComPtr<ID3D11GeometryShader> m_geometryShader;
+		//Microsoft::WRL::ComPtr<ID3D11GeometryShader> m_geometryShader;
+		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;
 	};
 }

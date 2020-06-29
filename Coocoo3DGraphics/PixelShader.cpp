@@ -10,7 +10,6 @@ PixelShader ^ PixelShader::CompileLoad(DeviceResources ^ deviceResources, const 
 }
 void PixelShader::CompileReload(DeviceResources ^ deviceResources, const Platform::Array<byte>^ sourceCode)
 {
-	Microsoft::WRL::ComPtr<ID3DBlob> data;
 	DX::ThrowIfFailed(
 		D3DCompile(
 			sourceCode->begin(),
@@ -22,12 +21,10 @@ void PixelShader::CompileReload(DeviceResources ^ deviceResources, const Platfor
 			"ps_5_0",
 			0,
 			0,
-			data.GetAddressOf(),
+			&byteCode,
 			nullptr
 		)
 	);
-	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
-		CreatePixelShader(data->GetBufferPointer(), data->GetBufferSize(), nullptr, &m_pixelShader));
 }
 
 PixelShader ^ PixelShader::Load(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
@@ -39,8 +36,8 @@ PixelShader ^ PixelShader::Load(DeviceResources ^ deviceResources, const Platfor
 
 void PixelShader::Reload(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
 {
-	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
-		CreatePixelShader(data->begin(), data->Length, nullptr, &m_pixelShader));
+	D3DCreateBlob(data->Length, &byteCode);
+	memcpy(byteCode->GetBufferPointer(), data->begin(), data->Length);
 }
 
 PixelShader::~PixelShader()

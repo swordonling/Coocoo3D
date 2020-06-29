@@ -8,6 +8,8 @@
 #include <d2d1_3.h>
 #include <d2d1effects_2.h>
 #include <dwrite_3.h>
+#include <d3d12.h>
+#include "d3dx12.h"
 #include <wincodec.h>
 #include <DirectXColors.h>
 #include <DirectXMath.h>

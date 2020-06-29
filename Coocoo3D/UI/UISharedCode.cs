@@ -186,7 +186,7 @@ namespace Coocoo3D.UI
                             {
                                 if (vertexShader != null && pixelShader != null)
                                 {
-                                    pObject.Reload(deviceResources, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
+                                    pObject.Reload(deviceResources,appBody.defaultResources.signatureMMD, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
                                     pObject.Ready = true;
                                 }
                                 else

@@ -11,7 +11,8 @@ namespace Coocoo3DGraphics
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		virtual ~PixelShader();
 	internal:
-		Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
+		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;
+		//Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pixelShader;
 	};
 }
 

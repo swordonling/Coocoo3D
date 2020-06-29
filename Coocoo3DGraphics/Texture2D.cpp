@@ -61,12 +61,10 @@ void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics:
 
 void Texture2D::Reload(Texture2D ^ texture)
 {
-	m_texture2D = texture->m_texture2D;
-	m_shaderResourceView = texture->m_shaderResourceView;
-	m_samplerState = texture->m_samplerState;
 	m_width = texture->m_width;
 	m_height = texture->m_height;
 	m_textureData = texture->m_textureData;
+	m_texture = texture->m_texture;
 }
 
 void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)

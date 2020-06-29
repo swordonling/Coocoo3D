@@ -12,7 +12,6 @@ GeometryShader ^ GeometryShader::CompileLoad(DeviceResources ^ deviceResources, 
 
 void GeometryShader::CompileReload(DeviceResources ^ deviceResources, const Platform::Array<byte>^ sourceCode)
 {
-	Microsoft::WRL::ComPtr<ID3DBlob> data;
 	DX::ThrowIfFailed(
 		D3DCompile(
 			sourceCode->begin(),
@@ -24,12 +23,10 @@ void GeometryShader::CompileReload(DeviceResources ^ deviceResources, const Plat
 			"gs_5_0",
 			0,
 			0,
-			data.GetAddressOf(),
+			&byteCode,
 			nullptr
 		)
 	);
-	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
-		CreateGeometryShader(data->GetBufferPointer(), data->GetBufferSize(), nullptr, &m_geometryShader));
 }
 
 GeometryShader ^ GeometryShader::Load(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
@@ -41,6 +38,6 @@ GeometryShader ^ GeometryShader::Load(DeviceResources ^ deviceResources, const P
 
 void GeometryShader::Reload(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
 {
-	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->
-		CreateGeometryShader(data->begin(), data->Length, nullptr, &m_geometryShader));
+	D3DCreateBlob(data->Length, &byteCode);
+	memcpy(byteCode->GetBufferPointer(), data->begin(), data->Length);
 }

@@ -9,10 +9,7 @@ namespace Coocoo3DGraphics
 	internal:
 		void Initialize(DeviceResources ^ deviceResources, int width, int height);
 
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture2D;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_shaderResourceView;
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
-		Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_depthStencilView;
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;
 		UINT m_width;
 		UINT m_height;
 		DXGI_FORMAT m_format;

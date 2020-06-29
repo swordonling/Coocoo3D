@@ -37,7 +37,7 @@ namespace Coocoo3D.Core
 
 
         public Camera camera = new Camera();
-        public WidgetRenderer widgetRenderer = new WidgetRenderer();
+        //public WidgetRenderer widgetRenderer = new WidgetRenderer();
         public PresentData[] presentDatas;
         public StorageFolder openedStorageFolder;
         public event EventHandler OpenedStorageFolderChanged;
@@ -89,7 +89,7 @@ namespace Coocoo3D.Core
             defaultResources.LoadTask = Task.Run(async () =>
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
-                widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
+                //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
@@ -170,7 +170,9 @@ namespace Coocoo3D.Core
                             mainCaches.mmdMeshLoadList.Clear();
                         }
                     }
+                    GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
+
                     for (int i = 0; i < textureProcessing.Count; i++)
                     {
                         graphicsContext.UploadTexture(textureProcessing[i]);
@@ -181,6 +183,7 @@ namespace Coocoo3D.Core
                     }
                     textureProcessing.Clear();
                     meshProcessing.Clear();
+
 
                     if (Playing)
                         PlayTime += deltaTime;
@@ -204,20 +207,22 @@ namespace Coocoo3D.Core
                     for (int i = 0; i < Entities.Count; i++)
                         Entities[i].UpdateGpuResources(graphicsContext, Lightings);
 
+                    graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
+                    graphicsContext.SetRootSignature(defaultResources.signatureMMD);
 
                     if (Entities.Count > 0)
                     {
-                        graphicsContext.SetSRV(PObjectType.mmd, null, 3);
-                        graphicsContext.SetAndClearDSV(defaultResources.DepthStencil0);
-                        if (Lightings.Count > 0)
-                        {
-                            presentDatas[1].UpdateCameraData(Lightings[0]);
-                            presentDatas[1].UpdateBuffer(graphicsContext);
-                            for (int i = 0; i < Entities.Count; i++)
-                                Entities[i].RenderDepth(graphicsContext, defaultResources, presentDatas[1]);
-                        }
+                        //graphicsContext.SetSRV(PObjectType.mmd, null, 3);
+                        //graphicsContext.SetAndClearDSV(defaultResources.DepthStencil0);
+                        //if (Lightings.Count > 0)
+                        //{
+                        //    presentDatas[1].UpdateCameraData(Lightings[0]);
+                        //    presentDatas[1].UpdateBuffer(graphicsContext);
+                        //    for (int i = 0; i < Entities.Count; i++)
+                        //        Entities[i].RenderDepth(graphicsContext, defaultResources, presentDatas[1]);
+                        //}
                         graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
-                        graphicsContext.SetSRV_RT(PObjectType.mmd, defaultResources.DepthStencil0, 3);
+                        //graphicsContext.SetSRV_RT(PObjectType.mmd, defaultResources.DepthStencil0, 3);
                     }
                     else
                     {
@@ -227,15 +232,16 @@ namespace Coocoo3D.Core
                     for (int i = 0; i < Entities.Count; i++)
                         Entities[i].Render(graphicsContext, defaultResources, Lightings, presentDatas[0]);
 
-                    if (defaultResources.Initilized && settings.viewSelectedEntityBone)
-                    {
-                        graphicsContext.ClearDepthStencil();
-                        for (int i = 0; i < SelectedEntities.Count; i++)
-                        {
-                            if (SelectedEntities[i].ComponentReady)
-                                widgetRenderer.RenderBoneVisual(graphicsContext, camera, SelectedEntities[i]);
-                        }
-                    }
+                    //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
+                    //{
+                    //    graphicsContext.ClearDepthStencil();
+                    //    for (int i = 0; i < SelectedEntities.Count; i++)
+                    //    {
+                    //        if (SelectedEntities[i].ComponentReady)
+                    //            widgetRenderer.RenderBoneVisual(graphicsContext, camera, SelectedEntities[i]);
+                    //    }
+                    //}
+                    graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
                     RenderCount++;

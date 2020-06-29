@@ -20,9 +20,8 @@ namespace Coocoo3DGraphics
 
 		virtual ~Texture2D();
 	internal:
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture2D;
-		Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_shaderResourceView;
-		Microsoft::WRL::ComPtr<ID3D11SamplerState> m_samplerState;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;
 		UINT m_width;
 		UINT m_height;
 		DXGI_FORMAT m_format;

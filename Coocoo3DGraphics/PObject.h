@@ -3,6 +3,7 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "GeometryShader.h"
+#include "GraphicsSignature.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct CullMode
@@ -28,19 +29,15 @@ namespace Coocoo3DGraphics
 		property bool Ready;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		void Reload(DeviceResources^ deviceResources, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
 		void Reload(PObject^ pObject);
 	internal:
+		VertexShader^ m_vertexShader;
 		PixelShader^ m_pixelShader;
 		GeometryShader^ m_geometryShader;
-		Microsoft::WRL::ComPtr<ID3D11BlendState> m_blendStateAlpha;
-		Microsoft::WRL::ComPtr<ID3D11BlendState> m_blendStateOqaque;
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullBack;
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullFront;
-		Microsoft::WRL::ComPtr<ID3D11RasterizerState>			m_RasterizerStateCullNone;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vertexShader;
-		Microsoft::WRL::ComPtr<ID3D11InputLayout> m_inputLayout;
+
+
+		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[10];
 	private:
-		void Other1(DeviceResources^ deviceResources);
 	};
 }

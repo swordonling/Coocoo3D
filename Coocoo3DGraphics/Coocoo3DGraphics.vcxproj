@@ -249,6 +249,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalDependencies>d3d12.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -268,10 +269,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="ConstantBuffer.h" />
+    <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXHelper.h" />
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="GraphicsContext.h" />
+    <ClInclude Include="GraphicsSignature.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MMDMesh.h" />
     <ClInclude Include="pch.h" />
@@ -286,6 +289,7 @@
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="GraphicsContext.cpp" />
+    <ClCompile Include="GraphicsSignature.cpp" />
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="MMDMesh.cpp" />
     <ClCompile Include="pch.cpp">
