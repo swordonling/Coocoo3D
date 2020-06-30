@@ -31,10 +31,10 @@ cbuffer cb3 : register(b3)
 	float _DeltaTime;
 };
 
-//Texture2D texture0 :register(t0);
-//SamplerState s0 : register(s0);
-//Texture2D texture1 :register(t1);
-//SamplerState s1 : register(s1);
+Texture2D texture0 :register(t0);
+SamplerState s0 : register(s0);
+Texture2D texture1 :register(t1);
+SamplerState s1 : register(s1);
 //Texture2D ShadowMap0:register(t3);
 //SamplerComparisonState sampleShadowMap0 : register(s3);
 
@@ -48,10 +48,10 @@ struct PSSkinnedIn
 };
 float4 main(PSSkinnedIn input) : SV_TARGET
 {
-	//float3 strength = float3(0,0,0);
-	//float3 specularStrength = float3(0, 0, 0);
-	//float3 viewDir = normalize(g_vCamPos - input.wPos);
-	//float3 norm = normalize(input.Norm);
+	float3 strength = float3(0,0,0);
+	float3 specularStrength = float3(0, 0, 0);
+	float3 viewDir = normalize(g_vCamPos - input.wPos);
+	float3 norm = normalize(input.Norm);
 
 	//for (int i = 0; i < 1; i++)
 	//{
@@ -69,15 +69,15 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	//	specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
 	//	strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
 	//}
-	//for (int i = 1; i < 4; i++)
-	//{
-	//	float3 lightDir = normalize(Lightings[i].LightDir);
-	//	float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
-	//	float3 halfAngle = normalize(viewDir + lightDir);
-	//	specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
-	//	strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
-	//}
-	//strength += _AmbientColor;
-	//return pow(texture0.Sample(s0,input.TexCoord)*float4(strength,1)*_DiffuseColor + float4(specularStrength,0),1 / 2.2f);
-	return float4(1, 0, 1, 1);
+	for (int i = 0; i < 4; i++)
+	{
+		float3 lightDir = normalize(Lightings[i].LightDir);
+		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
+		float3 halfAngle = normalize(viewDir + lightDir);
+		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
+		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
+	}
+	strength += _AmbientColor;
+	return pow(texture0.Sample(s0,input.TexCoord)*float4(strength,1)*_DiffuseColor + float4(specularStrength,0),1 / 2.2f);
+	//return float4(1, 0, 1, 1);
 }

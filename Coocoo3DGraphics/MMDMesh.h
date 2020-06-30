@@ -50,9 +50,10 @@ namespace Coocoo3DGraphics
 	public ref class MMDMesh sealed
 	{
 	public:
-		static MMDMesh^ Load1( const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		static MMDMesh^ Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::void UploadMesh(MMDMesh^ mesh)上传。
-		void Reload1( const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		void Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		void ReleaseUploadHeapResource();
 		virtual ~MMDMesh();
 
 		property Platform::Array<byte>^ m_verticeData;

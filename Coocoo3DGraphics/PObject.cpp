@@ -27,7 +27,6 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graph
 		if (geometryShader != nullptr)
 			state.GS = CD3DX12_SHADER_BYTECODE(geometryShader->byteCode.Get());
 		state.PS = CD3DX12_SHADER_BYTECODE(pixelShader->byteCode.Get());
-		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
 		state.SampleMask = UINT_MAX;
@@ -37,7 +36,32 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graph
 		state.DSVFormat = deviceResources->GetDepthBufferFormat();
 		state.SampleDesc.Count = 1;
 
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[0])));
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[1])));
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_FRONT, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[2])));
+
+
+		D3D12_BLEND_DESC blendDesc1 = {};
+		blendDesc1.RenderTarget[0].BlendEnable = true;
+		blendDesc1.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		blendDesc1.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		blendDesc1.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+		blendDesc1.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+		blendDesc1.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+		blendDesc1.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		blendDesc1.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+		state.BlendState = blendDesc1;
+
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[3])));
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[4])));
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_FRONT, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
 	}
 }
 
@@ -46,6 +70,9 @@ void PObject::Reload(PObject ^ pObject)
 	m_vertexShader = pObject->m_vertexShader;
 	m_geometryShader = pObject->m_geometryShader;
 	m_pixelShader = pObject->m_pixelShader;
-	m_pipelineState[0] = pObject->m_pipelineState[0];
+	for (int i = 0; i < _countof(m_pipelineState); i++)
+	{
+		m_pipelineState[i] = pObject->m_pipelineState[i];
+	}
 }
 

@@ -166,6 +166,15 @@ void Coocoo3DGraphics::DeviceResources::CreateDeviceResources()
 	DX::ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap)));
 	NAME_D3D12_OBJECT(m_dsvHeap);
 
+
+	D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+	heapDesc.NumDescriptors = c_graphicsPipelineHeapMaxCount;
+	heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	DX::ThrowIfFailed(m_d3dDevice->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_graphicsPipelineHeap)));
+	NAME_D3D12_OBJECT(m_graphicsPipelineHeap);
+	m_graphicsPipelineHeapAllocCount = 0;
+
 	for (UINT n = 0; n < c_frameCount; n++)
 	{
 		DX::ThrowIfFailed(

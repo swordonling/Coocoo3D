@@ -32,7 +32,9 @@
     </ClCompile>
     <ClCompile Include="GeometryShader.cpp" />
     <ClCompile Include="RenderTexture2D.cpp" />
-    <ClCompile Include="GraphicsSignature.cpp" />
+    <ClCompile Include="GraphicsSignature.cpp">
+      <Filter>Device</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -57,7 +59,9 @@
     <ClInclude Include="d3dx12.h">
       <Filter>Utility</Filter>
     </ClInclude>
-    <ClInclude Include="GraphicsSignature.h" />
+    <ClInclude Include="GraphicsSignature.h">
+      <Filter>Device</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">

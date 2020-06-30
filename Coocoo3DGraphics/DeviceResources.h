@@ -3,6 +3,7 @@
 namespace Coocoo3DGraphics
 {
 	static const UINT c_frameCount = 3;		// 使用三重缓冲。
+	static const UINT c_graphicsPipelineHeapMaxCount = 65536;		// 使用三重缓冲。
 
 	public enum struct DxgiFormat
 	{
@@ -179,6 +180,8 @@ namespace Coocoo3DGraphics
 			return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_graphicsPipelineHeap;
+		UINT												m_graphicsPipelineHeapAllocCount;
 	private:
 		void CreateDeviceIndependentResources();
 		void CreateDeviceResources();
@@ -205,6 +208,7 @@ namespace Coocoo3DGraphics
 		D3D12_VIEWPORT									m_screenViewport;
 		UINT											m_rtvDescriptorSize;
 		bool											m_deviceRemoved;
+
 
 		// CPU/GPU 同步。
 		Microsoft::WRL::ComPtr<ID3D12Fence>				m_fence;

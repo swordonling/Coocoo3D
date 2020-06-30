@@ -59,14 +59,6 @@ void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics:
 	}
 }
 
-void Texture2D::Reload(Texture2D ^ texture)
-{
-	m_width = texture->m_width;
-	m_height = texture->m_height;
-	m_textureData = texture->m_textureData;
-	m_texture = texture->m_texture;
-}
-
 void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
 {
 	HGLOBAL HGlobalImage = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, data->Length);
@@ -116,6 +108,20 @@ void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platfo
 		m_format = fallbackDxgiFormat;
 	}
 	GlobalUnlock(HGlobalImage);
+}
+
+void Texture2D::Reload(Texture2D ^ texture)
+{
+	m_width = texture->m_width;
+	m_height = texture->m_height;
+	m_textureData = texture->m_textureData;
+	m_texture = texture->m_texture;
+	m_heapRefIndex = texture->m_heapRefIndex;
+}
+
+void Texture2D::ReleaseUploadHeapResource()
+{
+	m_textureUpload.Reset();
 }
 
 Texture2D::~Texture2D()

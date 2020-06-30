@@ -68,6 +68,7 @@ namespace Coocoo3DGraphics
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
 		void ClearDepthStencil();
 		static void BeginAlloctor(DeviceResources^ deviceResources);
+		void SetDescriptorHeapDefault();
 		void BeginCommand();
 		void EndCommand();
 		void Execute();

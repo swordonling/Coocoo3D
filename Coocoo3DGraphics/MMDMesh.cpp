@@ -24,6 +24,13 @@ void MMDMesh::Reload1( const Platform::Array<byte>^ verticeData, const Platform:
 	m_indexData = indexData;
 }
 
+void MMDMesh::ReleaseUploadHeapResource()
+{
+	m_vertexBufferUpload[0].Reset();
+	m_vertexBufferUpload[1].Reset();
+	m_indexBufferUpload.Reset();
+}
+
 MMDMesh::~MMDMesh()
 {
 }

@@ -8,9 +8,9 @@ namespace Coocoo3DGraphics
 {
 	public enum struct CullMode
 	{
-		none = 0,
-		front = 1,
-		back = 2,
+		back = 0,
+		none = 1,
+		front = 2,
 	};
 	public enum struct BlendState
 	{

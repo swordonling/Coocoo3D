@@ -28,6 +28,7 @@ namespace Coocoo3D.Present
 
         public bool RenderReady = false;
         public bool ComponentReady = false;
+        public bool needUpdateMotion = false;
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void PropChange(PropertyChangedEventArgs e)
@@ -52,6 +53,7 @@ namespace Coocoo3D.Present
             boneComponent.SetPose(motionComponent, morphStateComponent, time);
             boneComponent.ComputeMatricesData();
             rendererComponent.SetPose(morphStateComponent);
+            needUpdateMotion = true;
         }
 
         public void UpdateGpuResources(GraphicsContext graphicsContext, IList<Lighting> lightings)
@@ -62,8 +64,13 @@ namespace Coocoo3D.Present
             {
                 boneComponent.ComputeMatricesData();
                 boneComponent.GpuUsable = true;
+                needUpdateMotion = true;
             }
-            graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize);
+            if (needUpdateMotion)
+            {
+                graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize);
+                needUpdateMotion = false;
+            }
         }
 
         public void RenderDepth(GraphicsContext graphicsContext, DefaultResources defaultResources, PresentData presentData)

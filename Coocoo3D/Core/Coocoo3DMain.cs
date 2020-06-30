@@ -172,7 +172,7 @@ namespace Coocoo3D.Core
                     }
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
-
+                    graphicsContext.SetDescriptorHeapDefault();
                     for (int i = 0; i < textureProcessing.Count; i++)
                     {
                         graphicsContext.UploadTexture(textureProcessing[i]);
@@ -181,8 +181,6 @@ namespace Coocoo3D.Core
                     {
                         graphicsContext.UploadMesh(meshProcessing[i]);
                     }
-                    textureProcessing.Clear();
-                    meshProcessing.Clear();
 
 
                     if (Playing)
@@ -244,6 +242,20 @@ namespace Coocoo3D.Core
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
+                    if (textureProcessing.Count > 0 || meshProcessing.Count > 0)
+                    {
+                        deviceResources.WaitForGpu();
+                        for (int i = 0; i < textureProcessing.Count; i++)
+                        {
+                            textureProcessing[i].ReleaseUploadHeapResource();
+                        }
+                        for (int i = 0; i < meshProcessing.Count; i++)
+                        {
+                            meshProcessing[i].ReleaseUploadHeapResource();
+                        }
+                        textureProcessing.Clear();
+                        meshProcessing.Clear();
+                    }
                     RenderCount++;
                     deviceResources.Present(false);
                     rendering = false;

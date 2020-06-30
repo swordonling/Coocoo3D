@@ -8,14 +8,15 @@ void GraphicsSignature::ReloadMMD(DeviceResources ^ deviceResources)
 {
 
 	CD3DX12_ROOT_PARAMETER parameter[10];
-	{
-		CD3DX12_DESCRIPTOR_RANGE range[1];
-		//range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0);
-	}
+	CD3DX12_DESCRIPTOR_RANGE range[2];
+	range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+	range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 	parameter[0].InitAsConstantBufferView(0);
 	parameter[1].InitAsConstantBufferView(1);
 	parameter[2].InitAsConstantBufferView(2);
 	parameter[3].InitAsConstantBufferView(3);
+	parameter[4].InitAsDescriptorTable(1, &range[0]);
+	parameter[5].InitAsDescriptorTable(1, &range[1]);
 
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = {};
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
@@ -42,7 +43,7 @@ void GraphicsSignature::ReloadMMD(DeviceResources ^ deviceResources)
 
 	CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
 	//rootSignatureDesc.Init(7, parameter, 3, staticSamplerDescs, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-	rootSignatureDesc.Init(4, parameter, 3, staticSamplerDescs, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootSignatureDesc.Init(6, parameter, 3, staticSamplerDescs, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
