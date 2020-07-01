@@ -181,12 +181,34 @@ void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
 	//context->UpdateSubresource(mesh->m_vertexBuffer2.Get(), 0, nullptr, verticeData->begin(), 0, 0);
+	mesh->lastUpdateIndex++;
+	mesh->lastUpdateIndex %= c_frameCount;
+	ID3D12Resource* resource = mesh->m_vertexBuffer2[mesh->lastUpdateIndex].Get();
+
+	D3D12_SUBRESOURCE_DATA vertexData = {};
+	vertexData.pData = verticeData->begin();
+	vertexData.RowPitch = verticeData->Length;
+	vertexData.SlicePitch = vertexData.RowPitch;
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
+	UpdateSubresources(m_commandList.Get(), resource, mesh->m_vertexBufferUpload2[mesh->lastUpdateIndex].Get(), 0, 0, 1, &vertexData);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 }
 
 void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
 	//context->UpdateSubresource(mesh->m_vertexBuffer2.Get(), 0, nullptr, verticeData->begin(), 0, 0);
+	mesh->lastUpdateIndex++;
+	mesh->lastUpdateIndex %= c_frameCount;
+	ID3D12Resource* resource = mesh->m_vertexBuffer2[mesh->lastUpdateIndex].Get();
+
+	D3D12_SUBRESOURCE_DATA vertexData = {};
+	vertexData.pData = verticeData->begin();
+	vertexData.RowPitch = verticeData->Length * sizeof(Windows::Foundation::Numerics::float3);
+	vertexData.SlicePitch = vertexData.RowPitch;
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
+	UpdateSubresources(m_commandList.Get(), resource, mesh->m_vertexBufferUpload2[mesh->lastUpdateIndex].Get(), 0, 0, 1, &vertexData);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 }
 
 void GraphicsContext::SetSRV(PObjectType type, Texture2D ^ texture, int slot)
@@ -248,48 +270,6 @@ void GraphicsContext::DrawIndexed(int indexCount, int startIndexLocation, int ba
 
 void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
 {
-	//D3D11_SUBRESOURCE_DATA vertexBufferData = { 0 };
-	//vertexBufferData.pSysMem = mesh->m_verticeData->begin();
-	//vertexBufferData.SysMemPitch = 0;
-	//vertexBufferData.SysMemSlicePitch = 0;
-	//CD3D11_BUFFER_DESC vertexBufferDesc(mesh->m_verticeData->Length, D3D11_BIND_VERTEX_BUFFER);
-
-	//DX::ThrowIfFailed(
-	//	m_deviceResources->GetD3DDevice()->CreateBuffer(
-	//		&vertexBufferDesc,
-	//		&vertexBufferData,
-	//		&mesh->m_vertexBuffer
-	//	)
-	//);
-	//if (mesh->m_verticeData2->Length != 0) {
-	//	D3D11_SUBRESOURCE_DATA vertexBufferData2 = { 0 };
-	//	vertexBufferData2.pSysMem = mesh->m_verticeData2->begin();
-	//	vertexBufferData2.SysMemPitch = 0;
-	//	vertexBufferData2.SysMemSlicePitch = 0;
-	//	CD3D11_BUFFER_DESC vertexBufferDesc1(mesh->m_verticeData2->Length, D3D11_BIND_VERTEX_BUFFER);
-
-	//	DX::ThrowIfFailed(
-	//		m_deviceResources->GetD3DDevice()->CreateBuffer(
-	//			&vertexBufferDesc1,
-	//			&vertexBufferData2,
-	//			&mesh->m_vertexBuffer2
-	//		)
-	//	);
-	//}
-
-	//D3D11_SUBRESOURCE_DATA indexBufferData = { 0 };
-	//indexBufferData.pSysMem = mesh->m_indexData->begin();
-	//indexBufferData.SysMemPitch = 0;
-	//indexBufferData.SysMemSlicePitch = 0;
-	//CD3D11_BUFFER_DESC indexBufferDesc(mesh->m_indexData->Length, D3D11_BIND_INDEX_BUFFER);
-
-	//DX::ThrowIfFailed(
-	//	m_deviceResources->GetD3DDevice()->CreateBuffer(
-	//		&indexBufferDesc,
-	//		&indexBufferData,
-	//		&mesh->m_indexBuffer
-	//	)
-	//);
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 
 	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
@@ -302,7 +282,7 @@ void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
 			&vertexBufferDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
-			IID_PPV_ARGS(&mesh->m_vertexBuffers[0])));
+			IID_PPV_ARGS(&mesh->m_vertexBuffer)));
 
 		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
 			&uploadHeapProperties,
@@ -310,46 +290,55 @@ void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
 			&vertexBufferDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&mesh->m_vertexBufferUpload[0])));
-		NAME_D3D12_OBJECT(mesh->m_vertexBuffers[0]);
+			IID_PPV_ARGS(&mesh->m_vertexBufferUpload)));
+		NAME_D3D12_OBJECT(mesh->m_vertexBuffer);
 
 		D3D12_SUBRESOURCE_DATA vertexData = {};
 		vertexData.pData = mesh->m_verticeData->begin();
 		vertexData.RowPitch = mesh->m_verticeData->Length;
 		vertexData.SlicePitch = vertexData.RowPitch;
 
-		UpdateSubresources(m_commandList.Get(), mesh->m_vertexBuffers[0].Get(), mesh->m_vertexBufferUpload[0].Get(), 0, 0, 1, &vertexData);
+		UpdateSubresources(m_commandList.Get(), mesh->m_vertexBuffer.Get(), mesh->m_vertexBufferUpload.Get(), 0, 0, 1, &vertexData);
 
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBuffers[0].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 	}
 	if (mesh->m_verticeData2->Length > 0)
 	{
-		CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_verticeData2->Length);
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&defaultHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&vertexBufferDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&mesh->m_vertexBuffers[1])));
+		for (int i = 0; i < c_frameCount; i++)
+		{
+			CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_verticeData2->Length);
+			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+				&defaultHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&vertexBufferDesc,
+				D3D12_RESOURCE_STATE_COPY_DEST,
+				nullptr,
+				IID_PPV_ARGS(&mesh->m_vertexBuffer2[i])));
 
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&uploadHeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&vertexBufferDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&mesh->m_vertexBufferUpload[1])));
-		NAME_D3D12_OBJECT(mesh->m_vertexBuffers[1]);
+			vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_verticeData2->Length);
+			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+				&uploadHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&vertexBufferDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&mesh->m_vertexBufferUpload2[i])));
+			NAME_D3D12_OBJECT(mesh->m_vertexBuffer2[i]);
+		}
 
 		D3D12_SUBRESOURCE_DATA vertexData = {};
 		vertexData.pData = mesh->m_verticeData2->begin();
 		vertexData.RowPitch = mesh->m_verticeData2->Length;
 		vertexData.SlicePitch = vertexData.RowPitch;
+		for (int i = 0; i < c_frameCount; i++)
+		{
+			UpdateSubresources(m_commandList.Get(), mesh->m_vertexBuffer2[i].Get(), mesh->m_vertexBufferUpload2[i].Get(), 0, 0, 1, &vertexData);
+		}
+		CD3DX12_RESOURCE_BARRIER barriers[c_frameCount];
+		for (int i = 0; i < c_frameCount; i++)
+			barriers[i] = { CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBuffer2[i].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER) };
 
-		UpdateSubresources(m_commandList.Get(), mesh->m_vertexBuffers[1].Get(), mesh->m_vertexBufferUpload[1].Get(), 0, 0, 1, &vertexData);
-
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBuffers[1].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		m_commandList->ResourceBarrier(c_frameCount, barriers);
 	}
 	{
 		CD3DX12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexData->Length);
@@ -383,19 +372,21 @@ void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
 		}
 	}
-
+	mesh->lastUpdateIndex = 0;
 
 	// 创建顶点/索引缓冲区视图。
-	mesh->m_vertexBufferView[0].BufferLocation = mesh->m_vertexBuffers[0]->GetGPUVirtualAddress();
-	mesh->m_vertexBufferView[0].StrideInBytes = mesh->m_vertexStride;
-	mesh->m_vertexBufferView[0].SizeInBytes = mesh->m_vertexStride*mesh->m_vertexCount;
+	mesh->m_vertexBufferView.BufferLocation = mesh->m_vertexBuffer->GetGPUVirtualAddress();
+	mesh->m_vertexBufferView.StrideInBytes = mesh->m_vertexStride;
+	mesh->m_vertexBufferView.SizeInBytes = mesh->m_vertexStride*mesh->m_vertexCount;
 
-	mesh->m_vertexBufferView[1].BufferLocation = mesh->m_vertexBuffers[1]->GetGPUVirtualAddress();
-	mesh->m_vertexBufferView[1].StrideInBytes = mesh->m_vertexStride2;
-	mesh->m_vertexBufferView[1].SizeInBytes = mesh->m_vertexStride2*mesh->m_vertexCount;
-
+	for (int i = 0; i < c_frameCount; i++)
+	{
+		mesh->m_vertexBufferView2[i].BufferLocation = mesh->m_vertexBuffer2[i]->GetGPUVirtualAddress();
+		mesh->m_vertexBufferView2[i].StrideInBytes = mesh->m_vertexStride2;
+		mesh->m_vertexBufferView2[i].SizeInBytes = mesh->m_vertexStride2 * mesh->m_vertexCount;
+	}
 	mesh->m_indexBufferView.BufferLocation = mesh->m_indexBuffer->GetGPUVirtualAddress();
-	mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount*mesh->m_indexStride;
+	mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount * mesh->m_indexStride;
 	mesh->m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 }
 
@@ -570,8 +561,8 @@ void GraphicsContext::SetMesh(MMDMesh ^ mesh)
 	//context->IASetIndexBuffer(mesh->m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	//context->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
-	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView[0]);
-	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferView[1]);
+	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
+	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferView2[mesh->lastUpdateIndex]);
 	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
 }
 
