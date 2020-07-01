@@ -7,13 +7,15 @@ namespace Coocoo3DGraphics
 	public:
 		void ReloadAsDepthStencil(DeviceResources^ deviceResources, int width, int height);
 	internal:
-		void Initialize(DeviceResources ^ deviceResources, int width, int height);
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;
+		UINT m_heapRefIndex;
+		UINT m_dsvHeapRefIndex;
 		UINT m_width;
 		UINT m_height;
 		DXGI_FORMAT m_format;
-		UINT m_bindFlags;
+		DXGI_FORMAT m_dsvFormat;
+		D3D12_RESOURCE_FLAGS m_resourceFlags;
 
 	};
 }

@@ -35,7 +35,7 @@ namespace Coocoo3DGraphics
 		VertexShader^ m_vertexShader;
 		PixelShader^ m_pixelShader;
 		GeometryShader^ m_geometryShader;
-
+		static const UINT c_indexPipelineStateDepth = 6;
 
 		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[10];
 	private:

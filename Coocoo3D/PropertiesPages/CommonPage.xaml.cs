@@ -207,6 +207,7 @@ namespace Coocoo3D.PropertiesPages
                     lock (appBody.deviceResources)
                     {
                         appBody.defaultResources.DepthStencil0.ReloadAsDepthStencil(appBody.deviceResources, 8192, 8192);
+                        appBody.mainCaches.AddRenderTextureToUpdateList(appBody.defaultResources.DepthStencil0);
                     }
                 }
                 else
@@ -214,6 +215,7 @@ namespace Coocoo3D.PropertiesPages
                     lock (appBody.deviceResources)
                     {
                         appBody.defaultResources.DepthStencil0.ReloadAsDepthStencil(appBody.deviceResources, 4096, 4096);
+                        appBody.mainCaches.AddRenderTextureToUpdateList(appBody.defaultResources.DepthStencil0);
                     }
                 }
                 appBody.RequireRender();

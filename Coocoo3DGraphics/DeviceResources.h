@@ -180,8 +180,13 @@ namespace Coocoo3DGraphics
 			return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>		m_graphicsPipelineHeap;
-		UINT												m_graphicsPipelineHeapAllocCount;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_graphicsPipelineHeap;
+		UINT											m_graphicsPipelineHeapAllocCount;
+
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_rtvHeap;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_dsvHeap;
+		UINT											m_rtvHeapAllocCount;
+		UINT											m_dsvHeapAllocCount;
 	private:
 		void CreateDeviceIndependentResources();
 		void CreateDeviceResources();
@@ -199,8 +204,6 @@ namespace Coocoo3DGraphics
 		Microsoft::WRL::ComPtr<IDXGISwapChain3>			m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D12Resource>			m_renderTargets[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource>			m_depthStencil;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_rtvHeap;
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_dsvHeap;
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue>		m_commandQueue;
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator>	m_commandAllocators[c_frameCount];
 		DXGI_FORMAT										m_backBufferFormat;

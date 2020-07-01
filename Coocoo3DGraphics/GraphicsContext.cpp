@@ -152,6 +152,7 @@ void GraphicsContext::SetPObjectDepthOnly(PObject ^ pObject)
 	//}
 	//context->PSSetShader(nullptr, nullptr, 0);
 	//context->RSSetState(pObject->m_RasterizerStateCullNone.Get());
+	m_commandList->SetPipelineState(pObject->m_pipelineState[PObject::c_indexPipelineStateDepth].Get());
 }
 
 void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
@@ -190,18 +191,6 @@ void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windo
 
 void GraphicsContext::SetSRV(PObjectType type, Texture2D ^ texture, int slot)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//if (texture != nullptr) {
-	//	context->PSSetShaderResources(slot, 1, texture->m_shaderResourceView.GetAddressOf());
-	//	context->PSSetSamplers(slot, 1, texture->m_samplerState.GetAddressOf());
-	//}
-	//else
-	//{
-	//	ID3D11ShaderResourceView* srv[1] = {};
-	//	ID3D11SamplerState* ss[1] = {};
-	//	context->PSSetShaderResources(slot, 1, srv);
-	//	context->PSSetSamplers(slot, 1, ss);
-	//}
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
@@ -211,49 +200,33 @@ void GraphicsContext::SetSRV(PObjectType type, Texture2D ^ texture, int slot)
 	}
 	else
 	{
-		throw ref new Platform::NotImplementedException();
+		//m_commandList->SetGraphicsRootDescriptorTable(4 + slot, CD3DX12_GPU_DESCRIPTOR_HANDLE());
 	}
 }
 
 void GraphicsContext::SetSRV_RT(PObjectType type, RenderTexture2D ^ texture, int slot)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//if (texture != nullptr) {
-	//	context->PSSetShaderResources(slot, 1, texture->m_shaderResourceView.GetAddressOf());
-	//	context->PSSetSamplers(slot, 1, texture->m_samplerState.GetAddressOf());
-	//}
-	//else
-	//{
-	//	ID3D11ShaderResourceView* srv[1] = {};
-	//	ID3D11SamplerState* ss[1] = {};
-	//	context->PSSetShaderResources(slot, 1, srv);
-	//	context->PSSetSamplers(slot, 1, ss);
-	//}
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (texture != nullptr)
+	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+		m_commandList->SetGraphicsRootDescriptorTable(4 + slot, gpuHandle);
+	}
+	else
+	{
+		throw ref new Platform::NotImplementedException();
+	}
 }
 
 void GraphicsContext::SetConstantBuffer(PObjectType type, ConstantBuffer ^ buffer, int slot)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->VSSetConstantBuffers(slot, 1, buffer->m_buffer.GetAddressOf());
-	//context->GSSetConstantBuffers(slot, 1, buffer->m_buffer.GetAddressOf());
-	//context->PSSetConstantBuffers(slot, 1, buffer->m_buffer.GetAddressOf());
 	m_commandList->SetGraphicsRootConstantBufferView(slot, buffer->GetCurrentVirtualAddress());
 }
 
 void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer ^ boneData, ConstantBuffer ^ entityData, ConstantBuffer ^ presentData, ConstantBuffer ^ materialData)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->VSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
-	//context->GSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
-	//context->PSSetConstantBuffers(0, 1, entityData->m_buffer.GetAddressOf());
-
-	//context->VSSetConstantBuffers(1, 1, boneData->m_buffer.GetAddressOf());
-
-	//context->PSSetConstantBuffers(2, 1, materialData->m_buffer.GetAddressOf());
-
-	//context->VSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
-	//context->GSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
-	//context->PSSetConstantBuffers(3, 1, presentData->m_buffer.GetAddressOf());
 	m_commandList->SetGraphicsRootConstantBufferView(0, entityData->GetCurrentVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(1, boneData->GetCurrentVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(2, materialData->GetCurrentVirtualAddress());
@@ -533,6 +506,61 @@ void GraphicsContext::UploadTexture(Texture2D ^ texture)
 	}
 }
 
+void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
+{
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+
+	{
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = 1;
+		textureDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		textureDesc.Width = texture->m_width;
+		textureDesc.Height = texture->m_height;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+
+		CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_D32_FLOAT, 1.0f, 0);
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+			&clearValue,
+			IID_PPV_ARGS(&texture->m_texture)));
+
+		NAME_D3D12_OBJECT(texture->m_texture);
+	}
+	{
+		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		texture->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart());
+		handle.Offset(incrementSize * m_deviceResources->m_graphicsPipelineHeapAllocCount);
+		d3dDevice->CreateShaderResourceView(texture->m_texture.Get(), &srvDesc, handle);
+
+		m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+
+
+		incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		texture->m_dsvHeapRefIndex = m_deviceResources->m_dsvHeapAllocCount;
+
+		handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		handle.Offset(incrementSize * m_deviceResources->m_dsvHeapAllocCount);
+		d3dDevice->CreateDepthStencilView(texture->m_texture.Get(), nullptr, handle);
+		m_deviceResources->m_dsvHeapAllocCount++;
+
+	}
+}
+
 void GraphicsContext::SetMesh(MMDMesh ^ mesh)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
@@ -541,7 +569,7 @@ void GraphicsContext::SetMesh(MMDMesh ^ mesh)
 	//	context->IASetVertexBuffers(1, 1, mesh->m_vertexBuffer2.GetAddressOf(), &mesh->m_vertexStride2, &mesh->m_vertexOffset);
 	//context->IASetIndexBuffer(mesh->m_indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
 	//context->IASetPrimitiveTopology(mesh->m_primitiveTopology);
-	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView[0]);
 	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferView[1]);
 	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
@@ -566,17 +594,24 @@ void GraphicsContext::SetRenderTargetScreenAndClear(Windows::Foundation::Numeric
 
 void GraphicsContext::SetAndClearDSV(RenderTexture2D ^ texture)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//D3D11_VIEWPORT viewport = CD3D11_VIEWPORT(
-	//	0.0f,
-	//	0.0f,
-	//	texture->m_width,
-	//	texture->m_height
-	//);
-	//context->RSSetViewports(1, &viewport);
-	//ID3D11RenderTargetView* rtv[1] = {};
-	//context->OMSetRenderTargets(1, rtv, texture->m_depthStencilView.Get());
-	//context->ClearDepthStencilView(texture->m_depthStencilView.Get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	// 设置视区和剪刀矩形。
+	D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(
+		0.0f,
+		0.0f,
+		texture->m_width,
+		texture->m_height
+	);
+	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
+	m_commandList->RSSetViewports(1, &viewport);
+	m_commandList->RSSetScissorRects(1, &scissorRect);
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), texture->m_dsvHeapRefIndex, incrementSize);
+	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	m_commandList->OMSetRenderTargets(0, nullptr, false, &depthStencilView);
 }
 
 void GraphicsContext::SetRootSignature(GraphicsSignature ^ rootSignature)
@@ -616,6 +651,16 @@ void GraphicsContext::BeginCommand()
 void GraphicsContext::EndCommand()
 {
 	DX::ThrowIfFailed(m_commandList->Close());
+}
+
+void GraphicsContext::BeginEvent()
+{
+	PIXBeginEvent(m_commandList.Get(), 0, L"Draw");
+}
+
+void GraphicsContext::EndEvent()
+{
+	PIXEndEvent(m_commandList.Get());
 }
 
 void GraphicsContext::Execute()

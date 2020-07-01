@@ -175,6 +175,7 @@
     <Compile Include="Utility\IDictionaryExt.cs" />
     <Compile Include="Core\MainCaches.cs" />
     <Compile Include="Utility\DoubleVector3.cs" />
+    <Compile Include="Utility\IListExt.cs" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

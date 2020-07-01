@@ -252,10 +252,7 @@ namespace Coocoo3D.UI
                                     texStream.Dispose();
                                     tex.ReloadFromImage1(appBody.deviceResources, texBytes);
                                     tex.Ready = true;
-                                    lock (appBody.mainCaches.textureLoadList)
-                                    {
-                                        appBody.mainCaches.textureLoadList.Add(tex);
-                                    }
+                                    appBody.mainCaches.AddTextureToLoadList(tex);
                                 }
                                 if (texFile.FileType.Equals(".tga", StringComparison.CurrentCultureIgnoreCase))
                                 {

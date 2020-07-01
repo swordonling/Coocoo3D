@@ -38,6 +38,7 @@ namespace Coocoo3D.Core
         {
             signatureMMD.ReloadMMD(deviceResources);
             DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
+            mainCaches.AddRenderTextureToUpdateList(DepthStencil0);
 
             TextureLoading.ReloadPure(1, 1, new System.Numerics.Vector4(0, 1, 1, 1));
             TextureError.ReloadPure(1, 1, new System.Numerics.Vector4(1, 0, 1, 1));

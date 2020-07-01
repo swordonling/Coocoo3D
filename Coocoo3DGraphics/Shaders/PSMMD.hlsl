@@ -35,8 +35,8 @@ Texture2D texture0 :register(t0);
 SamplerState s0 : register(s0);
 Texture2D texture1 :register(t1);
 SamplerState s1 : register(s1);
-//Texture2D ShadowMap0:register(t3);
-//SamplerComparisonState sampleShadowMap0 : register(s3);
+Texture2D ShadowMap0:register(t2);
+SamplerState sampleShadowMap0 : register(s2);
 
 struct PSSkinnedIn
 {
@@ -53,23 +53,23 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float3 viewDir = normalize(g_vCamPos - input.wPos);
 	float3 norm = normalize(input.Norm);
 
-	//for (int i = 0; i < 1; i++)
-	//{
-	//	float inShadow = 1.0f;
-	//	float4 sPos = mul(input.wPos, Lightings[0].LightSpaceMatrix);
-	//	float2 shadowTexCoords;
-	//	shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
-	//	shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-	//	if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
-	//		inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords, sPos.z / sPos.w - 0.001f);
+	for (int i = 0; i < 1; i++)
+	{
+		float inShadow = 1.0f;
+		float4 sPos = mul(input.wPos, Lightings[0].LightSpaceMatrix);
+		float2 shadowTexCoords;
+		shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
+		shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
+		if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
+			inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w+0.001) > 0 ? 1 : 0;
 
-	//	float3 lightDir = normalize(Lightings[i].LightDir);
-	//	float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
-	//	float3 halfAngle = normalize(viewDir + lightDir);
-	//	specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
-	//	strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
-	//}
-	for (int i = 0; i < 4; i++)
+		float3 lightDir = normalize(Lightings[i].LightDir);
+		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
+		float3 halfAngle = normalize(viewDir + lightDir);
+		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
+		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
+	}
+	for (int i = 1; i < 4; i++)
 	{
 		float3 lightDir = normalize(Lightings[i].LightDir);
 		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
@@ -79,5 +79,4 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	}
 	strength += _AmbientColor;
 	return pow(texture0.Sample(s0,input.TexCoord)*float4(strength,1)*_DiffuseColor + float4(specularStrength,0),1 / 2.2f);
-	//return float4(1, 0, 1, 1);
 }

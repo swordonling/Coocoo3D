@@ -62,6 +62,13 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graph
 		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[4])));
 		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_FRONT, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
+
+		state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		state.PS = {};
+		state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+		state.NumRenderTargets = 0;
+		DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])));
 	}
 }
 

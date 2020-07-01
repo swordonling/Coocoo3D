@@ -10,6 +10,7 @@
 #include <dwrite_3.h>
 #include <d3d12.h>
 #include "d3dx12.h"
+#include <pix.h>
 #include <wincodec.h>
 #include <DirectXColors.h>
 #include <DirectXMath.h>

@@ -61,6 +61,7 @@ namespace Coocoo3DGraphics
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
+		void UpdateRenderTexture(RenderTexture2D^ texture);
 		void SetMesh(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
@@ -71,6 +72,8 @@ namespace Coocoo3DGraphics
 		void SetDescriptorHeapDefault();
 		void BeginCommand();
 		void EndCommand();
+		void BeginEvent();
+		void EndEvent();
 		void Execute();
 	internal:
 		DeviceResources^ m_deviceResources;
