@@ -32,7 +32,7 @@ namespace Coocoo3D.Present
             return Name;
         }
 
-        public void UpdateLightingData(GraphicsContext graphicsContext, float ExtendRange, Camera camera)
+        public void UpdateLightingData(float ExtendRange, Camera camera)
         {
             if (LightingType == LightingType.Directional)
             {

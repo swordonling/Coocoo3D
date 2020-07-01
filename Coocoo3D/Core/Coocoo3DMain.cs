@@ -39,7 +39,6 @@ namespace Coocoo3D.Core
 
         public Camera camera = new Camera();
         //public WidgetRenderer widgetRenderer = new WidgetRenderer();
-        public PresentData[] presentDatas;
         public StorageFolder openedStorageFolder;
         public event EventHandler OpenedStorageFolderChanged;
         public void OpenedStorageFolderChange(StorageFolder storageFolder)
@@ -77,13 +76,13 @@ namespace Coocoo3D.Core
         public Coocoo3DMain()
         {
             graphicsContext.Reload(deviceResources);
+
+            settings.viewSelectedEntityBone = true;
+            settings.HighResolutionShadow = false;
+            settings.backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f);
+            settings.ExtendShadowMapRange = 32;
+
             CurrentScene = new Scene(this);
-            presentDatas = new PresentData[8];
-            for (int i = 0; i < 8; i++)
-            {
-                presentDatas[i] = new PresentData();
-                presentDatas[i].Reload(deviceResources);
-            }
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
             threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
 
@@ -91,6 +90,7 @@ namespace Coocoo3D.Core
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
+                forwardRenderPipeline1.Reload(this);
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
@@ -109,6 +109,7 @@ namespace Coocoo3D.Core
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
         }
         #region Render Pipeline
+        RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
         private void UpdateEntities()
         {
             int threshold = 1;
@@ -161,6 +162,11 @@ namespace Coocoo3D.Core
                     mainCaches.mmdMeshLoadList.MoveTo_CC(meshProcessing);
 
 
+                    camera.AspectRatio = AspectRatio;
+                    camera.Update();
+                    for (int i = 0; i < Lightings.Count; i++)
+                        Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
+
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
 
@@ -204,47 +210,17 @@ namespace Coocoo3D.Core
                     {
                         NeedUpdateEntities = false;
                         UpdateEntities();
-                        for (int i = 0; i < presentDatas.Length; i++)
-                        {
-                            presentDatas[i].PlayTime = PlayTime;
-                            presentDatas[i].DeltaTime = deltaTime;
-                        }
+                        forwardRenderPipeline1.TimeChange(PlayTime, deltaTime);
                     }
-
-                    camera.AspectRatio = AspectRatio;
-                    camera.Update();
-                    presentDatas[0].UpdateCameraData(camera);
-                    presentDatas[0].UpdateBuffer(graphicsContext);
-                    for (int i = 0; i < Lightings.Count; i++)
-                        Lightings[i].UpdateLightingData(graphicsContext, settings.ExtendShadowMapRange, camera);
+;
                     for (int i = 0; i < Entities.Count; i++)
                         Entities[i].UpdateGpuResources(graphicsContext, Lightings);
 
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-                    graphicsContext.SetRootSignature(defaultResources.signatureMMD);
 
-                    if (Entities.Count > 0)
-                    {
-                        graphicsContext.SetSRV(PObjectType.mmd, null, 2);
-                        graphicsContext.SetAndClearDSV(defaultResources.DepthStencil0);
-                        if (Lightings.Count > 0)
-                        {
-                            presentDatas[1].UpdateCameraData(Lightings[0]);
-                            presentDatas[1].UpdateBuffer(graphicsContext);
-                            for (int i = 0; i < Entities.Count; i++)
-                                Entities[i].RenderDepth(graphicsContext, defaultResources, presentDatas[1]);
-                        }
-                        graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
-                        graphicsContext.SetSRV_RT(PObjectType.mmd, defaultResources.DepthStencil0, 2);
-                    }
-                    else
-                    {
-                        graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
-                    }
-
-                    for (int i = 0; i < Entities.Count; i++)
-                        Entities[i].Render(graphicsContext, defaultResources, Lightings, presentDatas[0]);
-
+                    forwardRenderPipeline1.PrepareRenderData(graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
+                    forwardRenderPipeline1.RenderBeforeCamera(graphicsContext, defaultResources, CurrentScene);
+                    forwardRenderPipeline1.RenderCamera(graphicsContext, defaultResources, CurrentScene, 0);
                     //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
                     //{
                     //    graphicsContext.ClearDepthStencil();
@@ -321,11 +297,11 @@ namespace Coocoo3D.Core
     }
 
 
-    public class Settings
+    public struct Settings
     {
-        public bool viewSelectedEntityBone = true;
-        public bool HighResolutionShadow = false;
-        public Vector4 backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f);
-        public float ExtendShadowMapRange = 32;
+        public bool viewSelectedEntityBone;
+        public bool HighResolutionShadow;
+        public Vector4 backgroundColor;
+        public float ExtendShadowMapRange;
     }
 }

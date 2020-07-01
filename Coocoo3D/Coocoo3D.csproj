@@ -170,6 +170,8 @@
       <DependentUpon>SoftwareInfoPropertiesPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RenderPipeline\ForwardRenderPipeline1.cs" />
+    <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />
     <Compile Include="Utility\IDictionaryExt.cs" />
