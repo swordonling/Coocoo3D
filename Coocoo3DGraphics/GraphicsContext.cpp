@@ -251,7 +251,8 @@ void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer ^ boneData, Consta
 {
 	m_commandList->SetGraphicsRootConstantBufferView(0, entityData->GetCurrentVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(1, boneData->GetCurrentVirtualAddress());
-	m_commandList->SetGraphicsRootConstantBufferView(2, materialData->GetCurrentVirtualAddress());
+	if (materialData != nullptr)
+		m_commandList->SetGraphicsRootConstantBufferView(2, materialData->GetCurrentVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(3, presentData->GetCurrentVirtualAddress());
 }
 

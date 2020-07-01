@@ -90,7 +90,8 @@ namespace Coocoo3D.Core
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
-                forwardRenderPipeline1.Reload(this);
+                forwardRenderPipeline1.Reload(deviceResources, defaultResources);
+                forwardRenderPipeline1.Ready = true;
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
@@ -135,14 +136,6 @@ namespace Coocoo3D.Core
             NeedRender = true;
         }
 
-        public void RenderFrame(bool updateEntities = false)
-        {
-            NeedUpdateEntities |= updateEntities;
-            bool actualRender = RenderFrame2();
-            //if (actualRender)
-            FrameUpdated?.Invoke(this, null);
-        }
-
         List<Texture2D> textureProcessing = new List<Texture2D>();
         List<RenderTexture2D> rtProcessing = new List<RenderTexture2D>();
         List<MMDMesh> meshProcessing = new List<MMDMesh>();
@@ -161,6 +154,19 @@ namespace Coocoo3D.Core
                     mainCaches.RenderTextureUpdateList.MoveTo_CC(rtProcessing);
                     mainCaches.mmdMeshLoadList.MoveTo_CC(meshProcessing);
 
+                    lock (CurrentScene)
+                    {
+                        for(int i = 0; i < CurrentScene.EntityLoadList.Count; i++)
+                        {
+                            CurrentScene.Entities.Add(CurrentScene.EntityLoadList[i]);
+                        }
+                        CurrentScene.EntityLoadList.Clear();
+                        for(int i = 0; i < CurrentScene.LightingLoadList.Count; i++)
+                        {
+                            CurrentScene.Lightings.Add(CurrentScene.LightingLoadList[i]);
+                        }
+                        CurrentScene.LightingLoadList.Clear();
+                    }
 
                     camera.AspectRatio = AspectRatio;
                     camera.Update();
@@ -170,7 +176,7 @@ namespace Coocoo3D.Core
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
 
-                    if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0)
+                    if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0|| worldViewer.RequireResize)
                     {
                         for (int i = 0; i < textureProcessing.Count; i++)
                         {
@@ -183,6 +189,11 @@ namespace Coocoo3D.Core
                         graphicsContext.EndCommand();
                         graphicsContext.Execute();
                         deviceResources.WaitForGpu();
+                        if(worldViewer.RequireResize)
+                        {
+                            deviceResources.SetLogicalSize(worldViewer.NewSize);
+                            worldViewer.RequireResize = false;
+                        }
                         for (int i = 0; i < rtProcessing.Count; i++)
                         {
                             graphicsContext.UpdateRenderTexture(rtProcessing[i]);
@@ -217,10 +228,12 @@ namespace Coocoo3D.Core
                         Entities[i].UpdateGpuResources(graphicsContext, Lightings);
 
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-
-                    forwardRenderPipeline1.PrepareRenderData(graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
-                    forwardRenderPipeline1.RenderBeforeCamera(graphicsContext, defaultResources, CurrentScene);
-                    forwardRenderPipeline1.RenderCamera(graphicsContext, defaultResources, CurrentScene, 0);
+                    if (forwardRenderPipeline1.Ready)
+                    {
+                        forwardRenderPipeline1.PrepareRenderData(graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
+                        forwardRenderPipeline1.RenderBeforeCamera(graphicsContext, defaultResources, CurrentScene);
+                        forwardRenderPipeline1.RenderCamera(graphicsContext, defaultResources, CurrentScene, 0);
+                    }
                     //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
                     //{
                     //    graphicsContext.ClearDepthStencil();

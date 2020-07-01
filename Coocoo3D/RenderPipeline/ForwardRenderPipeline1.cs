@@ -12,15 +12,16 @@ namespace Coocoo3D.RenderPipeline
 {
     public class ForwardRenderPipeline1 : RenderPipeline
     {
-        public void Reload(Coocoo3DMain appBody)
+        public void Reload(DeviceResources deviceResources, DefaultResources defaultResources)
         {
-            textureError = appBody.defaultResources.TextureError;
+            textureError = defaultResources.TextureError;
             for (int i = 0; i < c_maxCameraPerRender; i++)
             {
-                cameraPresentDatas[i].Reload(appBody.deviceResources);
+                cameraPresentDatas[i].Reload(deviceResources);
             }
-            lightingCameraPresentData.Reload(appBody.deviceResources);
+            lightingCameraPresentData.Reload(deviceResources);
         }
+        public bool Ready;
         Texture2D textureError;
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public PresentData lightingCameraPresentData = new PresentData();
@@ -72,7 +73,7 @@ namespace Coocoo3D.RenderPipeline
             if (scene.Lightings.Count > 0)
             {
                 for (int i = 0; i < Entities.Count; i++)
-                    Entities[i].RenderDepth(graphicsContext, defaultResources, lightingCameraPresentData);
+                    RenderEntityDepth(graphicsContext, Entities[i], lightingCameraPresentData);
             }
             graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
         }
@@ -93,6 +94,21 @@ namespace Coocoo3D.RenderPipeline
         {
         }
 
+
+        private void RenderEntityDepth(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData)
+        {
+            var Materials = entity.rendererComponent.Materials;
+            graphicsContext.SetMMDRender1CBResources(entity.boneComponent.boneMatrices, entity.rendererComponent.EntityDataBuffer, cameraPresentData.DataBuffer, null);
+            graphicsContext.SetMesh(entity.rendererComponent.mesh);
+            graphicsContext.SetPObjectDepthOnly(entity.rendererComponent.pObject);
+
+            int indexCountAll = 0;
+            for (int i = 0; i < Materials.Count; i++)
+            {
+                indexCountAll += Materials[i].indexCount;
+            }
+            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
+        }
 
         private void RenderEntity(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData)
         {

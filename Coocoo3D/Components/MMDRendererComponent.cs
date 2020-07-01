@@ -176,63 +176,6 @@ namespace Coocoo3D.Components
             }
         }
 
-        public void RenderDepth(GraphicsContext graphicsContext, MMDBoneComponent boneComponent, PresentData presentData)
-        {
-            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, boneComponent.boneMatrices, 1);
-            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, EntityDataBuffer, 0);
-            graphicsContext.SetConstantBuffer(PObjectType.mmdDepth, presentData.DataBuffer, 3);
-            graphicsContext.SetMesh(mesh);
-            graphicsContext.SetPObjectDepthOnly(pObject);
-
-            int indexCountAll = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                indexCountAll += Materials[i].indexCount;
-            }
-            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
-        }
-
-        public void Render(GraphicsContext graphicsContext, DefaultResources defaultResources, MMDBoneComponent boneComponent, PresentData presentData)
-        {
-            graphicsContext.SetMesh(mesh);
-            int indexStartLocation = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                if (texs != null)
-                {
-                    Texture2D tex1 = null;
-                    if (Materials[i].texIndex != -1)
-                        tex1 = texs[Materials[i].texIndex];
-                    if (tex1 != null)
-                        graphicsContext.SetSRV(PObjectType.mmd, tex1, 0);
-                    else
-                        graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 0);
-                    if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
-                    {
-                        Texture2D tex2 = texs[Materials[i].toonIndex];
-                        if (tex2 != null)
-                            graphicsContext.SetSRV(PObjectType.mmd, tex2, 1);
-                        else
-                            graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
-                    }
-                    else
-                        graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
-                }
-                else
-                {
-                    graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 1);
-                    graphicsContext.SetSRV(PObjectType.mmd, defaultResources.TextureError, 0);
-                }
-                graphicsContext.SetMMDRender1CBResources(boneComponent.boneMatrices, EntityDataBuffer, presentData.DataBuffer, Materials[i].matBuf);
-                if (Materials[i].DrawFlags.HasFlag(DrawFlags.DrawDoubleFace))
-                    graphicsContext.SetPObject(pObject, CullMode.none, BlendState.alpha);
-                else
-                    graphicsContext.SetPObject(pObject, CullMode.back, BlendState.alpha);
-                graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
-                indexStartLocation += Materials[i].indexCount;
-            }
-        }
-
         bool MemEqual(byte[] a, int aIndex, byte[] b, int bIndex, int length)
         {
             for (int i = 0; i < length; i++)

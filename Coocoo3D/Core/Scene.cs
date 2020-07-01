@@ -20,21 +20,34 @@ namespace Coocoo3D.Core
         public List<Lighting> Lightings = new List<Lighting>();
         public ObservableCollection<ISceneObject> sceneObjects = new ObservableCollection<ISceneObject>();
 
+        public List<MMD3DEntity> EntityLoadList = new List<MMD3DEntity>();
+        public List<Lighting> LightingLoadList = new List<Lighting>();
+
         public void AddSceneObject(MMD3DEntity entity)
         {
-            lock (AppBody.deviceResources)
+            //lock (AppBody.deviceResources)
+            //{
+            //    Entities.Add(entity);
+            //    sceneObjects.Add(entity);
+            //}
+            lock (this)
             {
-                Entities.Add(entity);
-                sceneObjects.Add(entity);
+                EntityLoadList.Add(entity);
             }
+            sceneObjects.Add(entity);
         }
         public void AddSceneObject(Lighting lighting)
         {
-            lock (AppBody.deviceResources)
+            //lock (AppBody.deviceResources)
+            //{
+            //    Lightings.Add(lighting);
+            //    sceneObjects.Add(lighting);
+            //}
+            lock(this)
             {
-                Lightings.Add(lighting);
-                sceneObjects.Add(lighting);
+                LightingLoadList.Add(lighting);
             }
+            sceneObjects.Add(lighting);
         }
         public void SortObjects()
         {

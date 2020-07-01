@@ -73,16 +73,6 @@ namespace Coocoo3D.Present
             }
         }
 
-        public void RenderDepth(GraphicsContext graphicsContext, DefaultResources defaultResources, PresentData presentData)
-        {
-            rendererComponent.RenderDepth(graphicsContext, boneComponent, presentData);
-        }
-
-        public void Render(GraphicsContext graphicsContext, DefaultResources defaultResources, IList<Lighting> lightings, PresentData presentData)
-        {
-            rendererComponent.Render(graphicsContext, defaultResources, boneComponent, presentData);
-        }
-
         public Matrix4x4 GetTransformMatrix()
         {
             return Matrix4x4.CreateFromQuaternion(Rotation) * Matrix4x4.CreateTranslation(Position);

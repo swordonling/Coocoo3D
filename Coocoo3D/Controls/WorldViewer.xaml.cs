@@ -34,6 +34,9 @@ namespace Coocoo3D.Controls
         }
         Coocoo3DMain _appBody;
 
+        public bool RequireResize;
+        public Size NewSize;
+
         public WorldViewer()
         {
             this.InitializeComponent();
@@ -50,8 +53,10 @@ namespace Coocoo3D.Controls
             if (_appBody == null) return;
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
-            AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
-            AppBody.RenderFrame();
+            NewSize = new Size(ActualWidth, ActualHeight);
+            RequireResize = true;
+            //AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
+            AppBody.RequireRender();
             swapChainPanel.SizeChanged -= SwapChainPanel_SizeChanged;
             swapChainPanel.SizeChanged += SwapChainPanel_SizeChanged;
         }
@@ -59,8 +64,10 @@ namespace Coocoo3D.Controls
         private void SwapChainPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
-            AppBody.deviceResources.SetLogicalSize(e.NewSize);
-            AppBody.RenderFrame();
+            NewSize = e.NewSize;
+            RequireResize = true;
+            //AppBody.deviceResources.SetLogicalSize(e.NewSize);
+            AppBody.RequireRender();
         }
 
         private void InkCanvas_Loaded(object sender, RoutedEventArgs e)
@@ -98,7 +105,7 @@ namespace Coocoo3D.Controls
             }
             else
             {
-                AppBody.RenderFrame();
+                AppBody.RequireRender();
                 AppBody.LatestUserOperating = DateTime.Now;
             }
         }
@@ -136,7 +143,7 @@ namespace Coocoo3D.Controls
         {
             e.Handled = true;
             AppBody.camera.Distance += -e.GetCurrentPoint(sender as UIElement).Properties.MouseWheelDelta / 20.0f;
-            AppBody.RenderFrame();
+            AppBody.RequireRender();
         }
     }
 }
