@@ -56,10 +56,9 @@ namespace Coocoo3D.Present
             needUpdateMotion = true;
         }
 
-        public void UpdateGpuResources(GraphicsContext graphicsContext, IList<Lighting> lightings)
+        public void UpdateGpuResources(GraphicsContext graphicsContext)
         {
-            Matrix4x4 matWorld = Matrix4x4.CreateFromQuaternion(Rotation) * Matrix4x4.CreateTranslation(Position);
-            rendererComponent.UpdateGPUResources(graphicsContext, matWorld, lightings);
+            rendererComponent.UpdateGPUResources(graphicsContext);
             if (!boneComponent.GpuUsable)
             {
                 boneComponent.ComputeMatricesData();
@@ -71,11 +70,6 @@ namespace Coocoo3D.Present
                 graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize);
                 needUpdateMotion = false;
             }
-        }
-
-        public Matrix4x4 GetTransformMatrix()
-        {
-            return Matrix4x4.CreateFromQuaternion(Rotation) * Matrix4x4.CreateTranslation(Position);
         }
 
         public override string ToString()

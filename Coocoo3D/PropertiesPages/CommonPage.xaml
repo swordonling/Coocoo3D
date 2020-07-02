@@ -35,7 +35,7 @@
                     <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
                 <TextBlock x:Name="ViewFrameRate"/>
-                <ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>
+                <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
                 <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
             </StackPanel>
         </ScrollViewer>

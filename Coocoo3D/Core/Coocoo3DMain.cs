@@ -156,12 +156,12 @@ namespace Coocoo3D.Core
 
                     lock (CurrentScene)
                     {
-                        for(int i = 0; i < CurrentScene.EntityLoadList.Count; i++)
+                        for (int i = 0; i < CurrentScene.EntityLoadList.Count; i++)
                         {
                             CurrentScene.Entities.Add(CurrentScene.EntityLoadList[i]);
                         }
                         CurrentScene.EntityLoadList.Clear();
-                        for(int i = 0; i < CurrentScene.LightingLoadList.Count; i++)
+                        for (int i = 0; i < CurrentScene.LightingLoadList.Count; i++)
                         {
                             CurrentScene.Lightings.Add(CurrentScene.LightingLoadList[i]);
                         }
@@ -176,7 +176,7 @@ namespace Coocoo3D.Core
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
 
-                    if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0|| worldViewer.RequireResize)
+                    if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0 || worldViewer.RequireResize)
                     {
                         for (int i = 0; i < textureProcessing.Count; i++)
                         {
@@ -189,7 +189,7 @@ namespace Coocoo3D.Core
                         graphicsContext.EndCommand();
                         graphicsContext.Execute();
                         deviceResources.WaitForGpu();
-                        if(worldViewer.RequireResize)
+                        if (worldViewer.RequireResize)
                         {
                             deviceResources.SetLogicalSize(worldViewer.NewSize);
                             worldViewer.RequireResize = false;
@@ -223,14 +223,14 @@ namespace Coocoo3D.Core
                         UpdateEntities();
                         forwardRenderPipeline1.TimeChange(PlayTime, deltaTime);
                     }
-;
+
                     for (int i = 0; i < Entities.Count; i++)
-                        Entities[i].UpdateGpuResources(graphicsContext, Lightings);
+                        Entities[i].UpdateGpuResources(graphicsContext);
 
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
                     if (forwardRenderPipeline1.Ready)
                     {
-                        forwardRenderPipeline1.PrepareRenderData(graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
+                        forwardRenderPipeline1.PrepareRenderData(deviceResources, graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
                         forwardRenderPipeline1.RenderBeforeCamera(graphicsContext, defaultResources, CurrentScene);
                         forwardRenderPipeline1.RenderCamera(graphicsContext, defaultResources, CurrentScene, 0);
                     }

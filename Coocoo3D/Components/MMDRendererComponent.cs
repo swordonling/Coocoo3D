@@ -22,15 +22,10 @@ namespace Coocoo3D.Components
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
         public PObject pObject;
-        public ConstantBuffer EntityDataBuffer = new ConstantBuffer();
-        byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + MMDMatLit.c_materialDataSize];
+        byte[] rcDataUploadBuffer = new byte[MMDMatLit.c_materialDataSize];
         GCHandle gch_rcDataUploadBuffer;
-        public const int c_transformMatrixDataSize = 64;
-        public const int c_lightingDataSize = 384;
 
-        const int c_offsetTransformMatrixData = 0;
-        const int c_offsetLightingData = c_transformMatrixDataSize;
-        const int c_offsetMaterialData = c_transformMatrixDataSize + c_lightingDataSize;
+        const int c_offsetMaterialData = 0;
         public Vector3[] meshPosDataUploadBuffer;
         public GCHandle gch_meshPosDataUploadBuffer;
         bool meshNeedUpdate;
@@ -138,53 +133,8 @@ namespace Coocoo3D.Components
             }
         }
 
-        public void UpdateGPUResources(GraphicsContext graphicsContext, Matrix4x4 world, IList<Lighting> lightings)
+        public void UpdateGPUResources(GraphicsContext graphicsContext)
         {
-            IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
-            for (int j = 0; j < c_lightingDataSize; j += 4)
-            {
-                Marshal.WriteInt32(pBufferData + j, 0);
-            }
-            int mainLightIndex = -1;
-            int lightCount = 0;
-            for (int i = 0; i < lightings.Count; i++)
-            {
-                if (lightings[i].LightingType == LightingType.Directional)
-                {
-                    Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[i].rotateMatrix), pBufferData, true);
-                    Marshal.StructureToPtr((uint)lightings[i].LightingType, pBufferData + 12, true);
-                    Marshal.StructureToPtr(lightings[i].Color, pBufferData + 16, true);
-                    Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[i].vpMatrix), pBufferData + 32, true);
-                    mainLightIndex = i;
-                    lightCount++;
-                    pBufferData += 96;
-                    break;
-                }
-            }
-            for (int i = 0; i < lightings.Count; i++)
-            {
-                if (i != mainLightIndex)
-                {
-                    if (lightings[i].LightingType == LightingType.Directional)
-                        Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[i].rotateMatrix), pBufferData, true);
-                    else
-                        Marshal.StructureToPtr(lightings[i].Rotation * 180 / MathF.PI, pBufferData, true);
-                    Marshal.StructureToPtr((uint)lightings[i].LightingType, pBufferData + 12, true);
-                    Marshal.StructureToPtr(lightings[i].Color, pBufferData + 16, true);
-                    Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[i].vpMatrix), pBufferData + 32, true);
-                    lightCount++;
-                    pBufferData += 96;
-                    if (lightCount >= 4)
-                        break;
-                }
-            }
-
-            pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetTransformMatrixData);
-            Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
-
-            graphicsContext.UpdateResource(EntityDataBuffer, rcDataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
-
-
             for (int i = 0; i < Materials.Count; i++)
             {
                 IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
@@ -254,7 +204,6 @@ namespace Coocoo3D.FileFormat
         public static void Reload(this MMDRendererComponent rendererComponent, DeviceResources deviceResources, MainCaches mainCaches, PMXFormat modelResource)
         {
             rendererComponent.ReloadBase();
-            rendererComponent.EntityDataBuffer.Reload(deviceResources, MMDRendererComponent.c_transformMatrixDataSize + MMDRendererComponent.c_lightingDataSize);
             rendererComponent.mesh = modelResource.GetMesh();
             mainCaches.AddMeshToLoadList(rendererComponent.mesh);
             rendererComponent.meshPosDataUploadBuffer = new Vector3[rendererComponent.mesh.m_vertexCount];

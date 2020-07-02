@@ -70,7 +70,7 @@ namespace Coocoo3D.Present
                 }
             }
             graphicsContext.UpdateVertices(particleMesh, vertexData);
-            graphicsContext.SetConstantBuffer(PObjectType.ui3d,entity.rendererComponent.EntityDataBuffer, 0);
+            //graphicsContext.SetConstantBuffer(PObjectType.ui3d,entity.rendererComponent.EntityDataBuffer, 0);
             graphicsContext.SetMesh(particleMesh);
             graphicsContext.SetMaterial(boneRenderMaterial);
             //graphicsContext.DrawIndexed(visibleBoneCount * 1, 0, 0);
