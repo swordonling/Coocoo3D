@@ -39,6 +39,10 @@
                         <mu:NumberBox Grid.Row="2" Grid.Column="2" Header="B" Value="{x:Bind VCB,Mode=TwoWay}" AcceptsExpression="True"/>
                         <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="A" Value="{x:Bind VCA,Mode=TwoWay}" AcceptsExpression="True"/>
                     </Grid>
+                    <mu:RadioButtons>
+                        <RadioButton x:Name="radio1" Content="平行光" Tag="directional" Checked="RadioButton_Checked"/>
+                        <RadioButton x:Name="radio2" Content="点光" Tag="point" Checked="RadioButton_Checked"/>
+                    </mu:RadioButtons>
                 </StackPanel>
             </Grid>
         </ScrollViewer>

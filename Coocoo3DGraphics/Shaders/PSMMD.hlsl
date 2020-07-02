@@ -55,28 +55,53 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 
 	for (int i = 0; i < 1; i++)
 	{
-		float inShadow = 1.0f;
-		float4 sPos = mul(input.wPos, Lightings[0].LightSpaceMatrix);
-		float2 shadowTexCoords;
-		shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
-		shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-		if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
-			inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w+0.001) > 0 ? 1 : 0;
+		if (Lightings[i].LightType == 0)
+		{
+			float inShadow = 1.0f;
+			float4 sPos = mul(input.wPos, Lightings[0].LightSpaceMatrix);
+			float2 shadowTexCoords;
+			shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
+			shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
+			if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
+				inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w + 0.001) > 0 ? 1 : 0;
 
-		float3 lightDir = normalize(Lightings[i].LightDir);
-		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
-		float3 halfAngle = normalize(viewDir + lightDir);
-		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
-		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
+			float3 lightDir = normalize(Lightings[i].LightDir);
+			float3 lightStrength = max(Lightings[i].LightColor.rgb*Lightings[i].LightColor.a,0);
+			float3 halfAngle = normalize(viewDir + lightDir);
+			specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
+			strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f)*inShadow);
+		}
+		else if (Lightings[i].LightType == 1)
+		{
+			float inShadow = 1.0f;
+			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
+			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
+			float3 halfAngle = normalize(viewDir + lightDir);
+			specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
+			strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
+		}
 	}
 	for (int i = 1; i < 4; i++)
 	{
-		float3 lightDir = normalize(Lightings[i].LightDir);
-		float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
-		float3 halfAngle = normalize(viewDir + lightDir);
-		specularStrength += saturate(pow(max(dot(halfAngle, norm),0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
-		strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
+		if (Lightings[i].LightType == 0)
+		{
+			float inShadow = 1.0f;
+			float3 lightDir = normalize(Lightings[i].LightDir);
+			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
+			float3 halfAngle = normalize(viewDir + lightDir);
+			specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
+			strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
+		}
+		else if (Lightings[i].LightType == 1)
+		{
+			float inShadow = 1.0f;
+			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
+			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
+			float3 halfAngle = normalize(viewDir + lightDir);
+			specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb;
+			strength += lightStrength * (0.12f + saturate(dot(norm, lightDir)*0.88f));
+		}
 	}
 	strength += _AmbientColor;
-	return pow(texture0.Sample(s0,input.TexCoord)*float4(strength,1)*_DiffuseColor + float4(specularStrength,0),1 / 2.2f);
+	return pow(texture0.Sample(s0, input.TexCoord)*float4(strength, 1)*_DiffuseColor + float4(specularStrength, 0), 1 / 2.2f);
 }

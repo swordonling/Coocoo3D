@@ -22,9 +22,9 @@ void GraphicsSignature::ReloadMMD(DeviceResources ^ deviceResources)
 
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = {};
 	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
-	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
 	staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
 	staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

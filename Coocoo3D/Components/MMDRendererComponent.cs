@@ -23,8 +23,8 @@ namespace Coocoo3D.Components
         public List<Texture2D> texs;
         public PObject pObject;
         public ConstantBuffer EntityDataBuffer = new ConstantBuffer();
-        byte[] DataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + MMDMatLit.c_materialDataSize];
-        GCHandle gch_DataUploadBuffer;
+        byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + MMDMatLit.c_materialDataSize];
+        GCHandle gch_rcDataUploadBuffer;
         public const int c_transformMatrixDataSize = 64;
         public const int c_lightingDataSize = 384;
 
@@ -39,11 +39,11 @@ namespace Coocoo3D.Components
 
         public MMDRendererComponent()
         {
-            gch_DataUploadBuffer = GCHandle.Alloc(gch_DataUploadBuffer);
+            gch_rcDataUploadBuffer = GCHandle.Alloc(gch_rcDataUploadBuffer);
         }
         ~MMDRendererComponent()
         {
-            if (gch_DataUploadBuffer.IsAllocated) gch_DataUploadBuffer.Free();
+            if (gch_rcDataUploadBuffer.IsAllocated) gch_rcDataUploadBuffer.Free();
             if (gch_meshPosDataUploadBuffer.IsAllocated) gch_meshPosDataUploadBuffer.Free();
         }
 
@@ -140,33 +140,56 @@ namespace Coocoo3D.Components
 
         public void UpdateGPUResources(GraphicsContext graphicsContext, Matrix4x4 world, IList<Lighting> lightings)
         {
-            IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetLightingData);
+            IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
             for (int j = 0; j < c_lightingDataSize; j += 4)
             {
                 Marshal.WriteInt32(pBufferData + j, 0);
             }
-            for (int i = 0; i < 4; i++)
+            int mainLightIndex = -1;
+            int lightCount = 0;
+            for (int i = 0; i < lightings.Count; i++)
             {
-                if (i < lightings.Count)
+                if (lightings[i].LightingType == LightingType.Directional)
                 {
                     Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[i].rotateMatrix), pBufferData, true);
+                    Marshal.StructureToPtr((uint)lightings[i].LightingType, pBufferData + 12, true);
                     Marshal.StructureToPtr(lightings[i].Color, pBufferData + 16, true);
                     Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[i].vpMatrix), pBufferData + 32, true);
+                    mainLightIndex = i;
+                    lightCount++;
+                    pBufferData += 96;
+                    break;
                 }
-                pBufferData += 96;
+            }
+            for (int i = 0; i < lightings.Count; i++)
+            {
+                if (i != mainLightIndex)
+                {
+                    if (lightings[i].LightingType == LightingType.Directional)
+                        Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[i].rotateMatrix), pBufferData, true);
+                    else
+                        Marshal.StructureToPtr(lightings[i].Rotation * 180 / MathF.PI, pBufferData, true);
+                    Marshal.StructureToPtr((uint)lightings[i].LightingType, pBufferData + 12, true);
+                    Marshal.StructureToPtr(lightings[i].Color, pBufferData + 16, true);
+                    Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[i].vpMatrix), pBufferData + 32, true);
+                    lightCount++;
+                    pBufferData += 96;
+                    if (lightCount >= 4)
+                        break;
+                }
             }
 
-            pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetTransformMatrixData);
+            pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetTransformMatrixData);
             Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
 
-            graphicsContext.UpdateResource(EntityDataBuffer, DataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
+            graphicsContext.UpdateResource(EntityDataBuffer, rcDataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
 
 
             for (int i = 0; i < Materials.Count; i++)
             {
-                IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(DataUploadBuffer, c_offsetMaterialData);
+                IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
                 Marshal.StructureToPtr(Materials[i].innerStruct, ptr, true);
-                graphicsContext.UpdateResource(Materials[i].matBuf, DataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
+                graphicsContext.UpdateResource(Materials[i].matBuf, rcDataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
             }
 
             if (meshNeedUpdate)
@@ -190,7 +213,7 @@ namespace Coocoo3D.Components
     }
     public class MMDMatLit
     {
-        public const int c_materialDataSize = 128;
+        public const int c_materialDataSize = 256;
 
         public Texture2D tex;
         public string Name;
@@ -198,7 +221,7 @@ namespace Coocoo3D.Components
         public int indexCount;
         public int texIndex;
         public int toonIndex;
-        public MMDSupport.DrawFlags DrawFlags;
+        public DrawFlags DrawFlags;
         public Vector4 DiffuseColor { get => innerStruct.DiffuseColor; set => innerStruct.DiffuseColor = value; }
         public Vector4 SpecularColor { get => innerStruct.SpecularColor; set => innerStruct.SpecularColor = value; }
         public Vector3 AmbientColor { get => innerStruct.AmbientColor; set => innerStruct.AmbientColor = value; }
@@ -214,6 +237,9 @@ namespace Coocoo3D.Components
             public Vector3 AmbientColor;
             public float EdgeSize;
             public Vector4 EdgeColor;
+            public uint notUse1;
+            public uint notUse2;
+            public uint notUse3;
 
             public Vector4 Texture;
             public Vector4 SubTexture;

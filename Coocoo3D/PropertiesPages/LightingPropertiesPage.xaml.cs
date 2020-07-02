@@ -43,6 +43,10 @@ namespace Coocoo3D.PropertiesPages
                 lighting = _appBody.SelectedLighting[0];
                 appBody.FrameUpdated += FrameUpdated;
                 _cachePos = lighting.Rotation;
+                if (lighting.LightingType == LightingType.Directional)
+                    radio1.IsChecked = true;
+                else if (lighting.LightingType == LightingType.Point)
+                    radio2.IsChecked = true;
             }
             else
             {
@@ -164,6 +168,20 @@ namespace Coocoo3D.PropertiesPages
         {
             get => lighting.Name;
             set { lighting.Name = value; lighting.PropChange(eaName); }
+        }
+
+        private void RadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+            RadioButton radioButton = sender as RadioButton;
+            if((string)radioButton.Tag== "directional")
+            {
+                lighting.LightingType = LightingType.Directional;
+            }
+            else if ((string)radioButton.Tag == "point")
+            {
+                lighting.LightingType = LightingType.Point;
+            }
+            appBody.RequireRender();
         }
     }
 }

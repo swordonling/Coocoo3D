@@ -501,7 +501,9 @@ void GraphicsContext::UploadTexture(Texture2D ^ texture)
 void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
-
+	bool initializedBefore = false;
+	if (texture->m_texture != nullptr)
+		initializedBefore = true;
 	{
 		D3D12_RESOURCE_DESC textureDesc = {};
 		textureDesc.MipLevels = 1;
@@ -526,6 +528,7 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 
 		NAME_D3D12_OBJECT(texture->m_texture);
 	}
+	if(!initializedBefore)
 	{
 		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		texture->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
@@ -549,7 +552,26 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 		handle.Offset(incrementSize * m_deviceResources->m_dsvHeapAllocCount);
 		d3dDevice->CreateDepthStencilView(texture->m_texture.Get(), nullptr, handle);
 		m_deviceResources->m_dsvHeapAllocCount++;
+	}
+	else
+	{
+		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart());
+		handle.Offset(incrementSize * texture->m_heapRefIndex);
+		d3dDevice->CreateShaderResourceView(texture->m_texture.Get(), &srvDesc, handle);
+
+
+		incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+		handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+		handle.Offset(incrementSize * texture->m_dsvHeapRefIndex);
+		d3dDevice->CreateDepthStencilView(texture->m_texture.Get(), nullptr, handle);
 	}
 }
 

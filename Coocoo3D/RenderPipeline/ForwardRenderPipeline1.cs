@@ -47,6 +47,7 @@ namespace Coocoo3D.RenderPipeline
             lightingCameraPresentData.PlayTime = deltaTime;
         }
 
+        int lightingIndex1;
         public void PrepareRenderData(GraphicsContext graphicsContext, DefaultResources defaultResources, Settings settings, Scene scene, IReadOnlyList<Camera> cameras)
         {
             this.settings = settings;
@@ -57,10 +58,19 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].UpdateBuffer(graphicsContext);
             }
             IList<Lighting> Lightings = scene.Lightings;
+            lightingIndex1 = -1;
             if (Lightings.Count > 0)
             {
-                lightingCameraPresentData.UpdateCameraData(Lightings[0]);
-                lightingCameraPresentData.UpdateBuffer(graphicsContext);
+                for (int i = 0; i < Lightings.Count; i++)
+                {
+                    if (Lightings[i].LightingType == LightingType.Directional)
+                    {
+                        lightingCameraPresentData.UpdateCameraData(Lightings[i]);
+                        lightingCameraPresentData.UpdateBuffer(graphicsContext);
+                        lightingIndex1 = i;
+                        break;
+                    }
+                }
             }
         }
 
@@ -70,7 +80,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetSRV(PObjectType.mmd, null, 2);
             graphicsContext.SetAndClearDSV(defaultResources.DepthStencil0);
             IList<MMD3DEntity> Entities = scene.Entities;
-            if (scene.Lightings.Count > 0)
+            if (lightingIndex1 != -1)
             {
                 for (int i = 0; i < Entities.Count; i++)
                     RenderEntityDepth(graphicsContext, Entities[i], lightingCameraPresentData);
@@ -144,10 +154,15 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
                 }
                 graphicsContext.SetMMDRender1CBResources(entity.boneComponent.boneMatrices, rendererComponent.EntityDataBuffer, cameraPresentData.DataBuffer, Materials[i].matBuf);
+                CullMode cullMode = CullMode.back;
+                BlendState blendState = BlendState.alpha;
                 if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawDoubleFace))
-                    graphicsContext.SetPObject(rendererComponent.pObject, CullMode.none, BlendState.alpha);
-                else
-                    graphicsContext.SetPObject(rendererComponent.pObject, CullMode.back, BlendState.alpha);
+                    cullMode = CullMode.none;
+                if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawSelfShadow))
+                    blendState = BlendState.none;
+
+                graphicsContext.SetPObject(rendererComponent.pObject, cullMode, blendState);
+
                 graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
                 indexStartLocation += Materials[i].indexCount;
             }

@@ -15,7 +15,6 @@ namespace Coocoo3D.Present
         public string Name = "";
         public LightingType LightingType;
         public Vector3 Rotation;
-        public Vector3 Position;
         public Vector4 Color;
 
         public Matrix4x4 vpMatrix;
@@ -41,7 +40,7 @@ namespace Coocoo3D.Present
                 if (extendY)
                     lookat += Vector3.Normalize((camera.LookAtPoint - camera.Pos) * new Vector3(1, 0, 1)) * ExtendRange;
 
-                
+
                 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, camera.Angle.Y);
                 var pos = Vector3.Transform(-Vector3.UnitZ * 128, rotateMatrix);
                 var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
@@ -54,10 +53,15 @@ namespace Coocoo3D.Present
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 
             }
+            else if(LightingType == LightingType.Point)
+            {
+
+            }
         }
     }
-    public enum LightingType
+    public enum LightingType : uint
     {
-        Directional
+        Directional = 0,
+        Point = 1,
     }
 }
