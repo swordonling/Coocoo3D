@@ -153,7 +153,7 @@ namespace Coocoo3D.FileFormat
             entity.boneComponent.Reload(modelResource);
             entity.boneComponent.boneMatrices.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
 
-            entity.rendererComponent.Reload(deviceResources, mainCaches, modelResource);
+            entity.rendererComponent.Reload(mainCaches, modelResource);
             entity.ComponentReady = true;
         }
     }

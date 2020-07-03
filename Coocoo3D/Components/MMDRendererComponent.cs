@@ -21,7 +21,7 @@ namespace Coocoo3D.Components
         public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
-        public PObject pObject;
+        public PObject pObject = new PObject();
         byte[] rcDataUploadBuffer = new byte[MMDMatLit.c_materialDataSize];
         GCHandle gch_rcDataUploadBuffer;
 
@@ -135,13 +135,6 @@ namespace Coocoo3D.Components
 
         public void UpdateGPUResources(GraphicsContext graphicsContext)
         {
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
-                Marshal.StructureToPtr(Materials[i].innerStruct, ptr, true);
-                graphicsContext.UpdateResource(Materials[i].matBuf, rcDataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
-            }
-
             if (meshNeedUpdate)
             {
                 graphicsContext.UpdateVertices2(mesh, meshPosDataUploadBuffer);
@@ -177,7 +170,6 @@ namespace Coocoo3D.Components
         public Vector3 AmbientColor { get => innerStruct.AmbientColor; set => innerStruct.AmbientColor = value; }
         public float EdgeScale { get => innerStruct.EdgeSize; set => innerStruct.EdgeSize = value; }
         public Vector4 EdgeColor { get => innerStruct.EdgeColor; set => innerStruct.EdgeColor = value; }
-        public ConstantBuffer matBuf = new ConstantBuffer();
 
         public InnerStruct innerStruct;
         public struct InnerStruct
@@ -187,9 +179,6 @@ namespace Coocoo3D.Components
             public Vector3 AmbientColor;
             public float EdgeSize;
             public Vector4 EdgeColor;
-            public uint notUse1;
-            public uint notUse2;
-            public uint notUse3;
 
             public Vector4 Texture;
             public Vector4 SubTexture;
@@ -201,7 +190,7 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static void Reload(this MMDRendererComponent rendererComponent, DeviceResources deviceResources, MainCaches mainCaches, PMXFormat modelResource)
+        public static void Reload(this MMDRendererComponent rendererComponent, MainCaches mainCaches, PMXFormat modelResource)
         {
             rendererComponent.ReloadBase();
             rendererComponent.mesh = modelResource.GetMesh();
@@ -228,7 +217,6 @@ namespace Coocoo3D.FileFormat
                 };
 
                 mat.AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f));
-                mat.matBuf.Reload(deviceResources, MMDMatLit.c_materialDataSize);
                 rendererComponent.Materials.Add(mat);
                 rendererComponent.materialsBaseData.Add(mat.innerStruct);
                 rendererComponent.computedMaterialsData.Add(mat.innerStruct);

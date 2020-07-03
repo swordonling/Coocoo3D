@@ -11,18 +11,9 @@ namespace Coocoo3D.Core
 {
     public class DefaultResources
     {
-        public GraphicsSignature signatureMMD = new GraphicsSignature();
-        public VertexShader VSMMD = new VertexShader();
         public VertexShader VSUIStandard = new VertexShader();
-        public PixelShader PSMMD = new PixelShader();
-        public PixelShader PSMMDLoading = new PixelShader();
-        public PixelShader PSMMDError = new PixelShader();
         public PixelShader uiPixelShader = new PixelShader();
-        public GeometryShader particleGeometryShader = new GeometryShader();
         public GeometryShader uiGeometryShader = new GeometryShader();
-        public PObject PObjectMMD = new PObject();
-        public PObject PObjectMMDLoading = new PObject();
-        public PObject PObjectMMDError = new PObject();
         public PObject uiPObject = new PObject();
 
         public RenderTexture2D DepthStencil0 = new RenderTexture2D();
@@ -36,7 +27,6 @@ namespace Coocoo3D.Core
         public Task LoadTask;
         public async Task ReloadDefalutResources(DeviceResources deviceResources, MainCaches mainCaches)
         {
-            signatureMMD.ReloadMMD(deviceResources);
             DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
             mainCaches.AddRenderTextureToUpdateList(DepthStencil0);
 
@@ -44,24 +34,16 @@ namespace Coocoo3D.Core
             TextureError.ReloadPure(1, 1, new System.Numerics.Vector4(1, 0, 1, 1));
             mainCaches.AddTextureToLoadList(TextureLoading);
             mainCaches.AddTextureToLoadList(TextureError);
-
-            await ReloadVertexShader(VSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMD.cso");
+            
             await ReloadVertexShader(VSUIStandard, deviceResources, "ms-appx:///Coocoo3DGraphics/VSUIStandard.cso");
-
-            await ReloadGeometryShader(particleGeometryShader, deviceResources, "ms-appx:///Coocoo3DGraphics/GSParticleStandard.cso");
+            
             await ReloadGeometryShader(uiGeometryShader, deviceResources, "ms-appx:///Coocoo3DGraphics/GSUIStandard.cso");
-
-            await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
-            await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
-            await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
+            
             await ReloadPixelShader(uiPixelShader, deviceResources, "ms-appx:///Coocoo3DGraphics/PSUIStandard.cso");
 
             await ReloadTexture2D(ui0Texture, deviceResources, mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
 
-
-            PObjectMMD.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMD);
-            PObjectMMDLoading.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMDLoading);
-            PObjectMMDError.Reload(deviceResources, signatureMMD, PObjectType.mmd, VSMMD, null, PSMMDError);
+            
 
             //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;

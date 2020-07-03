@@ -274,6 +274,7 @@
     <ClInclude Include="DirectXHelper.h" />
     <ClInclude Include="GeometryShader.h" />
     <ClInclude Include="GraphicsContext.h" />
+    <ClInclude Include="GraphicsObjectStatus.h" />
     <ClInclude Include="GraphicsSignature.h" />
     <ClInclude Include="Material.h" />
     <ClInclude Include="MMDMesh.h" />

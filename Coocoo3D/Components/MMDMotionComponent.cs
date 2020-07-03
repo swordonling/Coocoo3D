@@ -18,6 +18,7 @@ namespace Coocoo3D.Components
         const float c_framePreSecond = 30;
         public static BoneKeyFrame GetBoneMotion(List<BoneKeyFrame> keyframeSet, float time)
         {
+            if (keyframeSet.Count == 0) return new BoneKeyFrame() { Rotation = Quaternion.Identity };
             float frame = Math.Max(time * c_framePreSecond, 0);
             int left = 0;
             int right = keyframeSet.Count - 1;

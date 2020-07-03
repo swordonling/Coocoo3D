@@ -48,8 +48,8 @@ namespace Coocoo3D.Core
         }
         #region Time
         ThreadPoolTimer threadPoolTimer;
-        bool NeedRender = false;
-        bool NeedUpdateEntities = false;
+        volatile bool NeedRender = false;
+        volatile bool NeedUpdateEntities = false;
         public DateTime LatestUserOperating = DateTime.Now;
 
         public float PlayTime;
@@ -60,7 +60,7 @@ namespace Coocoo3D.Core
         public CoreDispatcher Dispatcher;
         public event EventHandler FrameUpdated;
 
-        public int RenderCount = 0;//
+        public int RenderCount = 0;
         private async void Tick(ThreadPoolTimer timer)
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
@@ -86,11 +86,12 @@ namespace Coocoo3D.Core
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
             threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
 
+            forwardRenderPipeline1.Reload(deviceResources);
             defaultResources.LoadTask = Task.Run(async () =>
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
+                await forwardRenderPipeline1.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
-                forwardRenderPipeline1.Reload(deviceResources, defaultResources);
                 forwardRenderPipeline1.Ready = true;
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
@@ -111,6 +112,7 @@ namespace Coocoo3D.Core
         }
         #region Render Pipeline
         RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
+        public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => forwardRenderPipeline1; }
         private void UpdateEntities()
         {
             int threshold = 1;

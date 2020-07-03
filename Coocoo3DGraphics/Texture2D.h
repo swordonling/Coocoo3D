@@ -1,11 +1,12 @@
 #pragma once
 #include "DeviceResources.h"
+#include "GraphicsObjectStatus.h"
 namespace Coocoo3DGraphics
 {
 	public ref class Texture2D sealed
 	{
 	public:
-		property bool Ready;
+		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
 

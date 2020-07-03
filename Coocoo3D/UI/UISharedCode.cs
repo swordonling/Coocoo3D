@@ -43,22 +43,10 @@ namespace Coocoo3D.UI
             if (!pmx.Ready && pmx.LoadTask != null) await pmx.LoadTask;
             MMD3DEntity entity = new MMD3DEntity();
             entity.Reload2(appBody.deviceResources, appBody.mainCaches, pmx);
-            entity.rendererComponent.pObject = appBody.defaultResources.PObjectMMD;
-            var texturesTemp = new List<Texture2D>();
-            foreach (var vTex in pmx.Textures)
-                texturesTemp.Add(appBody.defaultResources.TextureLoading);
-            entity.rendererComponent.texs = texturesTemp;
+            //entity.rendererComponent.texs = await LoadTextureForModel(appBody, storageFolder, pmx);
+            entity.rendererComponent.texs = GetTextureListForModel(appBody, storageFolder, pmx);
             scene.AddSceneObject(entity);
-            appBody.RequireRender();
-
-            var textures = await LoadTextureForModel(appBody, storageFolder, pmx);
-
-            lock (appBody.deviceResources)
-            {
-                entity.rendererComponent.texs = textures;
-                entity.rendererComponent.pObject = appBody.defaultResources.PObjectMMD;
-                entity.RenderReady = true;
-            }
+            LoadModelTextures(appBody, storageFolder, pmx, entity.rendererComponent.texs);
             appBody.RequireRender();
 
         }
@@ -143,9 +131,9 @@ namespace Coocoo3D.UI
             lock (appBody.mainCaches.pObjectCaches)
             {
                 pObject = appBody.mainCaches.pObjectCaches.GetOrCreate(storageFile.Path);
-                if (pObject.LoadTask == null && !pObject.Ready)
+                if (pObject.LoadTask == null && pObject.Status != GraphicsObjectStatus.loaded)
                 {
-                    pObject.Reload(appBody.defaultResources.PObjectMMDLoading);
+                    pObject.Status = GraphicsObjectStatus.loading;
                     pObject.LoadTask = Task.Run(async () =>
                     {
                         try
@@ -182,78 +170,85 @@ namespace Coocoo3D.UI
                             {
                                 pixelShader = PixelShader.CompileLoad(deviceResources, await ReadAllBytes(storageFile4));
                             }
-                            lock (appBody.deviceResources)
+
+                            if (vertexShader != null && pixelShader != null)
                             {
-                                if (vertexShader != null && pixelShader != null)
-                                {
-                                    pObject.Reload(deviceResources,appBody.defaultResources.signatureMMD, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
-                                    pObject.Ready = true;
-                                }
-                                else
-                                {
-                                    pObject.Reload(appBody.defaultResources.PObjectMMDError);
-                                }
-                                pObject.LoadTask = null;
+                                pObject.Reload(deviceResources, appBody.CurrentRenderPipeline.GraphicsSignature, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
+                                pObject.Status = GraphicsObjectStatus.loaded;
                             }
+                            else
+                            {
+                                pObject.Status = GraphicsObjectStatus.error;
+                            }
+                            pObject.LoadTask = null;
                         }
                         catch
                         {
-                            lock (appBody.deviceResources)
-                            {
-                                pObject.Reload(appBody.defaultResources.PObjectMMDError);
-                            }
+                            pObject.Status = GraphicsObjectStatus.error;
                             pObject.LoadTask = null;
                         }
                     });
                 }
             }
-            lock (appBody.deviceResources)
+            foreach (var entity in entities)
             {
-                foreach (var entity in entities)
-                {
-                    entity.rendererComponent.pObject = pObject;
-                }
+                entity.rendererComponent.pObject = pObject;
             }
             appBody.RequireRender();
-            if (!pObject.Ready && pObject.LoadTask != null) await (pObject.LoadTask as Task);
+            if (pObject.Status != GraphicsObjectStatus.loaded && pObject.LoadTask != null) await (pObject.LoadTask as Task);
             appBody.RequireRender();
         }
 
-        public static async Task<List<Texture2D>> LoadTextureForModel(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx)
+        public static List<Texture2D> GetTextureListForModel(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx)
         {
             List<Texture2D> textures = new List<Texture2D>();
+            List<string> paths = new List<string>();
             foreach (var vTex in pmx.Textures)
             {
-                string relativePath = vTex.TexturePath.Replace("//", "\\");
-                relativePath = relativePath.Replace('/', '\\');
-                IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
+                string relativePath = vTex.TexturePath.Replace("//", "\\").Replace('/', '\\');
                 string texPath = Path.Combine(storageFolder.Path, relativePath);
-                Texture2D tex = null;
+                paths.Add(texPath);
+            }
+            lock (appBody.mainCaches.textureCaches)
+            {
+                for (int i = 0; i < pmx.Textures.Count; i++)
+                {
+                    Texture2D tex = appBody.mainCaches.textureCaches.GetOrCreate(paths[i]);
+                    if (tex.Status != GraphicsObjectStatus.loaded) tex.Status = GraphicsObjectStatus.loading;
+                    tex.Path = paths[i];
+                    textures.Add(tex);
+                }
+            }
+            return textures;
+        }
+
+        public static async Task LoadModelTextures(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx, List<Texture2D> textures)
+        {
+            for (int i = 0; i < textures.Count; i++)
+            {
+                Texture2D tex = textures[i];
+                string relativePath = pmx.Textures[i].TexturePath.Replace("//", "\\").Replace('/', '\\');
+                IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
+
                 if (storageItem is StorageFile texFile)
                 {
-                    lock (appBody.mainCaches.textureCaches)
+                    if (tex.Status != GraphicsObjectStatus.loaded && tex.LoadTask == null)
                     {
-                        tex = appBody.mainCaches.textureCaches.GetOrCreate(texPath);
-                        textures.Add(tex);
-                        if (tex.LoadTask == null && !tex.Ready)
+                        tex.LoadTask = new Task(async () =>
                         {
-                            lock (appBody.deviceResources)
+                            async Task _LoadImage(StorageFile f1)
                             {
-                                tex.Reload(appBody.defaultResources.TextureLoading);
+                                Stream texStream = (await f1.OpenReadAsync()).AsStreamForRead();
+                                byte[] texBytes = new byte[texStream.Length];
+                                texStream.Read(texBytes, 0, (int)texStream.Length);
+                                texStream.Dispose();
+                                tex.ReloadFromImage1(appBody.deviceResources, texBytes);
+                                appBody.mainCaches.AddTextureToLoadList(tex);
+                                tex.Status = GraphicsObjectStatus.loaded;
+                                appBody.RequireRender();
                             }
-                            tex.Path = texPath;
-                            tex.LoadTask = Task.Run(async () =>
+                            try
                             {
-                                async Task _LoadImage(StorageFile f1)
-                                {
-                                    Stream texStream = (await f1.OpenReadAsync()).AsStreamForRead();
-                                    byte[] texBytes = new byte[texStream.Length];
-                                    texStream.Read(texBytes, 0, (int)texStream.Length);
-                                    texStream.Dispose();
-                                    tex.ReloadFromImage1(appBody.deviceResources, texBytes);
-                                    tex.Ready = true;
-                                    appBody.mainCaches.AddTextureToLoadList(tex);
-                                }
                                 if (texFile.FileType.Equals(".tga", StringComparison.CurrentCultureIgnoreCase))
                                 {
                                     IStorageItem item1 = await storageFolder.TryGetItemAsync(relativePath.Replace(".tga", ".png"));
@@ -261,37 +256,36 @@ namespace Coocoo3D.UI
                                     {
                                         await _LoadImage(file);
                                     }
-                                    else lock (appBody.deviceResources)
-                                        {
-                                            tex.Reload(appBody.defaultResources.TextureError);
-                                        }
+                                    else
+                                    {
+                                        tex.Status = GraphicsObjectStatus.error;
+                                        appBody.RequireRender();
+                                    }
                                 }
                                 else
                                 {
                                     await _LoadImage(texFile);
                                 }
-                                tex.LoadTask = null;
-                            });
-                        }
+                            }
+                            catch
+                            {
+                                tex.Status = GraphicsObjectStatus.error;
+                                appBody.RequireRender();
+                            }
+                            tex.LoadTask = null;
+                        });
+                        tex.Status = GraphicsObjectStatus.loading;
+                        (tex.LoadTask as Task).Start();
                     }
-                    if (!tex.Ready && tex.LoadTask != null) await (tex.LoadTask as Task);
                 }
                 else
                 {
-                    lock (appBody.mainCaches.textureCaches)
-                    {
-                        tex = appBody.mainCaches.textureCaches.GetOrCreate(texPath);
-                        textures.Add(tex);
-                        lock (appBody.deviceResources)
-                        {
-                            tex.Reload(appBody.defaultResources.TextureError);
-                        }
-                    }
+                    tex.Status = GraphicsObjectStatus.error;
+                    appBody.RequireRender();
                 }
             }
-            return textures;
         }
-
+        
         private static async Task<byte[]> ReadAllBytes(StorageFile storageFile)
         {
             var stream = await storageFile.OpenReadAsync();

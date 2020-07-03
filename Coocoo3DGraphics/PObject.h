@@ -4,6 +4,7 @@
 #include "PixelShader.h"
 #include "GeometryShader.h"
 #include "GraphicsSignature.h"
+#include "GraphicsObjectStatus.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct CullMode
@@ -26,7 +27,7 @@ namespace Coocoo3DGraphics
 	public ref class PObject sealed
 	{
 	public:
-		property bool Ready;
+		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
