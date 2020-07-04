@@ -22,8 +22,6 @@ namespace Coocoo3D.Components
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
         public PObject pObject = new PObject();
-        byte[] rcDataUploadBuffer = new byte[MMDMatLit.c_materialDataSize];
-        GCHandle gch_rcDataUploadBuffer;
 
         const int c_offsetMaterialData = 0;
         public Vector3[] meshPosDataUploadBuffer;
@@ -34,11 +32,9 @@ namespace Coocoo3D.Components
 
         public MMDRendererComponent()
         {
-            gch_rcDataUploadBuffer = GCHandle.Alloc(gch_rcDataUploadBuffer);
         }
         ~MMDRendererComponent()
         {
-            if (gch_rcDataUploadBuffer.IsAllocated) gch_rcDataUploadBuffer.Free();
             if (gch_meshPosDataUploadBuffer.IsAllocated) gch_meshPosDataUploadBuffer.Free();
         }
 
@@ -183,6 +179,10 @@ namespace Coocoo3D.Components
             public Vector4 Texture;
             public Vector4 SubTexture;
             public Vector4 ToonTexture;
+        }
+        public override string ToString()
+        {
+            return string.Format("{0}_{1}",Name,NameEN);
         }
     }
 }

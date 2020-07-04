@@ -18,6 +18,7 @@ using System.Numerics;
 using Coocoo3D.Core;
 using Windows.Storage;
 using Windows.ApplicationModel.DataTransfer;
+using Coocoo3D.Components;
 
 // https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
 
@@ -45,6 +46,7 @@ namespace Coocoo3D.PropertiesPages
                 appBody.FrameUpdated += FrameUpdated;
                 _cacheP = mmd3dEntity.Position;
                 _cacheR = QuaternionToEularYXZ(mmd3dEntity.Rotation);
+                ViewMaterials.ItemsSource = mmd3dEntity.rendererComponent.Materials;
             }
             else
             {
@@ -248,5 +250,17 @@ namespace Coocoo3D.PropertiesPages
                 }
             }
         }
+
+        private void Grid_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+        {
+            MMDMatLit matLit = (sender as Grid).DataContext as MMDMatLit;
+            appBody.ShowDetailPage(typeof(MaterialPropertyPage), new Bundle_Main_Entity_Mat() { main = appBody, entity = mmd3dEntity, matLit = matLit });
+        }
+    }
+    public struct Bundle_Main_Entity_Mat
+    {
+        public Coocoo3DMain main;
+        public MMD3DEntity entity;
+        public MMDMatLit matLit;
     }
 }

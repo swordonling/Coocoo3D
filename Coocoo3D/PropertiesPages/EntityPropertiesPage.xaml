@@ -7,13 +7,20 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:mu="using:Microsoft.UI.Xaml.Controls"
     xmlns:ccom="using:Coocoo3DGraphics"
+    xmlns:ccc="using:Coocoo3D.Components"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     AllowDrop="True"
     DragOver="Page_DragOver"
     Drop="Page_Drop">
-
-    <ScrollViewer Padding="0,0,20,0">
+    <Page.Resources>
+        <DataTemplate x:Key="dtMaterial" x:DataType="ccc:MMDMatLit">
+            <Grid Background="Transparent" IsDoubleTapEnabled="True" DoubleTapped="Grid_DoubleTapped">
+                <ContentPresenter Content="{x:Bind}" VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+    </Page.Resources>
+    <ScrollViewer Padding="0,0,20,20">
         <StackPanel Grid.Row="0">
             <TextBox Height="100" x:Name="pageHeader" FontSize="18" Text="{x:Bind vName,Mode=TwoWay}" PlaceholderText="名称" TextWrapping="Wrap" AcceptsReturn="True"/>
             <Grid>
@@ -36,10 +43,19 @@
             <ScrollViewer Height="200" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
                 <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
+            <TextBlock Text="材质列表"/>
+            <ListView Height="300" x:Name="ViewMaterials" ItemTemplate="{StaticResource dtMaterial}">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Margin" Value="0"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+            </ListView>
             <ScrollViewer Height="150">
                 <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
-
         </StackPanel>
     </ScrollViewer>
 </Page>

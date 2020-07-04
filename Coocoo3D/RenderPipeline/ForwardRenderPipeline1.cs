@@ -321,8 +321,8 @@ namespace Coocoo3D.RenderPipeline
                 BlendState blendState = BlendState.alpha;
                 if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawDoubleFace))
                     cullMode = CullMode.none;
-                if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawSelfShadow))
-                    blendState = BlendState.none;
+                //if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawSelfShadow))
+                //    blendState = BlendState.none;
 
                 if (rendererComponent.pObject.Status == GraphicsObjectStatus.unload)
                     graphicsContext.SetPObject(PObjectMMD, cullMode, blendState);
