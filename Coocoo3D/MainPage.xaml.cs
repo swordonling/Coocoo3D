@@ -58,6 +58,14 @@ namespace Coocoo3D
             });
 
             frame1 = new Frame();
+            frame1.Navigate(typeof(PropertiesPages.PostProcessPage), appBody);
+            tabViewR1.TabItems.Add(new TabViewItem()
+            {
+                Header = "后处理",
+                Content = frame1,
+            });
+
+            frame1 = new Frame();
             frame1.Navigate(typeof(PropertiesPages.ResourcesPage), appBody);
             tabViewB1.TabItems.Add(new TabViewItem()
             {

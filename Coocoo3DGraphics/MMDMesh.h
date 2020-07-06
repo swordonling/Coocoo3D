@@ -53,6 +53,7 @@ namespace Coocoo3DGraphics
 		static MMDMesh^ Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::void UploadMesh(MMDMesh^ mesh)上传。
 		void Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
+		void ReloadNDCQuad();
 		void ReleaseUploadHeapResource();
 		virtual ~MMDMesh();
 
@@ -66,7 +67,7 @@ namespace Coocoo3DGraphics
 		UINT m_indexStride;
 		UINT m_vertexStride2;
 		UINT m_vertexOffset = 0;
-		D3D11_PRIMITIVE_TOPOLOGY m_primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		D3D_PRIMITIVE_TOPOLOGY m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer2[c_frameCount];

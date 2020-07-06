@@ -138,6 +138,10 @@ namespace Coocoo3DGraphics
 		DeviceResources();
 		void SetSwapChainPanel(Windows::UI::Xaml::Controls::SwapChainPanel^ window);
 		void SetLogicalSize(Windows::Foundation::Size logicalSize);
+		// 呈现器目标的大小，以像素为单位。
+		Windows::Foundation::Size	GetOutputSize() { return m_outputSize; }
+		// 呈现器目标的大小，以 dip 为单位。
+		Windows::Foundation::Size	GetLogicalSize() { return m_logicalSize; }
 		void SetCurrentOrientation(Windows::Graphics::Display::DisplayOrientations currentOrientation);
 		void SetDpi(float dpi);
 		void ValidateDevice();
@@ -147,11 +151,7 @@ namespace Coocoo3DGraphics
 	internal:
 		DeviceResources(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat);
 
-		// 呈现器目标的大小，以像素为单位。
-		Windows::Foundation::Size	GetOutputSize() const { return m_outputSize; }
 
-		// 呈现器目标的大小，以 dip 为单位。
-		Windows::Foundation::Size	GetLogicalSize() const { return m_logicalSize; }
 
 		float						GetDpi() const { return m_effectiveDpi; }
 		bool						IsDeviceRemoved() const { return m_deviceRemoved; }

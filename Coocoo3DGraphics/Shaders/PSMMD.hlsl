@@ -5,7 +5,7 @@ struct LightInfo
 	float4 LightColor;
 	float4x4 LightSpaceMatrix;
 };
-cbuffer cb0 : register(b0)
+cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
 	LightInfo Lightings[4];
@@ -103,5 +103,5 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		}
 	}
 	strength += _AmbientColor;
-	return pow(texture0.Sample(s0, input.TexCoord)*float4(strength, 1)*_DiffuseColor + float4(specularStrength, 0), 1 / 2.2f);
+	return texture0.Sample(s0, input.TexCoord)*float4(strength, 1)*_DiffuseColor + float4(specularStrength, 0);
 }

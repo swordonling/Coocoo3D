@@ -1,4 +1,4 @@
-cbuffer cb0 : register(b0)
+cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
 };
@@ -32,7 +32,7 @@ void main(
 	{
 		output = input[i];
 		output.pos = input[i].vPos;
-		output.pos = output.pos + float4(-3.0f*norm, 0);
+		output.pos = output.pos + float4(3.0f*norm, 0);
 		output.pos = mul(output.pos, g_mWorldToProj);
 
 		triStream.Append(output);

@@ -1,13 +1,13 @@
 #define MAX_BONE_MATRICES 1024
-cbuffer cb0 : register(b0)
+cbuffer cbAnimMatrices : register(b0)
+{
+	float4x4 g_mConstBoneWorld[MAX_BONE_MATRICES];
+};
+cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
 };
 
-cbuffer cbAnimMatrices : register(b1)
-{
-	float4x4 g_mConstBoneWorld[MAX_BONE_MATRICES];
-};
 cbuffer cb3 : register(b3)
 {
 	float4x4 g_mWorldToProj;

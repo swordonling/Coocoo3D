@@ -163,6 +163,9 @@
     <Compile Include="PropertiesPages\MaterialPropertyPage.xaml.cs">
       <DependentUpon>MaterialPropertyPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PropertiesPages\PostProcessPage.xaml.cs">
+      <DependentUpon>PostProcessPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PropertiesPages\ResourcesPage.xaml.cs">
       <DependentUpon>ResourcesPage.xaml</DependentUpon>
     </Compile>
@@ -174,7 +177,9 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RenderPipeline\ForwardRenderPipeline1.cs" />
+    <Compile Include="RenderPipeline\PostProcess.cs" />
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
+    <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />
     <Compile Include="Utility\IDictionaryExt.cs" />
@@ -233,6 +238,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="PropertiesPages\MaterialPropertyPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PropertiesPages\PostProcessPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

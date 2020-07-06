@@ -18,10 +18,15 @@ namespace Coocoo3D.Core
 
         public RenderTexture2D DepthStencil0 = new RenderTexture2D();
 
+        public RenderTexture2D ScreenSizeRenderTexture0 = new RenderTexture2D();
+        public RenderTexture2D ScreenSizeDepthStencil0 = new RenderTexture2D();
+
         public Texture2D ui0Texture = new Texture2D();
 
         public Texture2D TextureLoading = new Texture2D();
         public Texture2D TextureError = new Texture2D();
+
+        public MMDMesh quadMesh = new MMDMesh();
 
         public bool Initilized = false;
         public Task LoadTask;
@@ -34,7 +39,10 @@ namespace Coocoo3D.Core
             TextureError.ReloadPure(1, 1, new System.Numerics.Vector4(1, 0, 1, 1));
             mainCaches.AddTextureToLoadList(TextureLoading);
             mainCaches.AddTextureToLoadList(TextureError);
-            
+
+            quadMesh.ReloadNDCQuad();
+            mainCaches.AddMeshToLoadList(quadMesh);
+
             await ReloadVertexShader(VSUIStandard, deviceResources, "ms-appx:///Coocoo3DGraphics/VSUIStandard.cso");
             
             await ReloadGeometryShader(uiGeometryShader, deviceResources, "ms-appx:///Coocoo3DGraphics/GSUIStandard.cso");

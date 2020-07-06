@@ -65,6 +65,7 @@ namespace Coocoo3DGraphics
 		void SetMesh(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
+		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);
 		void SetRootSignature(GraphicsSignature^ rootSignature);
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
 		void ClearDepthStencil();
@@ -77,6 +78,6 @@ namespace Coocoo3DGraphics
 		void Execute();
 	internal:
 		DeviceResources^ m_deviceResources;
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>	m_commandList;
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4>	m_commandList;
 	};
 }

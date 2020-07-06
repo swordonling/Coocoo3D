@@ -87,12 +87,13 @@ namespace Coocoo3D.Core
             threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
 
             forwardRenderPipeline1.Reload(deviceResources);
+            postProcess.Reload(deviceResources);
             defaultResources.LoadTask = Task.Run(async () =>
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 await forwardRenderPipeline1.ReloadAssets(deviceResources);
+                await postProcess.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
-                forwardRenderPipeline1.Ready = true;
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
@@ -112,21 +113,32 @@ namespace Coocoo3D.Core
         }
         #region Render Pipeline
         RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
+        RenderPipeline.PostProcess postProcess = new RenderPipeline.PostProcess();
         public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => forwardRenderPipeline1; }
+        Task[] poolTasks1;
         private void UpdateEntities()
         {
             int threshold = 1;
             if (Entities.Count > threshold)
             {
-                Task[] tasks = new Task[Entities.Count - threshold];
+                if (poolTasks1 != null && poolTasks1.Length == Entities.Count - threshold)
+                {
+                    for(int i=0;i<Entities.Count - threshold;i++)
+                    {
+                        poolTasks1[i] = null;
+                    }
+                }
+                else
+                    poolTasks1 = new Task[Entities.Count - threshold];
+
                 for (int i = threshold; i < Entities.Count; i++)
                 {
                     MMD3DEntity entity = Entities[i];
-                    tasks[i - threshold] = Task.Run(() => entity.SetMotionTime(PlayTime));
+                    poolTasks1[i - threshold] = Task.Run(() => entity.SetMotionTime(PlayTime));
                 }
                 for (int i = 0; i < threshold; i++)
                     Entities[i].SetMotionTime(PlayTime);
-                Task.WaitAll(tasks);
+                Task.WaitAll(poolTasks1);
             }
             else for (int i = 0; i < Entities.Count; i++)
                     Entities[i].SetMotionTime(PlayTime);
@@ -141,6 +153,7 @@ namespace Coocoo3D.Core
         List<Texture2D> textureProcessing = new List<Texture2D>();
         List<RenderTexture2D> rtProcessing = new List<RenderTexture2D>();
         List<MMDMesh> meshProcessing = new List<MMDMesh>();
+        RenderPipeline.RenderPipelineContext renderPipelineContext = new RenderPipeline.RenderPipelineContext();
         private bool RenderFrame2()
         {
             if (DateTime.Now - LatestRenderTime > FrameInterval && !rendering)
@@ -152,6 +165,7 @@ namespace Coocoo3D.Core
                 LatestRenderTime = now;
                 lock (deviceResources)
                 {
+                    #region Render Preparing
                     mainCaches.textureLoadList.MoveTo_CC(textureProcessing);
                     mainCaches.RenderTextureUpdateList.MoveTo_CC(rtProcessing);
                     mainCaches.mmdMeshLoadList.MoveTo_CC(meshProcessing);
@@ -175,11 +189,11 @@ namespace Coocoo3D.Core
                     for (int i = 0; i < Lightings.Count; i++)
                         Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
 
-                    GraphicsContext.BeginAlloctor(deviceResources);
-                    graphicsContext.BeginCommand();
 
                     if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0 || worldViewer.RequireResize)
                     {
+                        GraphicsContext.BeginAlloctor(deviceResources);
+                        graphicsContext.BeginCommand();
                         for (int i = 0; i < textureProcessing.Count; i++)
                         {
                             graphicsContext.UploadTexture(textureProcessing[i]);
@@ -193,8 +207,15 @@ namespace Coocoo3D.Core
                         deviceResources.WaitForGpu();
                         if (worldViewer.RequireResize)
                         {
-                            deviceResources.SetLogicalSize(worldViewer.NewSize);
                             worldViewer.RequireResize = false;
+                            deviceResources.SetLogicalSize(worldViewer.NewSize);
+                            int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
+                            int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
+                            defaultResources.ScreenSizeRenderTexture0.ReloadAsRenderTarget(deviceResources, x, y, DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM);
+                            rtProcessing.Add(defaultResources.ScreenSizeRenderTexture0);
+
+                            defaultResources.ScreenSizeDepthStencil0.ReloadAsDepthStencil(deviceResources, x, y);
+                            rtProcessing.Add(defaultResources.ScreenSizeDepthStencil0);
                         }
                         for (int i = 0; i < rtProcessing.Count; i++)
                         {
@@ -211,10 +232,24 @@ namespace Coocoo3D.Core
                         textureProcessing.Clear();
                         meshProcessing.Clear();
                         rtProcessing.Clear();
-
-                        GraphicsContext.BeginAlloctor(deviceResources);
-                        graphicsContext.BeginCommand();
                     }
+                    #region context preparing
+                    renderPipelineContext.cameras = new Camera[] { camera };
+                    renderPipelineContext.deviceResources = deviceResources;
+                    renderPipelineContext.graphicsContext = graphicsContext;
+                    renderPipelineContext.outputDSV = defaultResources.ScreenSizeDepthStencil0;
+                    renderPipelineContext.outputRTV = defaultResources.ScreenSizeRenderTexture0;
+                    renderPipelineContext.scene = CurrentScene;
+                    renderPipelineContext.TextureLoading = defaultResources.TextureLoading;
+                    renderPipelineContext.TextureError = defaultResources.TextureError;
+                    renderPipelineContext.settings = settings;
+                    renderPipelineContext.ndcQuadMesh = defaultResources.quadMesh;
+                    renderPipelineContext.DSV0 = defaultResources.DepthStencil0;
+                    #endregion
+                    #endregion
+
+                    GraphicsContext.BeginAlloctor(deviceResources);
+                    graphicsContext.BeginCommand();
                     graphicsContext.BeginEvent();
                     graphicsContext.SetDescriptorHeapDefault();
                     if (Playing)
@@ -232,9 +267,15 @@ namespace Coocoo3D.Core
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
                     if (forwardRenderPipeline1.Ready)
                     {
-                        forwardRenderPipeline1.PrepareRenderData(deviceResources, graphicsContext, defaultResources, settings, CurrentScene, new Camera[] { camera });
-                        forwardRenderPipeline1.RenderBeforeCamera(graphicsContext, defaultResources, CurrentScene);
-                        forwardRenderPipeline1.RenderCamera(graphicsContext, defaultResources, CurrentScene, 0);
+                        forwardRenderPipeline1.PrepareRenderData(renderPipelineContext);
+                        forwardRenderPipeline1.BeforeRenderCameras(renderPipelineContext);
+                        forwardRenderPipeline1.RenderCamera(renderPipelineContext, 0);
+                    }
+                    if (postProcess.Ready)
+                    {
+                        postProcess.PrepareRenderData(renderPipelineContext);
+                        postProcess.BeforeRenderCameras(renderPipelineContext);
+                        postProcess.RenderCamera(renderPipelineContext, 0);
                     }
                     //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
                     //{
