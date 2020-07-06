@@ -31,6 +31,7 @@ namespace Coocoo3DGraphics
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader,DxgiFormat rtvFormat);
 		void Reload(PObject^ pObject);
 	internal:
 		VertexShader^ m_vertexShader;

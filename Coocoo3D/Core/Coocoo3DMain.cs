@@ -92,6 +92,7 @@ namespace Coocoo3D.Core
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 await forwardRenderPipeline1.ReloadAssets(deviceResources);
+                forwardRenderPipeline1.ChangeRenderTargetFormat(deviceResources, DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM);
                 await postProcess.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
             });

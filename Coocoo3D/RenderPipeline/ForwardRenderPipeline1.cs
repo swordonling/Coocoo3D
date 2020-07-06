@@ -36,10 +36,12 @@ namespace Coocoo3D.RenderPipeline
             await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
             await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
-
-            PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMD);
-            PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDLoading);
-            PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDError);
+        }
+        public void ChangeRenderTargetFormat(DeviceResources deviceResources,DxgiFormat format)
+        {
+            PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMD, format);
+            PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDLoading, format);
+            PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDError, format);
             Ready = true;
         }
         public GraphicsSignature rootSignature = new GraphicsSignature();
