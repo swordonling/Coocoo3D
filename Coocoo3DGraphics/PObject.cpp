@@ -136,7 +136,7 @@ void PObject::Reload(DeviceResources ^ deviceResources, GraphicsSignature ^ grap
 	blendDesc1.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
 	blendDesc1.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 	blendDesc1.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-	blendDesc1.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	blendDesc1.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
 	blendDesc1.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 	blendDesc1.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
@@ -165,6 +165,15 @@ void PObject::Reload(PObject ^ pObject)
 	for (int i = 0; i < _countof(m_pipelineState); i++)
 	{
 		m_pipelineState[i] = pObject->m_pipelineState[i];
+	}
+}
+
+void PObject::Unload()
+{
+	Status = GraphicsObjectStatus::unload;
+	for (int i = 0; i < _countof(m_pipelineState); i++)
+	{
+		m_pipelineState[i].Reset();
 	}
 }
 

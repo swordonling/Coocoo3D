@@ -48,6 +48,10 @@ namespace Coocoo3D.Present
         {
             DataBuffer.Reload(deviceResources, c_presentDataSize);
         }
+        public void Unload()
+        {
+            DataBuffer.Unload();
+        }
         public PresentData()
         {
             gch_PresentDataUploadBuffer = GCHandle.Alloc(PresentDataUploadBuffer);

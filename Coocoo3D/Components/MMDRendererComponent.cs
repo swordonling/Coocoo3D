@@ -161,11 +161,6 @@ namespace Coocoo3D.Components
         public int texIndex;
         public int toonIndex;
         public DrawFlags DrawFlags;
-        public Vector4 DiffuseColor { get => innerStruct.DiffuseColor; set => innerStruct.DiffuseColor = value; }
-        public Vector4 SpecularColor { get => innerStruct.SpecularColor; set => innerStruct.SpecularColor = value; }
-        public Vector3 AmbientColor { get => innerStruct.AmbientColor; set => innerStruct.AmbientColor = value; }
-        public float EdgeScale { get => innerStruct.EdgeSize; set => innerStruct.EdgeSize = value; }
-        public Vector4 EdgeColor { get => innerStruct.EdgeColor; set => innerStruct.EdgeColor = value; }
 
         public InnerStruct innerStruct;
         public struct InnerStruct
@@ -179,10 +174,22 @@ namespace Coocoo3D.Components
             public Vector4 Texture;
             public Vector4 SubTexture;
             public Vector4 ToonTexture;
+            public uint IsTransparent;
+            public float Metallic;
+            public float Smoothness;
+            public float Emission;
+            public uint UseMetallicMap;
+            public uint UseSmoothnessMap;
+            public uint UseEmissionMap;
+            public uint UseOcclusionMap;
+            public uint UseNormalMap;
+            public uint UseSubSurfaceMap;
+            public uint UseAnisotropyMap;
+            public uint UseIridescenceMap;
         }
         public override string ToString()
         {
-            return string.Format("{0}_{1}",Name,NameEN);
+            return string.Format("{0}_{1}", Name, NameEN);
         }
     }
 }
@@ -208,15 +215,18 @@ namespace Coocoo3D.FileFormat
                     NameEN = mmdMat.NameEN,
                     texIndex = mmdMat.TextureIndex,
                     indexCount = mmdMat.TriangeIndexNum,
-                    DiffuseColor = mmdMat.DiffuseColor,
-                    SpecularColor = mmdMat.SpecularColor,
-                    EdgeScale = mmdMat.EdgeScale,
-                    EdgeColor = mmdMat.EdgeColor,
+                    innerStruct =
+                    {
+                        DiffuseColor = mmdMat.DiffuseColor,
+                        SpecularColor = mmdMat.SpecularColor,
+                        EdgeSize = mmdMat.EdgeScale,
+                        EdgeColor = mmdMat.EdgeColor,
+                        AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f)),
+                        Smoothness=0.5f,
+                    },
                     DrawFlags = mmdMat.DrawFlags,
                     toonIndex = mmdMat.ToonIndex,
                 };
-
-                mat.AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f));
                 rendererComponent.Materials.Add(mat);
                 rendererComponent.materialsBaseData.Add(mat.innerStruct);
                 rendererComponent.computedMaterialsData.Add(mat.innerStruct);

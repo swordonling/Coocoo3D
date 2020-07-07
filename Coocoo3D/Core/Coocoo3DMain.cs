@@ -70,17 +70,19 @@ namespace Coocoo3D.Core
             });
         }
         #endregion
-        public Settings settings = new Settings();
+        public Settings settings = new Settings()
+        {
+            viewSelectedEntityBone = true,
+            HighResolutionShadow = false,
+            backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
+            ExtendShadowMapRange = 32
+        };
         public float AspectRatio;
         IAsyncAction RenderLoop;
         public Coocoo3DMain()
         {
+            _currentRenderPipeline = forwardRenderPipeline1;
             graphicsContext.Reload(deviceResources);
-
-            settings.viewSelectedEntityBone = true;
-            settings.HighResolutionShadow = false;
-            settings.backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f);
-            settings.ExtendShadowMapRange = 32;
 
             CurrentScene = new Scene(this);
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
@@ -92,13 +94,12 @@ namespace Coocoo3D.Core
             {
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 await forwardRenderPipeline1.ReloadAssets(deviceResources);
-                forwardRenderPipeline1.ChangeRenderTargetFormat(deviceResources, DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM);
+                forwardRenderPipeline1.ChangeRenderTargetFormat(deviceResources, RTFormat);
                 await postProcess.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
             });
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
-                  int a = 0;
                   while (action.Status == AsyncStatus.Started)
                   {
                       DateTime now = DateTime.Now;
@@ -107,15 +108,16 @@ namespace Coocoo3D.Core
                       {
                           bool actualRender = RenderFrame2();
                       }
-                      a = a ^ 1;
-                      System.Threading.Thread.Sleep(a);
+                      System.Threading.Thread.Sleep(1);
                   }
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
         }
         #region Render Pipeline
         RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
-        RenderPipeline.PostProcess postProcess = new RenderPipeline.PostProcess();
-        public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => forwardRenderPipeline1; }
+        public RenderPipeline.PostProcess postProcess = new RenderPipeline.PostProcess();
+        public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => _currentRenderPipeline; }
+        RenderPipeline.RenderPipeline _currentRenderPipeline;
+        public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
         Task[] poolTasks1;
         private void UpdateEntities()
         {
@@ -124,7 +126,7 @@ namespace Coocoo3D.Core
             {
                 if (poolTasks1 != null && poolTasks1.Length == Entities.Count - threshold)
                 {
-                    for(int i=0;i<Entities.Count - threshold;i++)
+                    for (int i = 0; i < Entities.Count - threshold; i++)
                     {
                         poolTasks1[i] = null;
                     }
@@ -212,24 +214,22 @@ namespace Coocoo3D.Core
                             deviceResources.SetLogicalSize(worldViewer.NewSize);
                             int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
                             int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
-                            defaultResources.ScreenSizeRenderTexture0.ReloadAsRenderTarget(deviceResources, x, y, DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM);
-                            rtProcessing.Add(defaultResources.ScreenSizeRenderTexture0);
-
-                            defaultResources.ScreenSizeDepthStencil0.ReloadAsDepthStencil(deviceResources, x, y);
-                            rtProcessing.Add(defaultResources.ScreenSizeDepthStencil0);
+                            defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRenderTarget(deviceResources, x, y, RTFormat);
+                            rtProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
+                            for(int i=0;i<defaultResources.ScreenSizeRenderTextures.Length;i++)
+                            {
+                                defaultResources.ScreenSizeRenderTextures[i].ReloadAsRenderTarget(deviceResources, x, y, RTFormat);
+                                rtProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
+                            }
+                            defaultResources.ScreenSizeDepthStencilOutput.ReloadAsDepthStencil(deviceResources, x, y);
+                            rtProcessing.Add(defaultResources.ScreenSizeDepthStencilOutput);
                         }
                         for (int i = 0; i < rtProcessing.Count; i++)
-                        {
                             graphicsContext.UpdateRenderTexture(rtProcessing[i]);
-                        }
                         for (int i = 0; i < textureProcessing.Count; i++)
-                        {
                             textureProcessing[i].ReleaseUploadHeapResource();
-                        }
                         for (int i = 0; i < meshProcessing.Count; i++)
-                        {
                             meshProcessing[i].ReleaseUploadHeapResource();
-                        }
                         textureProcessing.Clear();
                         meshProcessing.Clear();
                         rtProcessing.Clear();
@@ -238,8 +238,8 @@ namespace Coocoo3D.Core
                     renderPipelineContext.cameras = new Camera[] { camera };
                     renderPipelineContext.deviceResources = deviceResources;
                     renderPipelineContext.graphicsContext = graphicsContext;
-                    renderPipelineContext.outputDSV = defaultResources.ScreenSizeDepthStencil0;
-                    renderPipelineContext.outputRTV = defaultResources.ScreenSizeRenderTexture0;
+                    renderPipelineContext.outputDSV = defaultResources.ScreenSizeDepthStencilOutput;
+                    renderPipelineContext.outputRTV = defaultResources.ScreenSizeRenderTextureOutput;
                     renderPipelineContext.scene = CurrentScene;
                     renderPipelineContext.TextureLoading = defaultResources.TextureLoading;
                     renderPipelineContext.TextureError = defaultResources.TextureError;
@@ -266,11 +266,11 @@ namespace Coocoo3D.Core
                         Entities[i].UpdateGpuResources(graphicsContext);
 
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-                    if (forwardRenderPipeline1.Ready)
+                    if (_currentRenderPipeline.Ready)
                     {
-                        forwardRenderPipeline1.PrepareRenderData(renderPipelineContext);
-                        forwardRenderPipeline1.BeforeRenderCameras(renderPipelineContext);
-                        forwardRenderPipeline1.RenderCamera(renderPipelineContext, 0);
+                        _currentRenderPipeline.PrepareRenderData(renderPipelineContext);
+                        _currentRenderPipeline.BeforeRenderCameras(renderPipelineContext);
+                        _currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
                     }
                     if (postProcess.Ready)
                     {
@@ -304,6 +304,16 @@ namespace Coocoo3D.Core
             }
         }
         #endregion
+
+        int currentRenderPipelineIndex;
+        public void SwitchToRenderPipeline(int index)
+        {
+            if (currentRenderPipelineIndex != index)
+            {
+                currentRenderPipelineIndex = index;
+
+            }
+        }
 
         public void ForceAudioAsync() => AudioAsync(PlayTime, Playing);
         TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);

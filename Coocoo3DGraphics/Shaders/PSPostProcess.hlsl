@@ -5,9 +5,13 @@ struct PSSkinnedIn
 };
 Texture2D texture0 :register(t0);
 SamplerState s0 : register(s0);
+cbuffer cb1 : register(b1)
+{
+	float _GammaCorrection;
+};
 float4 main(PSSkinnedIn input) : SV_TARGET
 { 
 	float4 col=texture0.Sample(s0, input.uv);
-	col.rgb = pow(col.rgb, 1 / 2.2f);
+	col.rgb = pow(col.rgb, 1 / _GammaCorrection);
 	return col;
 }

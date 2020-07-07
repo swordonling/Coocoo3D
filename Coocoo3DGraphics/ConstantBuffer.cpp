@@ -16,6 +16,12 @@ void ConstantBuffer::Reload(DeviceResources ^ deviceResources, int size)
 	Initialize(deviceResources, size);
 }
 
+void ConstantBuffer::Unload()
+{
+	m_constantBuffer.Reset();
+	lastUpdateIndex = 0;
+}
+
 void ConstantBuffer::Initialize(DeviceResources ^ deviceResources, int size)
 {
 	Size = (size + 255) & ~255;

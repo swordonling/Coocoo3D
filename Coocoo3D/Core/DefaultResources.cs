@@ -11,15 +11,11 @@ namespace Coocoo3D.Core
 {
     public class DefaultResources
     {
-        public VertexShader VSUIStandard = new VertexShader();
-        public PixelShader uiPixelShader = new PixelShader();
-        public GeometryShader uiGeometryShader = new GeometryShader();
-        public PObject uiPObject = new PObject();
-
         public RenderTexture2D DepthStencil0 = new RenderTexture2D();
 
-        public RenderTexture2D ScreenSizeRenderTexture0 = new RenderTexture2D();
-        public RenderTexture2D ScreenSizeDepthStencil0 = new RenderTexture2D();
+        public RenderTexture2D[] ScreenSizeRenderTextures = new RenderTexture2D[4];
+        public RenderTexture2D ScreenSizeRenderTextureOutput = new RenderTexture2D();
+        public RenderTexture2D ScreenSizeDepthStencilOutput = new RenderTexture2D();
 
         public Texture2D ui0Texture = new Texture2D();
 
@@ -27,6 +23,13 @@ namespace Coocoo3D.Core
         public Texture2D TextureError = new Texture2D();
 
         public MMDMesh quadMesh = new MMDMesh();
+        public DefaultResources()
+        {
+            for(int i=0;i< ScreenSizeRenderTextures.Length;i++)
+            {
+                ScreenSizeRenderTextures[i] = new RenderTexture2D();
+            }
+        }
 
         public bool Initilized = false;
         public Task LoadTask;
@@ -43,16 +46,8 @@ namespace Coocoo3D.Core
             quadMesh.ReloadNDCQuad();
             mainCaches.AddMeshToLoadList(quadMesh);
 
-            await ReloadVertexShader(VSUIStandard, deviceResources, "ms-appx:///Coocoo3DGraphics/VSUIStandard.cso");
-            
-            await ReloadGeometryShader(uiGeometryShader, deviceResources, "ms-appx:///Coocoo3DGraphics/GSUIStandard.cso");
-            
-            await ReloadPixelShader(uiPixelShader, deviceResources, "ms-appx:///Coocoo3DGraphics/PSUIStandard.cso");
-
             await ReloadTexture2D(ui0Texture, deviceResources, mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
-
             
-
             //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }

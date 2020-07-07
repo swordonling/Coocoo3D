@@ -15,14 +15,16 @@ namespace Coocoo3D.RenderPipeline
         public const int c_postProcessDataSize = 256;
 
         public override GraphicsSignature GraphicsSignature => rootSignature;
-        Settings settings;
         byte[] rcDataUploadBuffer = new byte[c_postProcessDataSize];
         public GCHandle gch_rcDataUploadBuffer;
-        public volatile bool Ready;
+
+        public InnerStruct innerStruct;
+        ConstantBuffer postProcessDataBuffer = new ConstantBuffer();
 
         public PostProcess()
         {
             gch_rcDataUploadBuffer = GCHandle.Alloc(rcDataUploadBuffer);
+            innerStruct.GammaCorrection = 2.2f;
         }
         ~PostProcess()
         {
@@ -32,26 +34,29 @@ namespace Coocoo3D.RenderPipeline
         public void Reload(DeviceResources deviceResources)
         {
             rootSignature.ReloadMMD(deviceResources);
+            postProcessDataBuffer.Reload(deviceResources, c_postProcessDataSize);
         }
 
-        public void PrepareRenderData(RenderPipelineContext context)
+        public override void PrepareRenderData(RenderPipelineContext context)
         {
 
         }
 
-        public void BeforeRenderCameras(RenderPipelineContext context)
+        public override void BeforeRenderCameras(RenderPipelineContext context)
         {
-
+            Marshal.StructureToPtr(innerStruct, Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
+            context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize);
         }
 
-        public void RenderCamera(RenderPipelineContext context, int cameraIndex)
+        public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(rootSignature);
-            graphicsContext.SetRenderTargetScreenAndClear(settings.backgroundColor);
-            graphicsContext.SetSRV_RT(PObjectType.mmd, context.outputRTV, 0);
+            graphicsContext.SetRenderTargetScreenAndClear(context.settings.backgroundColor);
+            graphicsContext.SetSRV_RT(PObjectType.postProcess, context.outputRTV, 0);
+            graphicsContext.SetConstantBuffer(PObjectType.postProcess, postProcessDataBuffer, 1);
             graphicsContext.SetMesh(context.ndcQuadMesh);
-            graphicsContext.SetPObject(PObjectPostProcess, CullMode.back, BlendState.none);
+            graphicsContext.SetPObject(PObjectPostProcess, CullMode.back, BlendState.alpha);
             graphicsContext.DrawIndexed(6, 0, 0);
         }
 
@@ -69,7 +74,10 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectPostProcess = new PObject();
         #endregion
 
-
+        public struct InnerStruct
+        {
+            public float GammaCorrection;
+        }
 
     }
 }

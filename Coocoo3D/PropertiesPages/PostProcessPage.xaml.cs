@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Coocoo3D.Core;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,6 +26,28 @@ namespace Coocoo3D.PropertiesPages
         public PostProcessPage()
         {
             this.InitializeComponent();
+        }
+        Coocoo3DMain appBody;
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+            appBody = e.Parameter as Coocoo3DMain;
+            if (appBody == null)
+            {
+                Frame.Navigate(typeof(ErrorPropertiesPage), "error");
+                return;
+            }
+        }
+
+        public float VGammaCorrection
+        {
+            get => appBody.postProcess.innerStruct.GammaCorrection;
+            set
+            {
+                appBody.postProcess.innerStruct.GammaCorrection = value;
+                appBody.RequireRender();
+            }
         }
     }
 }

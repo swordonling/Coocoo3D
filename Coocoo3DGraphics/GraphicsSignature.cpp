@@ -55,3 +55,11 @@ void GraphicsSignature::ReloadMMD(DeviceResources ^ deviceResources)
 	DX::ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
 }
+
+void GraphicsSignature::Unload()
+{
+	for (int i = 0; i < _countof(m_rootSignatures); i++)
+	{
+		m_rootSignatures[i].Reset();
+	}
+}

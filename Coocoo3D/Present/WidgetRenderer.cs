@@ -33,48 +33,48 @@ namespace Coocoo3D.Present
 
         public void Init(MainCaches mainCaches, DefaultResources defaultResources, IDictionary<string, Texture2D> caches)
         {
-            boneRenderMaterial = Material.Load(defaultResources.uiPObject);
-            boneRenderMaterial.SetTexture(defaultResources.ui0Texture, 0);
-            IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(indexData, 0);
-            for (int i = 0; i < c_particleCount; i++)
-            {
-                Marshal.WriteInt32(ptr, i);
-                ptr += 4;
-            }
-            particleMesh = MMDMesh.Load1( vertexData, null, indexData, c_perVertexSize, 0, 4, PrimitiveTopology._POINTLIST);
-            mainCaches.AddMeshToLoadList(particleMesh);
+            //boneRenderMaterial = Material.Load(defaultResources.uiPObject);
+            //boneRenderMaterial.SetTexture(defaultResources.ui0Texture, 0);
+            //IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(indexData, 0);
+            //for (int i = 0; i < c_particleCount; i++)
+            //{
+            //    Marshal.WriteInt32(ptr, i);
+            //    ptr += 4;
+            //}
+            //particleMesh = MMDMesh.Load1( vertexData, null, indexData, c_perVertexSize, 0, 4, PrimitiveTopology._POINTLIST);
+            //mainCaches.AddMeshToLoadList(particleMesh);
         }
 
         public void RenderBoneVisual( GraphicsContext graphicsContext, Camera camera, MMD3DEntity entity)
         {
-            graphicsContext.SetMaterial(boneRenderMaterial);
+            //graphicsContext.SetMaterial(boneRenderMaterial);
 
-            var bones = entity.boneComponent.bones;
-            IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(vertexData, 0);
-            int visibleBoneCount = 0;
-            Vector2 viewSize = new Vector2(0.05f, 0.05f);
-            for (int i = 0; i < bones.Count; i++)
-            {
-                if (bones[i].Flags.HasFlag(MMDSupport.BoneFlags.Visible))
-                {
-                    var pos = Vector3.Transform(bones[i].staticPosition, bones[i].GeneratedTransform);
-                    visibleBoneCount++;
+            //var bones = entity.boneComponent.bones;
+            //IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(vertexData, 0);
+            //int visibleBoneCount = 0;
+            //Vector2 viewSize = new Vector2(0.05f, 0.05f);
+            //for (int i = 0; i < bones.Count; i++)
+            //{
+            //    if (bones[i].Flags.HasFlag(MMDSupport.BoneFlags.Visible))
+            //    {
+            //        var pos = Vector3.Transform(bones[i].staticPosition, bones[i].GeneratedTransform);
+            //        visibleBoneCount++;
 
-                    Marshal.StructureToPtr(pos, ptr, true);
-                    Marshal.WriteInt32(ptr + 12, 1);
-                    Marshal.WriteInt32(ptr + 16, 1);
-                    Marshal.WriteInt32(ptr + 20, 0);
-                    Marshal.StructureToPtr(viewSize, ptr + 24, true);
+            //        Marshal.StructureToPtr(pos, ptr, true);
+            //        Marshal.WriteInt32(ptr + 12, 1);
+            //        Marshal.WriteInt32(ptr + 16, 1);
+            //        Marshal.WriteInt32(ptr + 20, 0);
+            //        Marshal.StructureToPtr(viewSize, ptr + 24, true);
 
-                    ptr += c_perVertexSize;
-                }
-            }
-            graphicsContext.UpdateVertices(particleMesh, vertexData);
-            //graphicsContext.SetConstantBuffer(PObjectType.ui3d,entity.rendererComponent.EntityDataBuffer, 0);
-            graphicsContext.SetMesh(particleMesh);
-            graphicsContext.SetMaterial(boneRenderMaterial);
-            //graphicsContext.DrawIndexed(visibleBoneCount * 1, 0, 0);
-            graphicsContext.Draw(visibleBoneCount * 1, 0);
+            //        ptr += c_perVertexSize;
+            //    }
+            //}
+            //graphicsContext.UpdateVertices(particleMesh, vertexData);
+            ////graphicsContext.SetConstantBuffer(PObjectType.ui3d,entity.rendererComponent.EntityDataBuffer, 0);
+            //graphicsContext.SetMesh(particleMesh);
+            //graphicsContext.SetMaterial(boneRenderMaterial);
+            ////graphicsContext.DrawIndexed(visibleBoneCount * 1, 0, 0);
+            //graphicsContext.Draw(visibleBoneCount * 1, 0);
         }
     }
 }

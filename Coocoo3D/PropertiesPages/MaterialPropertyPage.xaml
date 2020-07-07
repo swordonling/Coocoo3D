@@ -71,6 +71,9 @@
                     <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind VAmbientG,Mode=TwoWay}"/>
                     <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind VAmbientB,Mode=TwoWay}"/>
                 </Grid>
+                <TextBlock Text="其他选项"/>
+                <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="金属度" Value="{x:Bind VMetallic,Mode=TwoWay}"/>
+                <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光滑度" Value="{x:Bind VSmoothness,Mode=TwoWay}"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

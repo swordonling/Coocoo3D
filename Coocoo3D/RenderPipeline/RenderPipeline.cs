@@ -15,6 +15,14 @@ namespace Coocoo3D.RenderPipeline
 
         public abstract GraphicsSignature GraphicsSignature { get; }
 
+        public abstract void PrepareRenderData(RenderPipelineContext context);
+
+        public abstract void BeforeRenderCameras(RenderPipelineContext context);
+
+        public abstract void RenderCamera(RenderPipelineContext context, int cameraIndex);
+        
+        public volatile bool Ready;
+
         protected async Task ReloadPixelShader(PixelShader pixelShader, DeviceResources deviceResources, string uri)
         {
             pixelShader.Reload(deviceResources, await ReadAllBytes(uri));

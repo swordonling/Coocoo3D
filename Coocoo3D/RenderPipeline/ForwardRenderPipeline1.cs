@@ -37,13 +37,25 @@ namespace Coocoo3D.RenderPipeline
             await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
         }
+        public void Unload()
+        {
+            CurrentRenderTargetFormat = DxgiFormat.DXGI_FORMAT_UNKNOWN;
+            for (int i = 0; i < c_maxCameraPerRender; i++)
+            {
+                cameraPresentDatas[i].Unload();
+            }
+            rootSignature.Unload();
+            lightingCameraPresentData.Unload();
+        }
         public void ChangeRenderTargetFormat(DeviceResources deviceResources,DxgiFormat format)
         {
+            CurrentRenderTargetFormat = format;
             PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMD, format);
             PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDLoading, format);
             PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDError, format);
             Ready = true;
         }
+        public DxgiFormat CurrentRenderTargetFormat;
         public GraphicsSignature rootSignature = new GraphicsSignature();
         public VertexShader VSMMD = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
@@ -56,12 +68,10 @@ namespace Coocoo3D.RenderPipeline
 
         public override GraphicsSignature GraphicsSignature => rootSignature;
 
-        public volatile bool Ready;
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public PresentData lightingCameraPresentData = new PresentData();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
-        Settings settings;
         byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize];
         public GCHandle gch_rcDataUploadBuffer;
 
@@ -92,9 +102,8 @@ namespace Coocoo3D.RenderPipeline
         int lightingIndex1;
 
 
-        public void PrepareRenderData(RenderPipelineContext context)
+        public override void PrepareRenderData(RenderPipelineContext context)
         {
-            this.settings = context.settings;
             var deviceResources = context.deviceResources;
             var cameras = context.cameras;
             var scene = context.scene;
@@ -197,7 +206,7 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
-        public void BeforeRenderCameras(RenderPipelineContext context)
+        public override void BeforeRenderCameras(RenderPipelineContext context)
         {
             var graphicsContext = context.graphicsContext;
             var DSV0 = context.DSV0;
@@ -213,7 +222,7 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
-        public void RenderCamera(RenderPipelineContext context, int cameraIndex)
+        public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
             var graphicsContext = context.graphicsContext;
             var scene = context.scene;
@@ -284,6 +293,11 @@ namespace Coocoo3D.RenderPipeline
             List<Texture2D> texs = rendererComponent.texs;
             for (int i = 0; i < Materials.Count; i++)
             {
+                if (Materials[i].innerStruct.DiffuseColor.W < 0)
+                {
+                    indexStartLocation += Materials[i].indexCount;
+                    continue;
+                }
                 if (texs != null)
                 {
                     Texture2D tex1 = null;
@@ -342,7 +356,6 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetPObject(PObjectMMDLoading, cullMode, blendState);
                 else if (rendererComponent.pObject.Status == GraphicsObjectStatus.error)
                     graphicsContext.SetPObject(PObjectMMDError, cullMode, blendState);
-                if (Materials[i].DiffuseColor.W > 0)
                     graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
                 indexStartLocation += Materials[i].indexCount;
             }

@@ -7,6 +7,7 @@ namespace Coocoo3DGraphics
 	public:
 		static ConstantBuffer^ Load(DeviceResources^ deviceResources, int size);
 		void Reload(DeviceResources^ deviceResources, int size);
+		void Unload();
 		property int Size;
 	internal:
 		void Initialize(DeviceResources^ deviceResources, int size);

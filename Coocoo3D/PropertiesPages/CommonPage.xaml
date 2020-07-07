@@ -37,6 +37,9 @@
                 <TextBlock x:Name="ViewFrameRate"/>
                 <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
                 <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+                <ComboBox Header="渲染管线" SelectedIndex="0" SelectionChanged="ComboBox_SelectionChanged">
+                    <ComboBoxItem Content="forward"/>
+                </ComboBox>
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -222,5 +222,12 @@ namespace Coocoo3D.PropertiesPages
             }
         }
         #endregion
+
+        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (appBody == null) return;
+            int selectedIndex = (sender as ComboBox).SelectedIndex;
+            appBody.SwitchToRenderPipeline(selectedIndex);
+        }
     }
 }
