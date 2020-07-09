@@ -148,16 +148,15 @@ namespace Coocoo3DGraphics
 		void Present();
 		void Present(bool vsync);
 		void WaitForGpu();
+		bool IsRayTracingSupport();
 	internal:
-		DeviceResources(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat);
-
-
 
 		float						GetDpi() const { return m_effectiveDpi; }
 		bool						IsDeviceRemoved() const { return m_deviceRemoved; }
 
 		// D3D 访问器。
 		ID3D12Device*				GetD3DDevice() const { return m_d3dDevice.Get(); }
+		ID3D12Device5*				GetD3DDevice5() const { return m_d3dDevice5.Get(); }
 		IDXGISwapChain3*			GetSwapChain() const { return m_swapChain.Get(); }
 		ID3D12Resource*				GetRenderTarget() const { return m_renderTargets[m_currentFrame].Get(); }
 		ID3D12Resource*				GetDepthStencil() const { return m_depthStencil.Get(); }
@@ -200,6 +199,7 @@ namespace Coocoo3DGraphics
 
 		// Direct3D 对象。
 		Microsoft::WRL::ComPtr<ID3D12Device>			m_d3dDevice;
+		Microsoft::WRL::ComPtr<ID3D12Device5>			m_d3dDevice5;
 		Microsoft::WRL::ComPtr<IDXGIFactory4>			m_dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGISwapChain3>			m_swapChain;
 		Microsoft::WRL::ComPtr<ID3D12Resource>			m_renderTargets[c_frameCount];
@@ -212,6 +212,7 @@ namespace Coocoo3DGraphics
 		UINT											m_rtvDescriptorSize;
 		bool											m_deviceRemoved;
 
+		bool											m_isRayTracingSupport;
 
 		// CPU/GPU 同步。
 		Microsoft::WRL::ComPtr<ID3D12Fence>				m_fence;

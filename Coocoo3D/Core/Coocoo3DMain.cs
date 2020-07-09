@@ -57,6 +57,7 @@ namespace Coocoo3D.Core
         public bool Playing;
         public DateTime LatestRenderTime = DateTime.Now;
         public TimeSpan FrameInterval = TimeSpan.FromSeconds(1 / 120.0);
+        public float Fps = 120;
         public CoreDispatcher Dispatcher;
         public event EventHandler FrameUpdated;
 
@@ -218,7 +219,7 @@ namespace Coocoo3D.Core
                             rtProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
                             for(int i=0;i<defaultResources.ScreenSizeRenderTextures.Length;i++)
                             {
-                                defaultResources.ScreenSizeRenderTextures[i].ReloadAsRenderTarget(deviceResources, x, y, RTFormat);
+                                defaultResources.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
                                 rtProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
                             }
                             defaultResources.ScreenSizeDepthStencilOutput.ReloadAsDepthStencil(deviceResources, x, y);

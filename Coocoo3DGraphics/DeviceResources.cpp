@@ -11,22 +11,6 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Platform;
 
-namespace DisplayMetrics
-{
-	//高分辨率显示可能需要大量 GPU 和电量才能呈现。
-	// 例如，出现以下情况时，高分辨率电话可能会缩短电池使用时间
-	// 游戏尝试以全保真度按 60 帧/秒的速度呈现。
-	// 跨所有平台和外形规格以全保真度呈现的决定
-	// 应当审慎考虑。
-
-	// 用于定义“高分辨率”显示的默认阈值，如果该阈值
-	// 超出范围，并且 SupportHighResolutions 为 false，将缩放尺寸
-	// 50%。
-	static const float DpiThreshold = 192.0f;		// 200% 标准桌面显示。
-	static const float WidthThreshold = 8192.0f;	// 1080p 宽。
-	static const float HeightThreshold = 8192.0f;	// 1080p 高。
-};
-
 // 用于计算屏幕旋转的常量。
 namespace ScreenRotation
 {
@@ -63,26 +47,14 @@ namespace ScreenRotation
 	);
 };
 
-// DeviceResources 的构造函数。
-Coocoo3DGraphics::DeviceResources::DeviceResources(DXGI_FORMAT backBufferFormat, DXGI_FORMAT depthBufferFormat) :
-	m_currentFrame(0),
-	m_screenViewport(),
-	m_rtvDescriptorSize(0),
-	m_fenceEvent(0),
-	m_backBufferFormat(backBufferFormat),
-	m_depthBufferFormat(depthBufferFormat),
-	m_fenceValues{},
-	m_d3dRenderTargetSize(),
-	m_outputSize(),
-	m_logicalSize(),
-	m_nativeOrientation(DisplayOrientations::None),
-	m_currentOrientation(DisplayOrientations::None),
-	m_dpi(-1.0f),
-	m_effectiveDpi(-1.0f),
-	m_deviceRemoved(false)
+bool IsDirectXRaytracingSupported(IDXGIAdapter1* adapter)
 {
-	CreateDeviceIndependentResources();
-	CreateDeviceResources();
+	Microsoft::WRL::ComPtr<ID3D12Device> testDevice;
+	D3D12_FEATURE_DATA_D3D12_OPTIONS5 featureSupportData = {};
+
+	return SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&testDevice)))
+		&& SUCCEEDED(testDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureSupportData, sizeof(featureSupportData)))
+		&& featureSupportData.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 }
 
 // 配置不依赖于 Direct3D 设备的资源。
@@ -140,6 +112,10 @@ void Coocoo3DGraphics::DeviceResources::CreateDeviceResources()
 #endif
 
 	DX::ThrowIfFailed(hr);
+
+	m_isRayTracingSupport = IsDirectXRaytracingSupported(adapter.Get());
+
+	m_d3dDevice->QueryInterface(IID_PPV_ARGS(&m_d3dDevice5));
 
 	// 创建命令队列。
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -256,8 +232,7 @@ void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.BufferCount = c_frameCount;					// 使用三重缓冲最大程度地减小延迟。
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	// 所有 Windows 通用应用都必须使用 _FLIP_ SwapEffects。
-		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;   // 已经更改
-		//swapChainDesc.Flags = 0;
+		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 		swapChainDesc.Scaling = scaling;
 		swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 
@@ -270,14 +245,6 @@ void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
 				&swapChain
 			)
 		);
-		//DX::ThrowIfFailed(
-		//	m_dxgiFactory->CreateSwapChainForComposition(
-		//		GetCommandQueue(),								// 交换链需要对 DirectX 12 中的命令队列的引用。
-		//		&swapChainDesc,
-		//		nullptr,
-		//		&swapChain
-		//	)
-		//);
 
 		DX::ThrowIfFailed(swapChain.As(&m_swapChain));
 
@@ -396,23 +363,6 @@ void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
 void Coocoo3DGraphics::DeviceResources::UpdateRenderTargetSize()
 {
 	m_effectiveDpi = m_dpi;
-
-	// 为了延长高分辨率设备上的电池使用时间，请呈现到较小的呈现器目标
-	// 并允许 GPU 在显示输出时缩放输出。
-	if (m_dpi > DisplayMetrics::DpiThreshold)
-	{
-		float width = DX::ConvertDipsToPixels(m_logicalSize.Width, m_dpi);
-		float height = DX::ConvertDipsToPixels(m_logicalSize.Height, m_dpi);
-
-		// 当设备为纵向时，高度大于宽度。将
-		// 较大尺寸与宽度阈值进行比较，将较小尺寸
-		// 与高度阈值进行比较。
-		if (max(width, height) > DisplayMetrics::WidthThreshold && min(width, height) > DisplayMetrics::HeightThreshold)
-		{
-			// 为了缩放应用，我们更改了有效 DPI。逻辑大小不变。
-			m_effectiveDpi /= 2.0f;
-		}
-	}
 
 	// 计算必要的呈现目标大小(以像素为单位)。
 	m_outputSize.Width = DX::ConvertDipsToPixels(m_logicalSize.Width, m_effectiveDpi);
@@ -597,6 +547,11 @@ void Coocoo3DGraphics::DeviceResources::WaitForGpu()
 
 	// 对当前帧递增围栏值。
 	m_fenceValues[m_currentFrame]++;
+}
+
+bool Coocoo3DGraphics::DeviceResources::IsRayTracingSupport()
+{
+	return m_isRayTracingSupport;
 }
 
 // 准备呈现下一帧。

@@ -45,6 +45,10 @@ namespace Coocoo3D.PropertiesPages
                 _cacheRot = appBody.camera.Angle;
                 _cacheFOV = appBody.camera.Fov;
                 _cacheDistance = appBody.camera.Distance;
+                if (appBody.deviceResources.IsRayTracingSupport())
+                {
+                    VRayTracingSupport.Text = "使用的显卡支持光线追踪";
+                }
             }
             else
             {
@@ -219,6 +223,15 @@ namespace Coocoo3D.PropertiesPages
                     }
                 }
                 appBody.RequireRender();
+            }
+        }
+
+        public float VSetFps
+        {
+            get => appBody.Fps; set
+            {
+                appBody.Fps = Math.Max(value, 1);
+                appBody.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
             }
         }
         #endregion

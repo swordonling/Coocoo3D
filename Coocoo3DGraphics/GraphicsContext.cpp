@@ -10,7 +10,7 @@ struct wicToDxgiFormat
 };
 struct GUIDComparer
 {
-	bool operator()(const GUID & Left, const GUID & Right) const
+	bool operator()(const GUID& Left, const GUID& Right) const
 	{
 		return memcmp(&Left, &Right, sizeof(GUID)) < 0;
 	}
@@ -37,14 +37,14 @@ const std::map<DXGI_FORMAT, UINT>dxgiFormatBytesPerPixel =
 	{DXGI_FORMAT_B5G6R5_UNORM,2},
 };
 
-GraphicsContext ^ GraphicsContext::Load(DeviceResources ^ deviceResources)
+GraphicsContext^ GraphicsContext::Load(DeviceResources^ deviceResources)
 {
 	GraphicsContext^ graphicsContext = ref new GraphicsContext();
 	graphicsContext->m_deviceResources = deviceResources;
 	return graphicsContext;
 }
 
-void GraphicsContext::Reload(DeviceResources ^ deviceResources)
+void GraphicsContext::Reload(DeviceResources^ deviceResources)
 {
 	m_deviceResources = deviceResources;
 	auto d3dDevice = deviceResources->GetD3DDevice();
@@ -53,7 +53,7 @@ void GraphicsContext::Reload(DeviceResources ^ deviceResources)
 	DX::ThrowIfFailed(m_commandList->Close());
 }
 
-void GraphicsContext::SetMaterial(Material ^ material)
+void GraphicsContext::SetMaterial(Material^ material)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
 
@@ -92,7 +92,7 @@ void GraphicsContext::SetMaterial(Material ^ material)
 	//}
 }
 
-void GraphicsContext::SetPObject(PObject ^ pObject, CullMode cullMode, BlendState blendState)
+void GraphicsContext::SetPObject(PObject^ pObject, CullMode cullMode, BlendState blendState)
 {
 	int a = (int)cullMode;
 	a += (int)blendState * 3;
@@ -101,7 +101,7 @@ void GraphicsContext::SetPObject(PObject ^ pObject, CullMode cullMode, BlendStat
 
 }
 
-void GraphicsContext::SetPObjectDepthOnly(PObject ^ pObject)
+void GraphicsContext::SetPObjectDepthOnly(PObject^ pObject)
 {
 	m_commandList->SetPipelineState(pObject->m_pipelineState[PObject::c_indexPipelineStateDepth].Get());
 }
@@ -111,15 +111,15 @@ void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Arr
 	//auto context = m_deviceResources->GetD3DDeviceContext();
 	//context->UpdateSubresource(buffer->m_buffer.Get(), 0, nullptr, data->begin(), 0, 0);
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
-	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex*buffer->Size, data->begin(), sizeInByte);
+	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin(), sizeInByte);
 }
 
-void GraphicsContext::UpdateResource(ConstantBuffer ^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
+void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
 	//context->UpdateSubresource(buffer->m_buffer.Get(), 0, nullptr, data->begin() + dataOffset, 0, 0);
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
-	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex*buffer->Size, data->begin() + dataOffset, sizeInByte);
+	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin() + dataOffset, sizeInByte);
 }
 
 void GraphicsContext::UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData)
@@ -130,8 +130,6 @@ void GraphicsContext::UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^
 
 void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->UpdateSubresource(mesh->m_vertexBuffer2.Get(), 0, nullptr, verticeData->begin(), 0, 0);
 	mesh->lastUpdateIndex++;
 	mesh->lastUpdateIndex %= c_frameCount;
 	ID3D12Resource* resource = mesh->m_vertexBuffer2[mesh->lastUpdateIndex].Get();
@@ -147,8 +145,6 @@ void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>
 
 void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->UpdateSubresource(mesh->m_vertexBuffer2.Get(), 0, nullptr, verticeData->begin(), 0, 0);
 	mesh->lastUpdateIndex++;
 	mesh->lastUpdateIndex %= c_frameCount;
 	ID3D12Resource* resource = mesh->m_vertexBuffer2[mesh->lastUpdateIndex].Get();
@@ -162,7 +158,7 @@ void GraphicsContext::UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windo
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 }
 
-void GraphicsContext::SetSRV(PObjectType type, Texture2D ^ texture, int slot)
+void GraphicsContext::SetSRV(PObjectType type, Texture2D^ texture, int slot)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -177,13 +173,13 @@ void GraphicsContext::SetSRV(PObjectType type, Texture2D ^ texture, int slot)
 	}
 }
 
-void GraphicsContext::SetSRV_RT(PObjectType type, RenderTexture2D ^ texture, int slot)
+void GraphicsContext::SetSRV_RT(PObjectType type, RenderTexture2D^ texture, int slot)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
 		if (texture->prevResourceState == D3D12_RESOURCE_STATE_DEPTH_WRITE || texture->prevResourceState == D3D12_RESOURCE_STATE_RENDER_TARGET)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
@@ -196,12 +192,51 @@ void GraphicsContext::SetSRV_RT(PObjectType type, RenderTexture2D ^ texture, int
 	}
 }
 
-void GraphicsContext::SetConstantBuffer(PObjectType type, ConstantBuffer ^ buffer, int slot)
+void GraphicsContext::SetConstantBuffer(PObjectType type, ConstantBuffer^ buffer, int slot)
 {
 	m_commandList->SetGraphicsRootConstantBufferView(slot, buffer->GetCurrentVirtualAddress());
 }
 
-void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer ^ boneData, ConstantBuffer ^ entityData, ConstantBuffer ^ presentData, ConstantBuffer ^ materialData)
+void GraphicsContext::SetSRVT(Texture2D^ texture, int index)
+{
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (texture != nullptr)
+	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
+	}
+	else
+	{
+		throw ref new Platform::NotImplementedException();
+	}
+}
+
+void GraphicsContext::SetSRVT(RenderTexture2D^ texture, int index)
+{
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (texture != nullptr)
+	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		if (texture->prevResourceState == D3D12_RESOURCE_STATE_DEPTH_WRITE || texture->prevResourceState == D3D12_RESOURCE_STATE_RENDER_TARGET)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
+		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
+	}
+	else
+	{
+		throw ref new Platform::NotImplementedException();
+	}
+}
+
+void GraphicsContext::SetCBVR(ConstantBuffer^ buffer, int index)
+{
+	m_commandList->SetGraphicsRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
+}
+
+void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer^ boneData, ConstantBuffer^ entityData, ConstantBuffer^ presentData, ConstantBuffer^ materialData)
 {
 	m_commandList->SetGraphicsRootConstantBufferView(0, boneData->GetCurrentVirtualAddress());
 	m_commandList->SetGraphicsRootConstantBufferView(1, entityData->GetCurrentVirtualAddress());
@@ -218,12 +253,10 @@ void GraphicsContext::Draw(int indexCount, int startIndexLocation)
 
 void GraphicsContext::DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation)
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
 	m_commandList->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
 }
 
-void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
+void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 
@@ -355,7 +388,7 @@ void GraphicsContext::UploadMesh(MMDMesh ^ mesh)
 	}
 }
 
-void GraphicsContext::UploadTexture(Texture2D ^ texture)
+void GraphicsContext::UploadTexture(Texture2D^ texture)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 
@@ -416,12 +449,12 @@ void GraphicsContext::UploadTexture(Texture2D ^ texture)
 	}
 }
 
-void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
+void GraphicsContext::UpdateRenderTexture(RenderTexture2D^ texture)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	if (texture->m_texture == nullptr)
 	{
-		texture->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
+		texture->m_srvRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
 		m_deviceResources->m_graphicsPipelineHeapAllocCount++;
 		if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 		{
@@ -432,6 +465,11 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 		{
 			texture->m_rtvHeapRefIndex = m_deviceResources->m_rtvHeapAllocCount;
 			m_deviceResources->m_rtvHeapAllocCount++;
+		}
+		if (texture->m_uavFormat != DXGI_FORMAT_UNKNOWN)
+		{
+			texture->m_uavRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
+			m_deviceResources->m_graphicsPipelineHeapAllocCount++;
 		}
 	}
 
@@ -484,7 +522,7 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart());
-	handle.Offset(incrementSize * texture->m_heapRefIndex);
+	handle.Offset(incrementSize * texture->m_srvRefIndex);
 	d3dDevice->CreateShaderResourceView(texture->m_texture.Get(), &srvDesc, handle);
 	if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 	{
@@ -500,9 +538,21 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D ^ texture)
 		handle.Offset(incrementSize * texture->m_rtvHeapRefIndex);
 		d3dDevice->CreateRenderTargetView(texture->m_texture.Get(), nullptr, handle);
 	}
+	if (texture->m_uavFormat != DXGI_FORMAT_UNKNOWN)
+	{
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Format = texture->m_uavFormat;
+
+
+		incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle2 = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart());
+		handle2.Offset(incrementSize * texture->m_uavRefIndex);
+		d3dDevice->CreateUnorderedAccessView(texture->m_texture.Get(), nullptr, &uavDesc, handle2);
+	}
 }
 
-void GraphicsContext::SetMesh(MMDMesh ^ mesh)
+void GraphicsContext::SetMesh(MMDMesh^ mesh)
 {
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
@@ -527,7 +577,7 @@ void GraphicsContext::SetRenderTargetScreenAndClear(Windows::Foundation::Numeric
 	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
 }
 
-void GraphicsContext::SetAndClearDSV(RenderTexture2D ^ texture)
+void GraphicsContext::SetAndClearDSV(RenderTexture2D^ texture)
 {
 	// 设置视区和剪刀矩形。
 	D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(
@@ -551,7 +601,7 @@ void GraphicsContext::SetAndClearDSV(RenderTexture2D ^ texture)
 	m_commandList->OMSetRenderTargets(0, nullptr, false, &depthStencilView);
 }
 
-void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D ^ RTV, RenderTexture2D ^ DSV, Windows::Foundation::Numerics::float4 color)
+void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color)
 {
 	if ((RTV->m_width > DSV->m_width) || (RTV->m_height > DSV->m_height))
 	{
@@ -573,7 +623,7 @@ void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D ^ RTV, RenderTexture2D ^
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(RTV->m_texture.Get(), RTV->prevResourceState, D3D12_RESOURCE_STATE_RENDER_TARGET));
 	RTV->prevResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	if (DSV->prevResourceState == D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
-	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(DSV->m_texture.Get(), DSV->prevResourceState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(DSV->m_texture.Get(), DSV->prevResourceState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
 	DSV->prevResourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
@@ -589,7 +639,7 @@ void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D ^ RTV, RenderTexture2D ^
 	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
 }
 
-void GraphicsContext::SetRootSignature(GraphicsSignature ^ rootSignature)
+void GraphicsContext::SetRootSignature(GraphicsSignature^ rootSignature)
 {
 	m_commandList->SetGraphicsRootSignature(rootSignature->m_rootSignatures[0].Get());
 }
@@ -607,7 +657,7 @@ void GraphicsContext::ClearDepthStencil()
 	//context->ClearDepthStencilView(m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
-void GraphicsContext::BeginAlloctor(DeviceResources ^ deviceResources)
+void GraphicsContext::BeginAlloctor(DeviceResources^ deviceResources)
 {
 	DX::ThrowIfFailed(deviceResources->GetCommandAllocator()->Reset());
 }

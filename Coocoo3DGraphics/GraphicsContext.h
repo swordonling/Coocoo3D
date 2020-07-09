@@ -56,6 +56,9 @@ namespace Coocoo3DGraphics
 		void SetSRV(PObjectType type, Texture2D^ texture, int slot);
 		void SetSRV_RT(PObjectType type, RenderTexture2D^ texture, int slot);
 		void SetConstantBuffer(PObjectType type, ConstantBuffer^ buffer, int slot);
+		void SetSRVT(Texture2D^ texture, int index);
+		void SetSRVT(RenderTexture2D^ texture, int index);
+		void SetCBVR(ConstantBuffer^ buffer, int index);
 		void SetMMDRender1CBResources(ConstantBuffer^ boneData, ConstantBuffer^ entityData, ConstantBuffer^ presentData, ConstantBuffer^ materialData);
 		void Draw(int indexCount, int startIndexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);

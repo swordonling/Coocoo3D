@@ -34,12 +34,20 @@
                     <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" Minimum="0.1" Maximum="179.9" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
-                <TextBlock x:Name="ViewFrameRate"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="100"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="ViewFrameRate"/>
+                    <mu:NumberBox Grid.Column="1" Header="FPS限制" Value="{x:Bind VSetFps,Mode=TwoWay}" AcceptsExpression="True"/>
+                </Grid>
                 <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
                 <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
                 <ComboBox Header="渲染管线" SelectedIndex="0" SelectionChanged="ComboBox_SelectionChanged">
                     <ComboBoxItem Content="forward"/>
                 </ComboBox>
+                <TextBlock x:Name="VRayTracingSupport" Text="使用的显卡不支持光线追踪"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

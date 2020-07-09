@@ -33,7 +33,11 @@ namespace Coocoo3D.RenderPipeline
 
         public void Reload(DeviceResources deviceResources)
         {
-            rootSignature.ReloadMMD(deviceResources);
+            rootSignature.Reload(deviceResources, new GraphicSignatureDesc[]
+            {
+                GraphicSignatureDesc.CBV,
+                GraphicSignatureDesc.SRVTable,
+            });
             postProcessDataBuffer.Reload(deviceResources, c_postProcessDataSize);
         }
 
@@ -53,11 +57,11 @@ namespace Coocoo3D.RenderPipeline
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(rootSignature);
             graphicsContext.SetRenderTargetScreenAndClear(context.settings.backgroundColor);
-            graphicsContext.SetSRV_RT(PObjectType.postProcess, context.outputRTV, 0);
-            graphicsContext.SetConstantBuffer(PObjectType.postProcess, postProcessDataBuffer, 1);
+            graphicsContext.SetCBVR(postProcessDataBuffer, 0);
+            graphicsContext.SetSRVT(context.outputRTV, 1);
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.SetPObject(PObjectPostProcess, CullMode.back, BlendState.alpha);
-            graphicsContext.DrawIndexed(6, 0, 0);
+            graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
         }
 
         #region graphics assets
