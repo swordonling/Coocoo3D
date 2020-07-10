@@ -85,20 +85,29 @@ namespace Coocoo3D.Core
             _currentRenderPipeline = forwardRenderPipeline1;
             graphicsContext.Reload(deviceResources);
 
-            CurrentScene = new Scene(this);
-            Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
-            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
-
-            forwardRenderPipeline1.Reload(deviceResources);
-            postProcess.Reload(deviceResources);
             defaultResources.LoadTask = Task.Run(async () =>
             {
+                forwardRenderPipeline1.Reload(deviceResources);
+                postProcess.Reload(deviceResources);
+                if (deviceResources.IsRayTracingSupport())
+                {
+                    rayTracingRenderPipeline1.Reload(deviceResources);
+                }
                 await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
                 await forwardRenderPipeline1.ReloadAssets(deviceResources);
                 forwardRenderPipeline1.ChangeRenderTargetFormat(deviceResources, RTFormat);
                 await postProcess.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
+                if (deviceResources.IsRayTracingSupport())
+                {
+                    await rayTracingRenderPipeline1.ReloadAssets(deviceResources);
+                }
+                RequireRender();
             });
+
+            CurrentScene = new Scene(this);
+            Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
+            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
                   while (action.Status == AsyncStatus.Started)
@@ -115,6 +124,7 @@ namespace Coocoo3D.Core
         }
         #region Render Pipeline
         RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
+        RenderPipeline.RayTracingRenderPipeline1 rayTracingRenderPipeline1 = new RenderPipeline.RayTracingRenderPipeline1();
         public RenderPipeline.PostProcess postProcess = new RenderPipeline.PostProcess();
         public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => _currentRenderPipeline; }
         RenderPipeline.RenderPipeline _currentRenderPipeline;
@@ -217,7 +227,7 @@ namespace Coocoo3D.Core
                             int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
                             defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRenderTarget(deviceResources, x, y, RTFormat);
                             rtProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
-                            for(int i=0;i<defaultResources.ScreenSizeRenderTextures.Length;i++)
+                            for (int i = 0; i < defaultResources.ScreenSizeRenderTextures.Length; i++)
                             {
                                 defaultResources.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
                                 rtProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
@@ -260,7 +270,7 @@ namespace Coocoo3D.Core
                     {
                         NeedUpdateEntities = false;
                         UpdateEntities();
-                        forwardRenderPipeline1.TimeChange(PlayTime, deltaTime);
+                        _currentRenderPipeline.TimeChange(PlayTime, deltaTime);
                     }
 
                     for (int i = 0; i < Entities.Count; i++)

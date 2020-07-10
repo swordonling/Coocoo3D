@@ -17,6 +17,9 @@
     <Filter Include="Shaders\FromUnity">
       <UniqueIdentifier>{63953ed0-9148-49e5-8fb2-a95b27a02911}</UniqueIdentifier>
     </Filter>
+    <Filter Include="RayTracing">
+      <UniqueIdentifier>{33d80bae-d791-47c2-adf9-087c0e11f84b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -38,6 +41,7 @@
     <ClCompile Include="GraphicsSignature.cpp">
       <Filter>Device</Filter>
     </ClCompile>
+    <ClCompile Include="RayTracingPipelineStateObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -66,6 +70,16 @@
       <Filter>Device</Filter>
     </ClInclude>
     <ClInclude Include="GraphicsObjectStatus.h" />
+    <ClInclude Include="RayTracing\HlslCompat.h">
+      <Filter>RayTracing</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracing\RaytracingHlslCompat.h">
+      <Filter>RayTracing</Filter>
+    </ClInclude>
+    <ClInclude Include="RayTracingPipelineStateObject.h" />
+    <ClInclude Include="RayTracing\DirectXRaytracingHelper.h">
+      <Filter>RayTracing</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -106,6 +120,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\PSPostProcess.hlsl">
       <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="RayTracing\Raytracing.hlsl">
+      <Filter>RayTracing</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

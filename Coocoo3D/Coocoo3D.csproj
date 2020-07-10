@@ -178,6 +178,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RenderPipeline\ForwardRenderPipeline1.cs" />
     <Compile Include="RenderPipeline\PostProcess.cs" />
+    <Compile Include="RenderPipeline\RayTracingRenderPipeline1.cs" />
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />

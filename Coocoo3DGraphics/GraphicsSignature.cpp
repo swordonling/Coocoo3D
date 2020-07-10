@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "GraphicsSignature.h"
 #include "DirectXHelper.h"
+#include "RayTracing/RaytracingHlslCompat.h"
 
 using namespace Coocoo3DGraphics;
+#define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
 
 void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 {
@@ -133,6 +135,40 @@ void GraphicsSignature::Reload(DeviceResources^ deviceResources, const Platform:
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
 
 	free(mem1);
+}
+
+void GraphicsSignature::ReloadRayTracing(DeviceResources^ deviceResources)
+{
+	{
+		CD3DX12_DESCRIPTOR_RANGE UAVDescriptor;
+		UAVDescriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
+		CD3DX12_ROOT_PARAMETER rootParameters[2];
+		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
+		rootParameters[1].InitAsShaderResourceView(0);
+		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
+
+		auto device = deviceResources->GetD3DDevice();
+		Microsoft::WRL::ComPtr<ID3DBlob> blob;
+		Microsoft::WRL::ComPtr<ID3DBlob> error;
+
+		DX::ThrowIfFailed(D3D12SerializeRootSignature(&globalRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
+		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
+
+	}
+
+	{
+		CD3DX12_ROOT_PARAMETER rootParameters[1];
+		rootParameters[0].InitAsConstants(SizeOfInUint32(RayGenConstantBuffer), 0, 0);
+		CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
+		localRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+		auto device = deviceResources->GetD3DDevice();
+		Microsoft::WRL::ComPtr<ID3DBlob> blob;
+		Microsoft::WRL::ComPtr<ID3DBlob> error;
+
+		DX::ThrowIfFailed(D3D12SerializeRootSignature(&localRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
+		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[1])));
+
+	}
 }
 
 void GraphicsSignature::Unload()

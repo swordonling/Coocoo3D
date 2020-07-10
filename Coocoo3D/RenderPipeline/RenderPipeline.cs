@@ -23,6 +23,11 @@ namespace Coocoo3D.RenderPipeline
         
         public volatile bool Ready;
 
+        public virtual void TimeChange(float time, float deltaTime)
+        {
+
+        }
+
         protected async Task ReloadPixelShader(PixelShader pixelShader, DeviceResources deviceResources, string uri)
         {
             pixelShader.Reload(deviceResources, await ReadAllBytes(uri));

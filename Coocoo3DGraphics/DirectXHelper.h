@@ -13,6 +13,15 @@ namespace DX
 		}
 	}
 
+	inline void ThrowIfFalse(bool b)
+	{
+		if (!b)
+		{
+			// 在此行中设置断点，以捕获 Win32 API 错误。
+			throw Platform::Exception::CreateException(E_FAIL);
+		}
+	}
+
 	// 将使用与设备无关的像素(DIP)表示的长度转换为使用物理像素表示的长度。
 	inline float ConvertDipsToPixels(float dips, float dpi)
 	{

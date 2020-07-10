@@ -88,7 +88,7 @@ namespace Coocoo3D.RenderPipeline
             gch_rcDataUploadBuffer.Free();
         }
 
-        public void TimeChange(float time, float deltaTime)
+        public override void TimeChange(float time, float deltaTime)
         {
             for (int i = 0; i < cameraPresentDatas.Length; i++)
             {
