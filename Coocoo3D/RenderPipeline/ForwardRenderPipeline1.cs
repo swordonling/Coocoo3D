@@ -32,7 +32,9 @@ namespace Coocoo3D.RenderPipeline
         #region graphics assets
         public async Task ReloadAssets(DeviceResources deviceResources)
         {
-            await ReloadVertexShader(VSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMD.cso");
+            //await ReloadVertexShader(VSMMDSkinning, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning.cso");
+            await ReloadVertexShader(VSMMDSkinning2, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning2.cso");
+            await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
             await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
             await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
@@ -47,21 +49,27 @@ namespace Coocoo3D.RenderPipeline
             rootSignature.Unload();
             lightingCameraPresentData.Unload();
         }
-        public void ChangeRenderTargetFormat(DeviceResources deviceResources,DxgiFormat format)
+        public void ChangeRenderTargetFormat(DeviceResources deviceResources, DxgiFormat format)
         {
             CurrentRenderTargetFormat = format;
-            PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMD, format);
-            PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDLoading, format);
-            PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMD, null, PSMMDError, format);
+            //PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMD, format);
+            PObjectMMD2.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMD, VSMMDTransform, format);
+            PObjectMMDLoading.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMDLoading, VSMMDTransform, format);
+            PObjectMMDError.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMDError, VSMMDTransform, format);
+            //PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMDLoading, format);
+            //PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMDError, format);
             Ready = true;
         }
         public DxgiFormat CurrentRenderTargetFormat;
         public GraphicsSignature rootSignature = new GraphicsSignature();
-        public VertexShader VSMMD = new VertexShader();
+        //public VertexShader VSMMDSkinning = new VertexShader();
+        public VertexShader VSMMDSkinning2 = new VertexShader();
+        public VertexShader VSMMDTransform = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
         public PixelShader PSMMDLoading = new PixelShader();
         public PixelShader PSMMDError = new PixelShader();
-        public PObject PObjectMMD = new PObject();
+        //public PObject PObjectMMD = new PObject();
+        public PObject PObjectMMD2 = new PObject();
         public PObject PObjectMMDLoading = new PObject();
         public PObject PObjectMMDError = new PObject();
         #endregion
@@ -215,6 +223,8 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetSRV(PObjectType.mmd, null, 2);
             graphicsContext.SetAndClearDSV(DSV0);
             IList<MMD3DEntity> Entities = context.scene.Entities;
+            for (int i = 0; i < Entities.Count; i++)
+                EntitySkinning(graphicsContext, Entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
             if (lightingIndex1 != -1)
             {
                 for (int i = 0; i < Entities.Count; i++)
@@ -259,26 +269,55 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
+        private void EntitySkinning(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
+        {
+
+            var Materials = entity.rendererComponent.Materials;
+            graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+            graphicsContext.SetCBVR(entityDataBuffer, 1);
+            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
+            graphicsContext.SetMesh(entity.rendererComponent.mesh);
+            int indexCountAll = 0;
+            for (int i = 0; i < Materials.Count; i++)
+            {
+                indexCountAll += Materials[i].indexCount;
+            }
+
+            if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.unload)
+                graphicsContext.SetPObjectStreamOut(PObjectMMD2);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loaded)
+                graphicsContext.SetPObjectStreamOut(entity.rendererComponent.pObject);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loading)
+                graphicsContext.SetPObjectStreamOut(PObjectMMDLoading);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.error)
+                graphicsContext.SetPObjectStreamOut(PObjectMMDError);
+
+            graphicsContext.SetSOMesh(entity.rendererComponent.mesh);
+            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
+            graphicsContext.SetSOMesh(null);
+        }
         private void RenderEntityDepth(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
         {
             var Materials = entity.rendererComponent.Materials;
-            graphicsContext.SetMMDRender1CBResources(entity.boneComponent.boneMatrices, entityDataBuffer, cameraPresentData.DataBuffer, null);
-            graphicsContext.SetMesh(entity.rendererComponent.mesh);
-            if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.unload)
-                graphicsContext.SetPObjectDepthOnly(PObjectMMD);
-            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loaded)
-                graphicsContext.SetPObjectDepthOnly(entity.rendererComponent.pObject);
-            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loading)
-                graphicsContext.SetPObjectDepthOnly(PObjectMMDLoading);
-            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.error)
-                graphicsContext.SetPObjectDepthOnly(PObjectMMDError);
+            graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+            graphicsContext.SetCBVR(entityDataBuffer, 1);
+            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
 
             int indexCountAll = 0;
             for (int i = 0; i < Materials.Count; i++)
             {
                 indexCountAll += Materials[i].indexCount;
             }
-            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
+            if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.unload)
+                graphicsContext.SetPObjectDepthOnly(PObjectMMD2);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loaded)
+                graphicsContext.SetPObjectDepthOnly(entity.rendererComponent.pObject);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.loading)
+                graphicsContext.SetPObjectDepthOnly(PObjectMMDLoading);
+            else if (entity.rendererComponent.pObject.Status == GraphicsObjectStatus.error)
+                graphicsContext.SetPObjectDepthOnly(PObjectMMDError);
+            graphicsContext.SetMeshSkinned(entity.rendererComponent.mesh);
+            graphicsContext.Draw(indexCountAll, 0);
         }
 
         private void RenderEntity(RenderPipelineContext context, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer, ref int matIndex)
@@ -287,7 +326,7 @@ namespace Coocoo3D.RenderPipeline
             Texture2D textureError = context.TextureError;
             var graphicsContext = context.graphicsContext;
             MMDRendererComponent rendererComponent = entity.rendererComponent;
-            graphicsContext.SetMesh(rendererComponent.mesh);
+            graphicsContext.SetMeshSkinned(rendererComponent.mesh);
             var Materials = rendererComponent.Materials;
             int indexStartLocation = 0;
             List<Texture2D> texs = rendererComponent.texs;
@@ -339,7 +378,10 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
                     graphicsContext.SetSRV(PObjectType.mmd, textureError, 1);
                 }
-                graphicsContext.SetMMDRender1CBResources(entity.boneComponent.boneMatrices, entityDataBuffer, cameraPresentData.DataBuffer, materialBuffers[matIndex]);
+                graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+                graphicsContext.SetCBVR(entityDataBuffer, 1);
+                graphicsContext.SetCBVR(materialBuffers[matIndex], 2);
+                graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
                 matIndex++;
                 CullMode cullMode = CullMode.back;
                 BlendState blendState = BlendState.alpha;
@@ -349,14 +391,14 @@ namespace Coocoo3D.RenderPipeline
                 //    blendState = BlendState.none;
 
                 if (rendererComponent.pObject.Status == GraphicsObjectStatus.unload)
-                    graphicsContext.SetPObject(PObjectMMD, cullMode, blendState);
+                    graphicsContext.SetPObject(PObjectMMD2, cullMode, blendState);
                 else if (rendererComponent.pObject.Status == GraphicsObjectStatus.loaded)
                     graphicsContext.SetPObject(rendererComponent.pObject, cullMode, blendState);
                 else if (rendererComponent.pObject.Status == GraphicsObjectStatus.loading)
                     graphicsContext.SetPObject(PObjectMMDLoading, cullMode, blendState);
                 else if (rendererComponent.pObject.Status == GraphicsObjectStatus.error)
                     graphicsContext.SetPObject(PObjectMMDError, cullMode, blendState);
-                    graphicsContext.DrawIndexed(Materials[i].indexCount, indexStartLocation, 0);
+                graphicsContext.Draw(Materials[i].indexCount, indexStartLocation);
                 indexStartLocation += Materials[i].indexCount;
             }
         }

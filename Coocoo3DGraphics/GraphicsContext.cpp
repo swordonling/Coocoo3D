@@ -106,6 +106,11 @@ void GraphicsContext::SetPObjectDepthOnly(PObject^ pObject)
 	m_commandList->SetPipelineState(pObject->m_pipelineState[PObject::c_indexPipelineStateDepth].Get());
 }
 
+void GraphicsContext::SetPObjectStreamOut(PObject^ pObject)
+{
+	m_commandList->SetPipelineState(pObject->m_pipelineState[PObject::c_indexPipelineStateSkinning].Get());
+}
+
 void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
@@ -236,19 +241,33 @@ void GraphicsContext::SetCBVR(ConstantBuffer^ buffer, int index)
 	m_commandList->SetGraphicsRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
 }
 
-void GraphicsContext::SetMMDRender1CBResources(ConstantBuffer^ boneData, ConstantBuffer^ entityData, ConstantBuffer^ presentData, ConstantBuffer^ materialData)
+void GraphicsContext::SetSOMesh(MMDMesh^ mesh)
 {
-	m_commandList->SetGraphicsRootConstantBufferView(0, boneData->GetCurrentVirtualAddress());
-	m_commandList->SetGraphicsRootConstantBufferView(1, entityData->GetCurrentVirtualAddress());
-	if (materialData != nullptr)
-		m_commandList->SetGraphicsRootConstantBufferView(2, materialData->GetCurrentVirtualAddress());
-	m_commandList->SetGraphicsRootConstantBufferView(3, presentData->GetCurrentVirtualAddress());
+	if (mesh != nullptr)
+	{
+		if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_COPY_DEST)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_COPY_DEST));
+		mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_COPY_DEST;
+		D3D12_WRITEBUFFERIMMEDIATE_PARAMETER parameter = { mesh->m_skinnedVertice->GetGPUVirtualAddress() + mesh->m_indexCount * 64,0 };
+		D3D12_WRITEBUFFERIMMEDIATE_MODE modes[] = { D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN };
+		m_commandList->WriteBufferImmediate(1, &parameter, modes);
+		if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_STREAM_OUT)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_STREAM_OUT));
+		mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_STREAM_OUT;
+		m_commandList->SOSetTargets(0, 1, &mesh->m_skinnedVerticeStreamOutputBufferView);
+	}
+	else
+	{
+		D3D12_STREAM_OUTPUT_BUFFER_VIEW bufferView={};
+		m_commandList->SOSetTargets(0, 1, &bufferView);
+	}
 }
 
-void GraphicsContext::Draw(int indexCount, int startIndexLocation)
+void GraphicsContext::Draw(int vertexCount, int startVertexLocation)
 {
 	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->Draw(indexCount, startIndexLocation);
+	//context->Draw(indexCount, startIndexLocation)
+	m_commandList->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
 }
 
 void GraphicsContext::DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation)
@@ -364,6 +383,18 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 	}
 	mesh->lastUpdateIndex = 0;
 
+	{
+		CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * 64 + 64);
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&defaultHeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&vertexBufferDesc,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+			nullptr,
+			IID_PPV_ARGS(&mesh->m_skinnedVertice)));
+		NAME_D3D12_OBJECT(mesh->m_skinnedVertice);
+	}
+
 	// 创建顶点/索引缓冲区视图。
 	if (mesh->m_verticeData->Length > 0)
 	{
@@ -385,6 +416,17 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 		mesh->m_indexBufferView.BufferLocation = mesh->m_indexBuffer->GetGPUVirtualAddress();
 		mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount * mesh->m_indexStride;
 		mesh->m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+	}
+
+	{
+		mesh->m_skinnedVerticeVertexBufferView.BufferLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress();
+		mesh->m_skinnedVerticeVertexBufferView.StrideInBytes = 64;
+		mesh->m_skinnedVerticeVertexBufferView.SizeInBytes = mesh->m_indexCount * 64;
+
+		mesh->m_skinnedVerticeStreamOutputBufferView.BufferLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress();
+		mesh->m_skinnedVerticeStreamOutputBufferView.BufferFilledSizeLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress() + mesh->m_indexCount * 64;
+		mesh->m_skinnedVerticeStreamOutputBufferView.SizeInBytes = mesh->m_indexCount * 64;
+		mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 	}
 }
 
@@ -557,6 +599,16 @@ void GraphicsContext::SetMesh(MMDMesh^ mesh)
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
 	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferView2[mesh->lastUpdateIndex]);
+	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
+}
+
+void GraphicsContext::SetMeshSkinned(MMDMesh^ mesh)
+{
+	if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+	mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
+	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_skinnedVerticeVertexBufferView);
 	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
 }
 

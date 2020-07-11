@@ -46,8 +46,9 @@ namespace Coocoo3DGraphics
 		static GraphicsContext^ Load(DeviceResources^ deviceResources);
 		void Reload(DeviceResources^ deviceResources);
 		void SetMaterial(Material^ material);
-		void SetPObject(PObject^ pobject, CullMode cullMode, BlendState blendState);
-		void SetPObjectDepthOnly(PObject^ pobject);
+		void SetPObject(PObject^ pObject, CullMode cullMode, BlendState blendState);
+		void SetPObjectDepthOnly(PObject^ pObject);
+		void SetPObjectStreamOut(PObject^ pObject);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
@@ -59,13 +60,14 @@ namespace Coocoo3DGraphics
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
 		void SetCBVR(ConstantBuffer^ buffer, int index);
-		void SetMMDRender1CBResources(ConstantBuffer^ boneData, ConstantBuffer^ entityData, ConstantBuffer^ presentData, ConstantBuffer^ materialData);
-		void Draw(int indexCount, int startIndexLocation);
+		void SetSOMesh(MMDMesh^ mesh);
+		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
 		void UpdateRenderTexture(RenderTexture2D^ texture);
 		void SetMesh(MMDMesh^ mesh);
+		void SetMeshSkinned(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
 		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);

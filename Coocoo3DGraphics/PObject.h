@@ -30,15 +30,18 @@ namespace Coocoo3DGraphics
 		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
-		void Reload(DeviceResources^ deviceResources, GraphicsSignature ^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader,DxgiFormat rtvFormat);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
+		void Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, DxgiFormat rtvFormat);
 		void Reload(PObject^ pObject);
 		void Unload();
 	internal:
 		VertexShader^ m_vertexShader;
+		VertexShader^ m_vsTransform;
 		PixelShader^ m_pixelShader;
 		GeometryShader^ m_geometryShader;
 		static const UINT c_indexPipelineStateDepth = 6;
+		static const UINT c_indexPipelineStateSkinning = 7;
 
 		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[10];
 	private:

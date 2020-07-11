@@ -7,7 +7,6 @@ cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
 };
-
 cbuffer cb3 : register(b3)
 {
 	float4x4 g_mWorldToProj;
@@ -31,10 +30,10 @@ struct VSSkinnedIn
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
-	float4 wPos	: POSWORLD;			//world space Pos
 	float3 Norm : NORMAL;			//Normal
 	float2 Tex	: TEXCOORD;		    //Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
+	float EdgeScale : EDGESCALE;
 };
 
 
@@ -101,8 +100,7 @@ PSSkinnedIn main(VSSkinnedIn input)
 	PSSkinnedIn output;
 
 	SkinnedInfo vSkinned = SkinVert(input);
-	output.Pos = mul(mul(vSkinned.Pos, g_mWorld), g_mWorldToProj);
-	output.wPos = mul(vSkinned.Pos, g_mWorld);
+	output.Pos = mul(vSkinned.Pos, g_mWorld);
 	output.Norm = normalize(mul(vSkinned.Norm, (float3x3)g_mWorld));
 	output.Tangent = normalize(mul(vSkinned.Tan, (float3x3)g_mWorld));
 	output.Tex = input.Tex;

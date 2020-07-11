@@ -100,9 +100,6 @@
     <FxCompile Include="Shaders\PSUIStandard.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\VSMMD.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="Shaders\PSMMDError.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -123,6 +120,12 @@
     </FxCompile>
     <FxCompile Include="RayTracing\Raytracing.hlsl">
       <Filter>RayTracing</Filter>
+    </FxCompile>
+    <FxCompile Include="VSMMDTransform.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VSMMDSkinning2.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

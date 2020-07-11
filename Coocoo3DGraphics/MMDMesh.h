@@ -70,15 +70,20 @@ namespace Coocoo3DGraphics
 		D3D_PRIMITIVE_TOPOLOGY m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
+		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer2[c_frameCount];
+		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView2[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
+		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_skinnedVertice;
+		D3D12_VERTEX_BUFFER_VIEW m_skinnedVerticeVertexBufferView;
+		D3D12_STREAM_OUTPUT_BUFFER_VIEW m_skinnedVerticeStreamOutputBufferView;
+		D3D12_RESOURCE_STATES prevStateSkinnedVertice;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload2[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUpload;
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView2[c_frameCount];
-		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 		int lastUpdateIndex = 0;
 	};
 }
