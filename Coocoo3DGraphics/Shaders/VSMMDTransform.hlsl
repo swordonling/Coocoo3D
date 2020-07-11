@@ -1,10 +1,7 @@
-cbuffer cb3 : register(b3)
+#include "CameraDataDefine.hlsli"
+cbuffer cb2 : register(b2)
 {
-	float4x4 g_mWorldToProj;
-	float3   g_vCamPos;
-	float g_aspectRatio;
-	float _Time;
-	float _DeltaTime;
+	CAMERA_DATA_DEFINE//is a macro
 };
 
 struct VSSkinnedIn

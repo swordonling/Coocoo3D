@@ -42,6 +42,7 @@
       <Filter>Device</Filter>
     </ClCompile>
     <ClCompile Include="RayTracingPipelineStateObject.cpp" />
+    <ClCompile Include="RayTracingAccelerationStructure.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -70,16 +71,11 @@
       <Filter>Device</Filter>
     </ClInclude>
     <ClInclude Include="GraphicsObjectStatus.h" />
-    <ClInclude Include="RayTracing\HlslCompat.h">
-      <Filter>RayTracing</Filter>
-    </ClInclude>
-    <ClInclude Include="RayTracing\RaytracingHlslCompat.h">
-      <Filter>RayTracing</Filter>
-    </ClInclude>
     <ClInclude Include="RayTracingPipelineStateObject.h" />
     <ClInclude Include="RayTracing\DirectXRaytracingHelper.h">
       <Filter>RayTracing</Filter>
     </ClInclude>
+    <ClInclude Include="RayTracingAccelerationStructure.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -121,16 +117,19 @@
     <FxCompile Include="RayTracing\Raytracing.hlsl">
       <Filter>RayTracing</Filter>
     </FxCompile>
-    <FxCompile Include="VSMMDTransform.hlsl">
+    <FxCompile Include="Shaders\VSMMDSkinning2.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\VSMMDSkinning2.hlsl">
+    <FxCompile Include="Shaders\VSMMDTransform.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli">
       <Filter>Shaders\FromUnity</Filter>
+    </None>
+    <None Include="Shaders\CameraDataDefine.hlsli">
+      <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
 </Project>

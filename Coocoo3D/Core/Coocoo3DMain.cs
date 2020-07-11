@@ -50,6 +50,7 @@ namespace Coocoo3D.Core
         ThreadPoolTimer threadPoolTimer;
         volatile bool NeedRender = false;
         volatile bool NeedUpdateEntities = false;
+        public bool SaveCpuPower = true;
         public DateTime LatestUserOperating = DateTime.Now;
 
         public float PlayTime;
@@ -118,6 +119,7 @@ namespace Coocoo3D.Core
                       {
                           bool actualRender = RenderFrame2();
                       }
+                      if(SaveCpuPower)
                       System.Threading.Thread.Sleep(1);
                   }
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
@@ -225,7 +227,7 @@ namespace Coocoo3D.Core
                             deviceResources.SetLogicalSize(worldViewer.NewSize);
                             int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
                             int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
-                            defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRenderTarget(deviceResources, x, y, RTFormat);
+                            defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
                             rtProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
                             for (int i = 0; i < defaultResources.ScreenSizeRenderTextures.Length; i++)
                             {
@@ -322,7 +324,14 @@ namespace Coocoo3D.Core
             if (currentRenderPipelineIndex != index)
             {
                 currentRenderPipelineIndex = index;
-
+                if (currentRenderPipelineIndex == 0)
+                {
+                    _currentRenderPipeline = forwardRenderPipeline1;
+                }
+                if (currentRenderPipelineIndex == 1)
+                {
+                    _currentRenderPipeline = rayTracingRenderPipeline1;
+                }
             }
         }
 

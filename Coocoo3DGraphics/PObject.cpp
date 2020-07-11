@@ -8,6 +8,7 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 	m_vertexShader = vertexShader;
 	m_geometryShader = geometryShader;
 	m_pixelShader = pixelShader;
+	m_vsTransform = nullptr;
 	static const D3D12_INPUT_ELEMENT_DESC inputLayout0[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -109,6 +110,7 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 	m_vertexShader = vertexShader;
 	m_geometryShader = geometryShader;
 	m_pixelShader = pixelShader;
+	m_vsTransform = nullptr;
 	static const D3D12_INPUT_ELEMENT_DESC inputLayout0[] =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -280,6 +282,53 @@ void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graph
 	state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
 	state.NumRenderTargets = 0;
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])));
+
+}
+
+void PObject::ReloadSkinningOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs)
+{
+	m_vertexShader = vs;
+	m_geometryShader = gs;
+	m_pixelShader = nullptr;
+	m_vsTransform = nullptr;
+
+	static const D3D12_INPUT_ELEMENT_DESC inputLayout0[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "EDGESCALE", 0, DXGI_FORMAT_R32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BONES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 40, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 56, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+	struct PipelineStateStream
+	{
+		CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pROOTSIGNATURE;
+		CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT INPUTLAYOUT;
+		CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PRIMITIVETOPOLOGY;
+		CD3DX12_PIPELINE_STATE_STREAM_VS VS;
+		CD3DX12_PIPELINE_STATE_STREAM_GS GS;
+		CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT STREAMOUT;
+	} pipelineStateStream;
+	pipelineStateStream.pROOTSIGNATURE = graphicsSignature->m_rootSignatures[0].Get();
+	pipelineStateStream.INPUTLAYOUT = { inputLayout0, _countof(inputLayout0) };
+	pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vs->byteCode.Get());
+	if (gs != nullptr)
+		pipelineStateStream.GS = CD3DX12_SHADER_BYTECODE(gs->byteCode.Get());
+	D3D12_SO_DECLARATION_ENTRY declarations[] =
+	{
+		{0,"SV_POSITION",0,0,4,0},
+		{0,"NORMAL",0,0,3,0},
+		{0,"TEXCOORD",0,0,2,0},
+		{0,"TANGENT",0,0,3,0},
+		{0,"EDGESCALE",0,0,1,0},
+	};
+	UINT bufferStrides[] = { 64 };
+	pipelineStateStream.STREAMOUT = { declarations ,_countof(declarations),bufferStrides,_countof(bufferStrides),0 };
+	pipelineStateStream.PRIMITIVETOPOLOGY = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	D3D12_PIPELINE_STATE_STREAM_DESC state2 = { sizeof(pipelineStateStream),&pipelineStateStream };
+	DX::ThrowIfFailed(deviceResources->GetD3DDevice5()->CreatePipelineState(&state2, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateSkinning])));
 
 }
 

@@ -20,7 +20,10 @@ namespace Coocoo3D.RenderPipeline
         public abstract void BeforeRenderCameras(RenderPipelineContext context);
 
         public abstract void RenderCamera(RenderPipelineContext context, int cameraIndex);
-        
+
+        public abstract Task ReloadAssets(DeviceResources deviceResources);
+
+
         public volatile bool Ready;
 
         public virtual void TimeChange(float time, float deltaTime)

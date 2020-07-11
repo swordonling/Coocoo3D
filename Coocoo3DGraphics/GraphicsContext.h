@@ -8,6 +8,8 @@
 #include "RenderTexture2D.h"
 #include "ConstantBuffer.h"
 #include "GraphicsSignature.h"
+#include "RayTracingPipelineStateObject.h"
+#include "RayTracingAccelerationStructure.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -59,19 +61,26 @@ namespace Coocoo3DGraphics
 		void SetConstantBuffer(PObjectType type, ConstantBuffer^ buffer, int slot);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
+		void SetSRVCT(RayTracingAccelerationStructure^ rayTracingAccelerationStructure, int index);
 		void SetCBVR(ConstantBuffer^ buffer, int index);
+		void SetCBVCR(ConstantBuffer^ buffer, int index);
+		void SetUAVT(RenderTexture2D^ texture, int index);
+		void SetUAVCT(RenderTexture2D^ texture, int index);
 		void SetSOMesh(MMDMesh^ mesh);
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
+		void TestRayTracing(RayTracingPipelineStateObject^ rtpso);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
 		void UpdateRenderTexture(RenderTexture2D^ texture);
+		void BuildAccelerationStructures(RayTracingAccelerationStructure^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMeshSkinned(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
 		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);
 		void SetRootSignature(GraphicsSignature^ rootSignature);
+		void SetRootSignatureRayTracing(GraphicsSignature^ rootSignature);
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
 		void ClearDepthStencil();
 		static void BeginAlloctor(DeviceResources^ deviceResources);

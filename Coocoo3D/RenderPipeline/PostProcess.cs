@@ -65,7 +65,7 @@ namespace Coocoo3D.RenderPipeline
         }
 
         #region graphics assets
-        public async Task ReloadAssets(DeviceResources deviceResources)
+        public override async Task ReloadAssets(DeviceResources deviceResources)
         {
             await ReloadVertexShader(VSPostProcess, deviceResources, "ms-appx:///Coocoo3DGraphics/VSPostProcess.cso");
             await ReloadPixelShader(PSPostProcess, deviceResources, "ms-appx:///Coocoo3DGraphics/PSPostProcess.cso");

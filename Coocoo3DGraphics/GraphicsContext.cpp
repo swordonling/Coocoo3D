@@ -185,7 +185,7 @@ void GraphicsContext::SetSRV_RT(PObjectType type, RenderTexture2D^ texture, int 
 	if (texture != nullptr)
 	{
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
-		if (texture->prevResourceState == D3D12_RESOURCE_STATE_DEPTH_WRITE || texture->prevResourceState == D3D12_RESOURCE_STATE_RENDER_TARGET)
+		if (texture->prevResourceState != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
@@ -224,7 +224,7 @@ void GraphicsContext::SetSRVT(RenderTexture2D^ texture, int index)
 	if (texture != nullptr)
 	{
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
-		if (texture->prevResourceState == D3D12_RESOURCE_STATE_DEPTH_WRITE || texture->prevResourceState == D3D12_RESOURCE_STATE_RENDER_TARGET)
+		if (texture->prevResourceState != D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
@@ -236,9 +236,64 @@ void GraphicsContext::SetSRVT(RenderTexture2D^ texture, int index)
 	}
 }
 
+void GraphicsContext::SetSRVCT(RayTracingAccelerationStructure^ rayTracingAccelerationStructure, int index)
+{
+	if (rayTracingAccelerationStructure != nullptr)
+	{
+		m_commandList->SetComputeRootShaderResourceView(index, rayTracingAccelerationStructure->m_topLevelAccelerationStructure[rayTracingAccelerationStructure->lastUpdateIndex]->GetGPUVirtualAddress());
+	}
+	else
+	{
+		m_commandList->SetComputeRootShaderResourceView(index, NULL);
+	}
+}
+
 void GraphicsContext::SetCBVR(ConstantBuffer^ buffer, int index)
 {
 	m_commandList->SetGraphicsRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
+}
+
+void GraphicsContext::SetCBVCR(ConstantBuffer^ buffer, int index)
+{
+	m_commandList->SetComputeRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
+}
+
+void GraphicsContext::SetUAVT(RenderTexture2D^ texture, int index)
+{
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (texture != nullptr)
+	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		if (texture->prevResourceState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+		texture->prevResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
+	}
+	else
+	{
+		throw ref new Platform::NotImplementedException();
+	}
+}
+
+void GraphicsContext::SetUAVCT(RenderTexture2D^ texture, int index)
+{
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	if (texture != nullptr)
+	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		if (texture->prevResourceState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+		texture->prevResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
+	}
+	else
+	{
+		throw ref new Platform::NotImplementedException();
+	}
 }
 
 void GraphicsContext::SetSOMesh(MMDMesh^ mesh)
@@ -258,7 +313,7 @@ void GraphicsContext::SetSOMesh(MMDMesh^ mesh)
 	}
 	else
 	{
-		D3D12_STREAM_OUTPUT_BUFFER_VIEW bufferView={};
+		D3D12_STREAM_OUTPUT_BUFFER_VIEW bufferView = {};
 		m_commandList->SOSetTargets(0, 1, &bufferView);
 	}
 }
@@ -273,6 +328,26 @@ void GraphicsContext::Draw(int vertexCount, int startVertexLocation)
 void GraphicsContext::DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation)
 {
 	m_commandList->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+}
+
+void GraphicsContext::TestRayTracing(RayTracingPipelineStateObject^ rtpso)
+{
+	int lastUpdateIndexRtpso = rtpso->lastUpdateIndex;
+	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
+	// Since each shader table has only one shader record, the stride is same as the size.
+	dispatchDesc.HitGroupTable.StartAddress = rtpso->m_hitGroupShaderTable[lastUpdateIndexRtpso]->GetGPUVirtualAddress();
+	dispatchDesc.HitGroupTable.SizeInBytes = rtpso->m_hitGroupShaderTable[lastUpdateIndexRtpso]->GetDesc().Width;
+	dispatchDesc.HitGroupTable.StrideInBytes = dispatchDesc.HitGroupTable.SizeInBytes;
+	dispatchDesc.MissShaderTable.StartAddress = rtpso->m_missShaderTable[lastUpdateIndexRtpso]->GetGPUVirtualAddress();
+	dispatchDesc.MissShaderTable.SizeInBytes = rtpso->m_missShaderTable[lastUpdateIndexRtpso]->GetDesc().Width;
+	dispatchDesc.MissShaderTable.StrideInBytes = dispatchDesc.MissShaderTable.SizeInBytes;
+	dispatchDesc.RayGenerationShaderRecord.StartAddress = rtpso->m_rayGenShaderTable[lastUpdateIndexRtpso]->GetGPUVirtualAddress();
+	dispatchDesc.RayGenerationShaderRecord.SizeInBytes = rtpso->m_rayGenShaderTable[lastUpdateIndexRtpso]->GetDesc().Width;
+	dispatchDesc.Width = (UINT)m_deviceResources->GetOutputSize().Width;
+	dispatchDesc.Height = (UINT)m_deviceResources->GetOutputSize().Height;
+	dispatchDesc.Depth = 1;
+	m_commandList->SetPipelineState1(rtpso->m_dxrStateObject.Get());
+	m_commandList->DispatchRays(&dispatchDesc);
 }
 
 void GraphicsContext::UploadMesh(MMDMesh^ mesh)
@@ -384,7 +459,7 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 	mesh->lastUpdateIndex = 0;
 
 	{
-		CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * 64 + 64);
+		CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * MMDMesh::c_skinnedVerticeStride + 64);
 		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
@@ -420,12 +495,12 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 
 	{
 		mesh->m_skinnedVerticeVertexBufferView.BufferLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress();
-		mesh->m_skinnedVerticeVertexBufferView.StrideInBytes = 64;
-		mesh->m_skinnedVerticeVertexBufferView.SizeInBytes = mesh->m_indexCount * 64;
+		mesh->m_skinnedVerticeVertexBufferView.StrideInBytes = MMDMesh::c_skinnedVerticeStride;
+		mesh->m_skinnedVerticeVertexBufferView.SizeInBytes = mesh->m_indexCount * MMDMesh::c_skinnedVerticeStride;
 
 		mesh->m_skinnedVerticeStreamOutputBufferView.BufferLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress();
-		mesh->m_skinnedVerticeStreamOutputBufferView.BufferFilledSizeLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress() + mesh->m_indexCount * 64;
-		mesh->m_skinnedVerticeStreamOutputBufferView.SizeInBytes = mesh->m_indexCount * 64;
+		mesh->m_skinnedVerticeStreamOutputBufferView.BufferFilledSizeLocation = mesh->m_skinnedVertice->GetGPUVirtualAddress() + mesh->m_indexCount * MMDMesh::c_skinnedVerticeStride;
+		mesh->m_skinnedVerticeStreamOutputBufferView.SizeInBytes = mesh->m_indexCount * MMDMesh::c_skinnedVerticeStride;
 		mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 	}
 }
@@ -594,6 +669,221 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D^ texture)
 	}
 }
 
+//void GraphicsContext::BuildAccelerationStructures(MMDMesh^ mesh)
+//{
+//	D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+//	geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+//	//geometryDesc.Triangles.IndexBuffer = m_indexBuffer->GetGPUVirtualAddress();
+//	//geometryDesc.Triangles.IndexCount = static_cast<UINT>(m_indexBuffer->GetDesc().Width) / sizeof(Index);
+//	//geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+//	geometryDesc.Triangles.Transform3x4 = 0;
+//	geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+//	geometryDesc.Triangles.VertexCount = mesh->m_indexCount;
+//	geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->m_skinnedVertice->GetGPUVirtualAddress();
+//	geometryDesc.Triangles.VertexBuffer.StrideInBytes = MMDMesh::c_skinnedVerticeStride;
+//	geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+//
+//	auto m_dxrDevice = m_deviceResources->GetD3DDevice5();
+//	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+//	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
+//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = {};
+//	bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+//	bottomLevelInputs.Flags = buildFlags;
+//	bottomLevelInputs.NumDescs = 1;
+//	bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+//	bottomLevelInputs.pGeometryDescs = &geometryDesc;
+//	m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
+//	DX::ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+//
+//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
+//	topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+//	topLevelInputs.Flags = buildFlags;
+//	topLevelInputs.NumDescs = 1;
+//	topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+//
+//	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
+//	m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
+//	DX::ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+//
+//	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+//	CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+//	DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+//		&defaultHeapProperties,
+//		D3D12_HEAP_FLAG_NONE,
+//		&CD3DX12_RESOURCE_DESC::Buffer(max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+//		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+//		nullptr,
+//		IID_PPV_ARGS(&mesh->scratchResource)));
+//	NAME_D3D12_OBJECT(mesh->scratchResource);
+//
+//	DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+//		&defaultHeapProperties,
+//		D3D12_HEAP_FLAG_NONE,
+//		&CD3DX12_RESOURCE_DESC::Buffer(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+//		D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+//		nullptr,
+//		IID_PPV_ARGS(&mesh->m_bottomLevelAccelerationStructure)));
+//	NAME_D3D12_OBJECT(mesh->m_bottomLevelAccelerationStructure);
+//
+//	DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+//		&defaultHeapProperties,
+//		D3D12_HEAP_FLAG_NONE,
+//		&CD3DX12_RESOURCE_DESC::Buffer(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+//		D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+//		nullptr,
+//		IID_PPV_ARGS(&mesh->m_topLevelAccelerationStructure)));
+//	NAME_D3D12_OBJECT(mesh->m_topLevelAccelerationStructure);
+//
+//
+//	D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+//	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
+//	instanceDesc.InstanceMask = 1;
+//	instanceDesc.AccelerationStructure = mesh->m_bottomLevelAccelerationStructure->GetGPUVirtualAddress();
+//
+//	DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+//		&uploadHeapProperties,
+//		D3D12_HEAP_FLAG_NONE,
+//		&CD3DX12_RESOURCE_DESC::Buffer(sizeof(D3D12_RAYTRACING_INSTANCE_DESC)),
+//		D3D12_RESOURCE_STATE_GENERIC_READ,
+//		nullptr,
+//		IID_PPV_ARGS(&mesh->instanceDescs)));
+//	NAME_D3D12_OBJECT(mesh->instanceDescs);
+//
+//	void* pMappedData;
+//	mesh->instanceDescs->Map(0, nullptr, &pMappedData);
+//	memcpy(pMappedData, &instanceDesc, sizeof(instanceDesc));
+//	mesh->instanceDescs->Unmap(0, nullptr);
+//
+//	// Bottom Level Acceleration Structure desc
+//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc = {};
+//	{
+//		bottomLevelBuildDesc.Inputs = bottomLevelInputs;
+//		bottomLevelBuildDesc.ScratchAccelerationStructureData = mesh->scratchResource->GetGPUVirtualAddress();
+//		bottomLevelBuildDesc.DestAccelerationStructureData = mesh->m_bottomLevelAccelerationStructure->GetGPUVirtualAddress();
+//	}
+//
+//	// Top Level Acceleration Structure desc
+//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+//	{
+//		topLevelInputs.InstanceDescs = mesh->instanceDescs->GetGPUVirtualAddress();
+//		topLevelBuildDesc.Inputs = topLevelInputs;
+//		topLevelBuildDesc.DestAccelerationStructureData = mesh->m_topLevelAccelerationStructure->GetGPUVirtualAddress();
+//		topLevelBuildDesc.ScratchAccelerationStructureData = mesh->scratchResource->GetGPUVirtualAddress();
+//	}
+//	if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+//		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+//	mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+//	m_commandList->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
+//	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(mesh->m_bottomLevelAccelerationStructure.Get()));
+//	m_commandList->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+//}
+
+void GraphicsContext::BuildAccelerationStructures(RayTracingAccelerationStructure^ rayTracingAccelerationStructure)
+{
+	rayTracingAccelerationStructure->lastUpdateIndex = (rayTracingAccelerationStructure->lastUpdateIndex + 1) % c_frameCount;
+	int lastUpdateIndex = rayTracingAccelerationStructure->lastUpdateIndex;
+	UINT meshCount = rayTracingAccelerationStructure->m_rayTracingMeshes.size();
+	rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex].clear();
+	rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex].reserve(meshCount);
+
+	auto m_dxrDevice = m_deviceResources->GetD3DDevice5();
+	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+	for (int i = 0; i < meshCount; i++)
+	{
+		std::vector< D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
+		geometryDescs.reserve(1);
+		auto mesh = rayTracingAccelerationStructure->m_rayTracingMeshes[i];
+
+		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		geometryDesc.Triangles.VertexBuffer.StrideInBytes = MMDMesh::c_skinnedVerticeStride;
+		geometryDesc.Triangles.VertexCount = mesh->m_indexCount;
+		geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->m_skinnedVertice->GetGPUVirtualAddress();
+		geometryDescs.push_back(geometryDesc);
+
+
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = {};
+		bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+		bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+		bottomLevelInputs.NumDescs = 1;
+		bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+		bottomLevelInputs.pGeometryDescs = geometryDescs.data();
+		m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
+		DX::ThrowIfFalse(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+		Microsoft::WRL::ComPtr<ID3D12Resource> asStruct;
+		DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+			&defaultHeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			IID_PPV_ARGS(&asStruct)));
+		NAME_D3D12_OBJECT(asStruct);
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc = {};
+		bottomLevelBuildDesc.Inputs = bottomLevelInputs;
+		bottomLevelBuildDesc.ScratchAccelerationStructureData = rayTracingAccelerationStructure->m_scratchResource[lastUpdateIndex]->GetGPUVirtualAddress();
+		bottomLevelBuildDesc.DestAccelerationStructureData = asStruct->GetGPUVirtualAddress();
+		rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex].push_back(asStruct);
+
+		if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE));
+		mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		m_commandList->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(asStruct.Get()));
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& topLevelInputs = topLevelBuildDesc.Inputs;
+	topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	topLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	topLevelInputs.NumDescs = meshCount;
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
+	m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
+	DX::ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+
+	DX::ThrowIfFailed(m_dxrDevice->CreateCommittedResource(
+		&defaultHeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+		D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+		nullptr,
+		IID_PPV_ARGS(&rayTracingAccelerationStructure->m_topLevelAccelerationStructure[lastUpdateIndex])));
+	NAME_D3D12_OBJECT(rayTracingAccelerationStructure->m_topLevelAccelerationStructure[lastUpdateIndex]);
+	rayTracingAccelerationStructure->m_topLevelAccelerationStructureSize[lastUpdateIndex] = topLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+
+
+	D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
+	instanceDesc.InstanceMask = 1;
+
+	D3D12_RAYTRACING_INSTANCE_DESC instanceDescs[10] = {};
+	for (int i = 0; i < meshCount; i++)
+	{
+		instanceDescs[i] = instanceDesc;
+		instanceDescs[i].InstanceID = i;
+		instanceDescs[i].AccelerationStructure = rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex][i]->GetGPUVirtualAddress();
+	}
+
+	void* pMappedData;
+	rayTracingAccelerationStructure->instanceDescs[lastUpdateIndex]->Map(0, nullptr, &pMappedData);
+	memcpy(pMappedData, instanceDescs, sizeof(instanceDescs));
+	rayTracingAccelerationStructure->instanceDescs[lastUpdateIndex]->Unmap(0, nullptr);
+
+	topLevelInputs.InstanceDescs = rayTracingAccelerationStructure->instanceDescs[lastUpdateIndex]->GetGPUVirtualAddress();
+	topLevelBuildDesc.DestAccelerationStructureData = rayTracingAccelerationStructure->m_topLevelAccelerationStructure[lastUpdateIndex]->GetGPUVirtualAddress();
+	topLevelBuildDesc.ScratchAccelerationStructureData = rayTracingAccelerationStructure->m_scratchResource[lastUpdateIndex]->GetGPUVirtualAddress();
+
+	m_commandList->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+
+	rayTracingAccelerationStructure->m_rayTracingMeshes.clear();
+}
+
 void GraphicsContext::SetMesh(MMDMesh^ mesh)
 {
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
@@ -694,6 +984,11 @@ void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ D
 void GraphicsContext::SetRootSignature(GraphicsSignature^ rootSignature)
 {
 	m_commandList->SetGraphicsRootSignature(rootSignature->m_rootSignatures[0].Get());
+}
+
+void GraphicsContext::SetRootSignatureRayTracing(GraphicsSignature^ rootSignature)
+{
+	m_commandList->SetComputeRootSignature(rootSignature->m_rootSignatures[0].Get());
 }
 
 void GraphicsContext::ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after)

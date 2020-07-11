@@ -234,13 +234,29 @@ namespace Coocoo3D.PropertiesPages
                 appBody.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
             }
         }
+
+        public bool VSaveCpuPower
+        {
+            get => appBody.SaveCpuPower; set
+            {
+                appBody.SaveCpuPower = value;
+            }
+        }
         #endregion
 
         private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (appBody == null) return;
             int selectedIndex = (sender as ComboBox).SelectedIndex;
-            appBody.SwitchToRenderPipeline(selectedIndex);
+            if (!appBody.deviceResources.IsRayTracingSupport() && selectedIndex == 1)
+            {
+                (sender as ComboBox).SelectedIndex = 0;
+            }
+            else
+            {
+                appBody.SwitchToRenderPipeline(selectedIndex);
+            }
+            appBody.RequireRender();
         }
     }
 }

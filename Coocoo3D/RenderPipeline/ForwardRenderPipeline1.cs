@@ -30,9 +30,8 @@ namespace Coocoo3D.RenderPipeline
             rootSignature.ReloadMMD(deviceResources);
         }
         #region graphics assets
-        public async Task ReloadAssets(DeviceResources deviceResources)
+        public override async Task ReloadAssets(DeviceResources deviceResources)
         {
-            //await ReloadVertexShader(VSMMDSkinning, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning.cso");
             await ReloadVertexShader(VSMMDSkinning2, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning2.cso");
             await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
             await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
@@ -52,23 +51,18 @@ namespace Coocoo3D.RenderPipeline
         public void ChangeRenderTargetFormat(DeviceResources deviceResources, DxgiFormat format)
         {
             CurrentRenderTargetFormat = format;
-            //PObjectMMD.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMD, format);
             PObjectMMD2.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMD, VSMMDTransform, format);
             PObjectMMDLoading.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMDLoading, VSMMDTransform, format);
             PObjectMMDError.Reload2(deviceResources, rootSignature, VSMMDSkinning2, null, PSMMDError, VSMMDTransform, format);
-            //PObjectMMDLoading.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMDLoading, format);
-            //PObjectMMDError.Reload(deviceResources, rootSignature, PObjectType.mmd, VSMMDSkinning, null, PSMMDError, format);
             Ready = true;
         }
         public DxgiFormat CurrentRenderTargetFormat;
         public GraphicsSignature rootSignature = new GraphicsSignature();
-        //public VertexShader VSMMDSkinning = new VertexShader();
         public VertexShader VSMMDSkinning2 = new VertexShader();
         public VertexShader VSMMDTransform = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
         public PixelShader PSMMDLoading = new PixelShader();
         public PixelShader PSMMDError = new PixelShader();
-        //public PObject PObjectMMD = new PObject();
         public PObject PObjectMMD2 = new PObject();
         public PObject PObjectMMDLoading = new PObject();
         public PObject PObjectMMDError = new PObject();
@@ -275,7 +269,7 @@ namespace Coocoo3D.RenderPipeline
             var Materials = entity.rendererComponent.Materials;
             graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
+            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
             graphicsContext.SetMesh(entity.rendererComponent.mesh);
             int indexCountAll = 0;
             for (int i = 0; i < Materials.Count; i++)
@@ -301,7 +295,7 @@ namespace Coocoo3D.RenderPipeline
             var Materials = entity.rendererComponent.Materials;
             graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
+            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
 
             int indexCountAll = 0;
             for (int i = 0; i < Materials.Count; i++)
@@ -380,8 +374,8 @@ namespace Coocoo3D.RenderPipeline
                 }
                 graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
                 graphicsContext.SetCBVR(entityDataBuffer, 1);
-                graphicsContext.SetCBVR(materialBuffers[matIndex], 2);
-                graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 3);
+                graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
+                graphicsContext.SetCBVR(materialBuffers[matIndex], 3);
                 matIndex++;
                 CullMode cullMode = CullMode.back;
                 BlendState blendState = BlendState.alpha;

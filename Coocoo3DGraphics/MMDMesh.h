@@ -85,6 +85,8 @@ namespace Coocoo3DGraphics
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload2[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUpload;
 		int lastUpdateIndex = 0;
+
+		static const UINT c_skinnedVerticeStride = 64u;
 	};
 }
 

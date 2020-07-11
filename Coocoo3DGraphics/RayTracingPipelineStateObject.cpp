@@ -10,21 +10,6 @@ const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
 const wchar_t* c_missShaderName = L"MyMissShader";
 
 
-void CreateLocalRootSignatureSubobjects(CD3DX12_STATE_OBJECT_DESC* raytracingPipeline,ID3D12RootSignature* subobjectRootSignature)
-{
-	// Hit group and miss shaders in this sample are not using a local root signature and thus one is not associated with them.
-
-	// Local root signature to be used in a ray gen shader.
-	{
-		auto localRootSignature = raytracingPipeline->CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-		localRootSignature->SetRootSignature(subobjectRootSignature);
-		// Shader association
-		auto rootSignatureAssociation = raytracingPipeline->CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
-		rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
-		rootSignatureAssociation->AddExport(c_raygenShaderName);
-	}
-}
-
 void RayTracingPipelineStateObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ rayTracingSignature, const Platform::Array<byte>^ data)
 {
 	CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
@@ -60,9 +45,14 @@ void RayTracingPipelineStateObject::Reload(DeviceResources^ deviceResources, Gra
 	UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
 	shaderConfig->Config(payloadSize, attributeSize);
 
-	// Local root signature and shader association
-	CreateLocalRootSignatureSubobjects(&raytracingPipeline, rayTracingSignature->m_rootSignatures[1].Get());
-	// This is a root signature that enables a shader to have unique arguments that come from shader tables.
+	{
+		auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+		localRootSignature->SetRootSignature(rayTracingSignature->m_rootSignatures[1].Get());
+		// Shader association
+		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+		rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
+		rootSignatureAssociation->AddExport(c_raygenShaderName);
+	}
 
 	// Global root signature
 	// This is a root signature that is shared across all raytracing shaders invoked during a DispatchRays() call.
@@ -81,39 +71,34 @@ void RayTracingPipelineStateObject::Reload(DeviceResources^ deviceResources, Gra
 	// Create the state object.
 	DX::ThrowIfFailed(device->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 
+}
+
+void RayTracingPipelineStateObject::ReloadTablesForModels(DeviceResources^ deviceResources, int modelCount)
+{
+	lastUpdateIndex = (lastUpdateIndex + 1) % c_frameCount;
+	auto device = deviceResources->GetD3DDevice5();
 
 	void* rayGenShaderIdentifier;
 	void* missShaderIdentifier;
 	void* hitGroupShaderIdentifier;
 
-	auto GetShaderIdentifiers = [&](auto* stateObjectProperties)
-	{
-		rayGenShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_raygenShaderName);
-		missShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_missShaderName);
-		hitGroupShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_hitGroupName);
-	};
-
 	// Get shader identifiers.
-	UINT shaderIdentifierSize;
+	UINT shaderIdentifierSize= D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 	{
 		Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 		DX::ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
-		GetShaderIdentifiers(stateObjectProperties.Get());
-		shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-	}
 
+		rayGenShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_raygenShaderName);
+		missShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_missShaderName);
+		hitGroupShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_hitGroupName);
+	}
 	// Ray gen shader table
 	{
-		struct RootArguments {
-			RayGenConstantBuffer cb;
-		} rootArguments;
-		rootArguments.cb = m_rayGenCB;
-
 		UINT numShaderRecords = 1;
-		UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
+		UINT shaderRecordSize = shaderIdentifierSize;
 		ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RayGenShaderTable");
-		rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize, &rootArguments, sizeof(rootArguments)));
-		m_rayGenShaderTable = rayGenShaderTable.GetResource();
+		rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize));
+		m_rayGenShaderTable[lastUpdateIndex] = rayGenShaderTable.GetResource();
 	}
 
 	// Miss shader table
@@ -122,7 +107,7 @@ void RayTracingPipelineStateObject::Reload(DeviceResources^ deviceResources, Gra
 		UINT shaderRecordSize = shaderIdentifierSize;
 		ShaderTable missShaderTable(device, numShaderRecords, shaderRecordSize, L"MissShaderTable");
 		missShaderTable.push_back(ShaderRecord(missShaderIdentifier, shaderIdentifierSize));
-		m_missShaderTable = missShaderTable.GetResource();
+		m_missShaderTable[lastUpdateIndex] = missShaderTable.GetResource();
 	}
 
 	// Hit group shader table
@@ -131,6 +116,6 @@ void RayTracingPipelineStateObject::Reload(DeviceResources^ deviceResources, Gra
 		UINT shaderRecordSize = shaderIdentifierSize;
 		ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 		hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize));
-		m_hitGroupShaderTable = hitGroupShaderTable.GetResource();
+		m_hitGroupShaderTable[lastUpdateIndex] = hitGroupShaderTable.GetResource();
 	}
 }

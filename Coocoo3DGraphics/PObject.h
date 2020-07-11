@@ -33,6 +33,7 @@ namespace Coocoo3DGraphics
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader);
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
 		void Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, DxgiFormat rtvFormat);
+		void ReloadSkinningOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs);
 		void Reload(PObject^ pObject);
 		void Unload();
 	internal:

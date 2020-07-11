@@ -1,4 +1,5 @@
 #include "FromUnity/UnityStandardBRDF.hlsli"
+#include "CameraDataDefine.hlsli"
 struct LightInfo
 {
 	float3 LightDir;
@@ -11,7 +12,7 @@ cbuffer cb1 : register(b1)
 	float4x4 g_mWorld;
 	LightInfo Lightings[4];
 };
-cbuffer cb2 : register(b2)
+cbuffer cb3 : register(b3)
 {
 	float4 _DiffuseColor;
 	float4 _SpecularColor;
@@ -27,15 +28,10 @@ cbuffer cb2 : register(b2)
 	float _Smoothness;
 	float _Emission;
 };
-cbuffer cb3 : register(b3)
+cbuffer cb2 : register(b2)
 {
-	float4x4 g_mWorldToProj;
-	float3   g_vCamPos;
-	float g_aspectRatio;
-	float _Time;
-	float _DeltaTime;
+	CAMERA_DATA_DEFINE//is a macro
 };
-
 Texture2D texture0 :register(t0);
 SamplerState s0 : register(s0);
 Texture2D texture1 :register(t1);
