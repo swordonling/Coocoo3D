@@ -20,7 +20,6 @@ namespace Coocoo3DGraphics {
 	public:
 		void ReloadMMD(DeviceResources^ deviceResources);
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs);
-		void ReloadRayTracing(DeviceResources^ deviceResources);
 		void Unload();
 	internal:
 		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignatures[10];

@@ -22,7 +22,7 @@ namespace Coocoo3D.Present
         public const int c_presentDataSize = 256;
         public byte[] PresentDataUploadBuffer = new byte[c_presentDataSize];
         GCHandle gch_PresentDataUploadBuffer;
-        public ConstantBuffer DataBuffer = new ConstantBuffer();
+        public ConstantBufferStatic DataBuffer = new ConstantBufferStatic();
 
 
         public void UpdateCameraData(Camera camera)

@@ -7,9 +7,9 @@
 #include "Texture2D.h"
 #include "RenderTexture2D.h"
 #include "ConstantBuffer.h"
+#include "ConstantBufferStatic.h"
 #include "GraphicsSignature.h"
-#include "RayTracingPipelineStateObject.h"
-#include "RayTracingAccelerationStructure.h"
+#include "RayTracingScene.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -53,6 +53,8 @@ namespace Coocoo3DGraphics
 		void SetPObjectStreamOut(PObject^ pObject);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
+		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
+		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
@@ -61,26 +63,29 @@ namespace Coocoo3DGraphics
 		void SetConstantBuffer(PObjectType type, ConstantBuffer^ buffer, int slot);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
-		void SetSRVCT(RayTracingAccelerationStructure^ rayTracingAccelerationStructure, int index);
 		void SetCBVR(ConstantBuffer^ buffer, int index);
+		void SetCBVR(ConstantBufferStatic^ buffer, int index);
 		void SetCBVCR(ConstantBuffer^ buffer, int index);
+		void SetCBVCR(ConstantBufferStatic^ buffer, int index);
 		void SetUAVT(RenderTexture2D^ texture, int index);
 		void SetUAVCT(RenderTexture2D^ texture, int index);
 		void SetSOMesh(MMDMesh^ mesh);
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
-		void TestRayTracing(RayTracingPipelineStateObject^ rtpso);
+		void DoRayTracing(RayTracingScene^ rayTracingScene, int asIndex);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
 		void UpdateRenderTexture(RenderTexture2D^ texture);
-		void BuildAccelerationStructures(RayTracingAccelerationStructure^ rayTracingAccelerationStructure);
+		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMeshSkinned(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
 		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);
 		void SetRootSignature(GraphicsSignature^ rootSignature);
-		void SetRootSignatureRayTracing(GraphicsSignature^ rootSignature);
+		void SetRootSignatureRayTracing(RayTracingScene^ rootSignature);
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
 		void ClearDepthStencil();
 		static void BeginAlloctor(DeviceResources^ deviceResources);

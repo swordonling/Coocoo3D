@@ -136,54 +136,6 @@ void GraphicsSignature::Reload(DeviceResources^ deviceResources, const Platform:
 	free(mem1);
 }
 
-//struct Viewport
-//{
-//	float left;
-//	float top;
-//	float right;
-//	float bottom;
-//};
-//struct RayGenConstantBuffer
-//{
-//	Viewport viewport;
-//	Viewport stencil;
-//};
-void GraphicsSignature::ReloadRayTracing(DeviceResources^ deviceResources)
-{
-	{
-		CD3DX12_DESCRIPTOR_RANGE UAVDescriptor;
-		UAVDescriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-		CD3DX12_ROOT_PARAMETER rootParameters[3];
-		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
-		rootParameters[1].InitAsShaderResourceView(0);
-		rootParameters[2].InitAsConstantBufferView(0);
-		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
-
-		auto device = deviceResources->GetD3DDevice();
-		Microsoft::WRL::ComPtr<ID3DBlob> blob;
-		Microsoft::WRL::ComPtr<ID3DBlob> error;
-
-		DX::ThrowIfFailed(D3D12SerializeRootSignature(&globalRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
-		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
-
-	}
-
-	{
-		//CD3DX12_ROOT_PARAMETER rootParameters[1];
-		//rootParameters[0].InitAsConstants(SizeOfInUint32(RayGenConstantBuffer), 1);
-		//CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
-		CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(0, nullptr);
-		localRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-		auto device = deviceResources->GetD3DDevice();
-		Microsoft::WRL::ComPtr<ID3DBlob> blob;
-		Microsoft::WRL::ComPtr<ID3DBlob> error;
-
-		DX::ThrowIfFailed(D3D12SerializeRootSignature(&localRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
-		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[1])));
-
-	}
-}
-
 void GraphicsSignature::Unload()
 {
 	for (int i = 0; i < _countof(m_rootSignatures); i++)

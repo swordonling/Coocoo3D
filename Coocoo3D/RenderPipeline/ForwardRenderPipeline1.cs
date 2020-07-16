@@ -73,7 +73,7 @@ namespace Coocoo3D.RenderPipeline
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public PresentData lightingCameraPresentData = new PresentData();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
-        public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
+        public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
         byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize];
         public GCHandle gch_rcDataUploadBuffer;
 
@@ -257,7 +257,7 @@ namespace Coocoo3D.RenderPipeline
         {
             while (materialBuffers.Count < count)
             {
-                ConstantBuffer constantBuffer = new ConstantBuffer();
+                ConstantBufferStatic constantBuffer = new ConstantBufferStatic();
                 constantBuffer.Reload(deviceResources, MMDMatLit.c_materialDataSize);
                 materialBuffers.Add(constantBuffer);
             }

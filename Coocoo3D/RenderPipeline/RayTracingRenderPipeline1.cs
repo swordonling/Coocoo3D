@@ -1,4 +1,5 @@
-﻿using Coocoo3D.Present;
+﻿using Coocoo3D.Components;
+using Coocoo3D.Present;
 using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
@@ -14,17 +15,18 @@ namespace Coocoo3D.RenderPipeline
     {
         public const int c_postProcessDataSize = 256;
         public const int c_transformMatrixDataSize = 64;
-
-        public override GraphicsSignature GraphicsSignature => rootSignature;
+        const int c_materialDataSize = 256;
+        const int c_argumentsSizeInBytes = 64;
+        public override GraphicsSignature GraphicsSignature => rootSignatureGraphics;
         byte[] rcDataUploadBuffer = new byte[c_postProcessDataSize];
         public GCHandle gch_rcDataUploadBuffer;
-        RayTracingPipelineStateObject RayTracingPipelineStateObject = new RayTracingPipelineStateObject();
-        RayTracingAccelerationStructure RayTracingAccelerationStructure = new RayTracingAccelerationStructure();
+        RayTracingScene RayTracingScene = new RayTracingScene();
 
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         ConstantBuffer buffer1 = new ConstantBuffer();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
+        public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
 
         public RayTracingRenderPipeline1()
         {
@@ -46,7 +48,6 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].Reload(deviceResources);
             }
 
-            rootSignature.ReloadRayTracing(deviceResources);
             rootSignatureGraphics.Reload(deviceResources, new GraphicSignatureDesc[]
             {
                 GraphicSignatureDesc.CBV,
@@ -54,7 +55,6 @@ namespace Coocoo3D.RenderPipeline
                 GraphicSignatureDesc.CBV,
             });
             buffer1.Reload(deviceResources, c_postProcessDataSize);
-            RayTracingAccelerationStructure.Reload(deviceResources, 1024 * 1024 * 64, 10);
         }
 
         #region graphics assets
@@ -63,20 +63,33 @@ namespace Coocoo3D.RenderPipeline
             await ReloadVertexShader(VSMMDSkinning2, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning2.cso");
             await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
 
-            RayTracingPipelineStateObject.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/Raytracing.cso"));
+            RayTracingScene.ReloadPipelineStatesStep0();
+            RayTracingScene.ReloadPipelineStatesStep1(await ReadAllBytes("ms-appx:///Coocoo3DGraphics/Raytracing2.cso"), new string[] { "MyRaygenShader", "MyClosestHitShader", "MyMissShader", });
+            RayTracingScene.ReloadPipelineStatesStep2(deviceResources, new string[] { "MyHitGroup" }, new string[] { "MyClosestHitShader" });
+            RayTracingScene.ReloadPipelineStatesStep3(16, 8, 1);
+            RayTracingScene.ReloadPipelineStatesStep4(deviceResources);
+            RayTracingScene.ReloadAllocScratchAndInstance(deviceResources, 1024 * 1024 * 64, 1024);
             PObjectMMD2.ReloadSkinningOnly(deviceResources, rootSignatureGraphics, VSMMDSkinning2, null);
             Ready = true;
         }
         public VertexShader VSMMDSkinning2 = new VertexShader();
         public VertexShader VSMMDTransform = new VertexShader();
         public PObject PObjectMMD2 = new PObject();
-        public GraphicsSignature rootSignature = new GraphicsSignature();
         public GraphicsSignature rootSignatureGraphics = new GraphicsSignature();
         #endregion
-
+        string[] rayGenShaderNames = { "MyRaygenShader" };
+        string[] missShaderNames = { "MyMissShader" };
         public override void PrepareRenderData(RenderPipelineContext context)
         {
-            DesireEntityBuffers(context.deviceResources, context.scene.Entities.Count);
+            var Entities = context.scene.Entities;
+            var deviceResources = context.deviceResources;
+            int countMaterials = 0;
+            for (int i = 0; i < Entities.Count; i++)
+            {
+                countMaterials += Entities[i].rendererComponent.Materials.Count;
+            }
+            DesireMaterialBuffers(deviceResources, countMaterials);
+            DesireEntityBuffers(deviceResources, Entities.Count);
             var graphicsContext = context.graphicsContext;
             var cameras = context.cameras;
             for (int i = 0; i < cameras.Count; i++)
@@ -84,7 +97,25 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].UpdateBuffer(graphicsContext);
             }
-            RayTracingPipelineStateObject.ReloadTablesForModels(context.deviceResources, context.scene.Entities.Count);
+
+
+            IntPtr ptr_rc = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
+            #region Update material data
+            int matIndex = 0;
+            for (int i = 0; i < Entities.Count; i++)
+            {
+                var Materials = Entities[i].rendererComponent.Materials;
+                for (int j = 0; j < Materials.Count; j++)
+                {
+                    Marshal.StructureToPtr(Materials[j].innerStruct, ptr_rc, true);
+                    graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, c_materialDataSize);
+                    matIndex++;
+                }
+            }
+            #endregion
+
+            RayTracingScene.NextASIndex(2048);
+            RayTracingScene.NextSTIndex();
         }
 
         public override void BeforeRenderCameras(RenderPipelineContext context)
@@ -100,33 +131,36 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetRootSignature(rootSignatureGraphics);
             for (int i = 0; i < Entities.Count; i++)
                 EntitySkinning(graphicsContext, Entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
+            graphicsContext.SetSOMesh(null);
 
             var entities = context.scene.Entities;
+
             if (entities.Count > 0)
             {
+                int matIndex = 0;
                 for (int i = 0; i < context.scene.Entities.Count; i++)
                 {
-                    RayTracingAccelerationStructure.AddMeshToThisFrameRayTracingList(entities[i].rendererComponent.mesh);
+                    //graphicsContext.BuildBottomAccelerationStructures(RayTracingScene, entities[i].rendererComponent.mesh, 0, entities[i].rendererComponent.mesh.m_indexCount);
+                    BuildEntityBAS(context, entities[i], ref matIndex);
                 }
-                context.graphicsContext.BuildAccelerationStructures(RayTracingAccelerationStructure);
+                graphicsContext.BuildTopAccelerationStructures(RayTracingScene);
+                RayTracingScene.BuildShaderTableStep1(context.deviceResources, rayGenShaderNames, missShaderNames, c_argumentsSizeInBytes);
+                RayTracingScene.BuildShaderTableStep2(context.deviceResources, "MyHitGroup", c_argumentsSizeInBytes, matIndex);
             }
-            graphicsContext.SetRootSignatureRayTracing(rootSignature);
         }
 
         public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
+            context.graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
             context.graphicsContext.SetUAVCT(context.outputRTV, 0);
             var entities = context.scene.Entities;
+
+            context.graphicsContext.SetCBVCR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
+
             if (entities.Count > 0)
             {
-                context.graphicsContext.SetSRVCT(RayTracingAccelerationStructure, 1);
+                context.graphicsContext.DoRayTracing(RayTracingScene, 1);
             }
-            else
-            {
-                context.graphicsContext.SetSRVCT(null, 1);
-            }
-            context.graphicsContext.SetCBVCR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
-            context.graphicsContext.TestRayTracing(RayTracingPipelineStateObject);
         }
 
         private void EntitySkinning(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
@@ -148,7 +182,56 @@ namespace Coocoo3D.RenderPipeline
 
             graphicsContext.SetSOMesh(entity.rendererComponent.mesh);
             graphicsContext.DrawIndexed(indexCountAll, 0, 0);
-            graphicsContext.SetSOMesh(null);
+        }
+
+
+        private void BuildEntityBAS(RenderPipelineContext context, MMD3DEntity entity, ref int matIndex)
+        {
+            Texture2D textureLoading = context.TextureLoading;
+            Texture2D textureError = context.TextureError;
+            var graphicsContext = context.graphicsContext;
+            MMDRendererComponent rendererComponent = entity.rendererComponent;
+
+            var Materials = rendererComponent.Materials;
+            int indexStartLocation = 0;
+            List<Texture2D> texs = rendererComponent.texs;
+            for (int i = 0; i < Materials.Count; i++)
+            {
+                if (Materials[i].innerStruct.DiffuseColor.W < 0)
+                {
+                    indexStartLocation += Materials[i].indexCount;
+                    continue;
+                }
+                Texture2D tex1 = null;
+                if (texs != null)
+                {
+
+                    if (Materials[i].texIndex != -1)
+                        tex1 = texs[Materials[i].texIndex];
+                    if (tex1 != null)
+                    {
+                        if (tex1.Status == GraphicsObjectStatus.loaded)
+                        {
+
+                        }
+                        else if (tex1.Status == GraphicsObjectStatus.loading)
+                            tex1 = textureLoading;
+                        else
+                            tex1 = textureError;
+                    }
+                    else
+                        tex1 = textureError;
+                }
+                else
+                {
+                    tex1 = textureError;
+                }
+
+                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount, tex1, materialBuffers[matIndex]);
+                matIndex++;
+
+                indexStartLocation += Materials[i].indexCount;
+            }
         }
 
         private void DesireEntityBuffers(DeviceResources deviceResources, int count)
@@ -158,6 +241,15 @@ namespace Coocoo3D.RenderPipeline
                 ConstantBuffer constantBuffer = new ConstantBuffer();
                 constantBuffer.Reload(deviceResources, c_transformMatrixDataSize);
                 entityDataBuffers.Add(constantBuffer);
+            }
+        }
+        private void DesireMaterialBuffers(DeviceResources deviceResources, int count)
+        {
+            while (materialBuffers.Count < count)
+            {
+                ConstantBufferStatic constantBuffer = new ConstantBufferStatic();
+                constantBuffer.Reload(deviceResources, c_materialDataSize);
+                materialBuffers.Add(constantBuffer);
             }
         }
     }

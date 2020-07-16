@@ -41,8 +41,8 @@
     <ClCompile Include="GraphicsSignature.cpp">
       <Filter>Device</Filter>
     </ClCompile>
-    <ClCompile Include="RayTracingPipelineStateObject.cpp" />
-    <ClCompile Include="RayTracingAccelerationStructure.cpp" />
+    <ClCompile Include="RayTracingScene.cpp" />
+    <ClCompile Include="ConstantBufferStatic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -71,11 +71,11 @@
       <Filter>Device</Filter>
     </ClInclude>
     <ClInclude Include="GraphicsObjectStatus.h" />
-    <ClInclude Include="RayTracingPipelineStateObject.h" />
     <ClInclude Include="RayTracing\DirectXRaytracingHelper.h">
       <Filter>RayTracing</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracingAccelerationStructure.h" />
+    <ClInclude Include="RayTracingScene.h" />
+    <ClInclude Include="ConstantBufferStatic.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -122,6 +122,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\VSMMDTransform.hlsl">
       <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="RayTracing\Raytracing2.hlsl">
+      <Filter>RayTracing</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
