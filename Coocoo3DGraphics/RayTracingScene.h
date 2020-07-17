@@ -4,19 +4,24 @@
 #include "MMDMesh.h"
 namespace Coocoo3DGraphics
 {
+	public ref class HitGroupDesc sealed
+	{
+	public:
+		property Platform::String^ HitGroupName;
+		property Platform::String^ AnyHitName;
+		property Platform::String^ ClosestHitName;
+	};
 	public ref class RayTracingScene sealed
 	{
 	public:
 		void ReloadPipelineStatesStep0();
 		void ReloadPipelineStatesStep1(const Platform::Array<byte>^ data, const Platform::Array<Platform::String^>^ exportNames);
-		void ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ hitGroupNames, const Platform::Array<Platform::String^>^ closestHitNames);
-		void ReloadPipelineStatesStep3(UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth);
-		void ReloadPipelineStatesStep4(DeviceResources^ deviceResources);
+		void ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth);
 		void ReloadAllocScratchAndInstance(DeviceResources^ deviceResources, UINT scratchSize, UINT instanceCount);
 		void NextASIndex(int meshCount);
 		void NextSTIndex();
 		void BuildShaderTableStep1(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ raygenShaderNames, const Platform::Array<Platform::String^>^ missShaderNames, int argumentSize);
-		void BuildShaderTableStep2(DeviceResources^ deviceResources, Platform::String^ hitGroupName, int argumentSize,int instances);
+		void BuildShaderTableStep2(DeviceResources^ deviceResources, const Platform::Array <Platform::String^>^ hitGroupNames, int argumentSize, int instances);
 		virtual ~RayTracingScene();
 	internal:
 		static const int c_argumentCacheStride = 128;

@@ -20,8 +20,6 @@ namespace Coocoo3D.Present
         public InnerStruct innerStruct;
 
         public const int c_presentDataSize = 256;
-        public byte[] PresentDataUploadBuffer = new byte[c_presentDataSize];
-        GCHandle gch_PresentDataUploadBuffer;
         public ConstantBufferStatic DataBuffer = new ConstantBufferStatic();
 
 
@@ -42,28 +40,13 @@ namespace Coocoo3D.Present
             AspectRatio = 1;
         }
 
-        public void UpdateBuffer(GraphicsContext graphicsContext)
+        public void Reload(DeviceResources deviceResources,int presentDataSize)
         {
-            IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(PresentDataUploadBuffer, 0);
-            Marshal.StructureToPtr(innerStruct, pBufferData, true);
-            graphicsContext.UpdateResource(DataBuffer, PresentDataUploadBuffer, c_presentDataSize);
-        }
-
-        public void Reload(DeviceResources deviceResources)
-        {
-            DataBuffer.Reload(deviceResources, c_presentDataSize);
+            DataBuffer.Reload(deviceResources, presentDataSize);
         }
         public void Unload()
         {
             DataBuffer.Unload();
-        }
-        public PresentData()
-        {
-            gch_PresentDataUploadBuffer = GCHandle.Alloc(PresentDataUploadBuffer);
-        }
-        ~PresentData()
-        {
-            gch_PresentDataUploadBuffer.Free();
         }
         public struct InnerStruct
         {

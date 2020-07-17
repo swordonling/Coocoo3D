@@ -76,8 +76,8 @@ namespace Coocoo3DGraphics
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
 		void UpdateRenderTexture(RenderTexture2D^ texture);
-		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
-		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMeshSkinned(MMDMesh^ mesh);

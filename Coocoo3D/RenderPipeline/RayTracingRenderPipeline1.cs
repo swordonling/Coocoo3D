@@ -13,18 +13,18 @@ namespace Coocoo3D.RenderPipeline
 {
     public class RayTracingRenderPipeline1 : RenderPipeline
     {
-        public const int c_postProcessDataSize = 256;
+        public const int c_tempDataSize = 512;
         public const int c_transformMatrixDataSize = 64;
-        const int c_materialDataSize = 256;
+        const int c_materialDataSize = 512;
         const int c_argumentsSizeInBytes = 64;
+        const int c_presentDataSize = 256;
         public override GraphicsSignature GraphicsSignature => rootSignatureGraphics;
-        byte[] rcDataUploadBuffer = new byte[c_postProcessDataSize];
+        byte[] rcDataUploadBuffer = new byte[c_tempDataSize];
         public GCHandle gch_rcDataUploadBuffer;
         RayTracingScene RayTracingScene = new RayTracingScene();
 
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
-        ConstantBuffer buffer1 = new ConstantBuffer();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
 
@@ -45,7 +45,7 @@ namespace Coocoo3D.RenderPipeline
         {
             for (int i = 0; i < c_maxCameraPerRender; i++)
             {
-                cameraPresentDatas[i].Reload(deviceResources);
+                cameraPresentDatas[i].Reload(deviceResources, c_presentDataSize);
             }
 
             rootSignatureGraphics.Reload(deviceResources, new GraphicSignatureDesc[]
@@ -54,7 +54,6 @@ namespace Coocoo3D.RenderPipeline
                 GraphicSignatureDesc.CBV,
                 GraphicSignatureDesc.CBV,
             });
-            buffer1.Reload(deviceResources, c_postProcessDataSize);
         }
 
         #region graphics assets
@@ -64,10 +63,8 @@ namespace Coocoo3D.RenderPipeline
             await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
 
             RayTracingScene.ReloadPipelineStatesStep0();
-            RayTracingScene.ReloadPipelineStatesStep1(await ReadAllBytes("ms-appx:///Coocoo3DGraphics/Raytracing2.cso"), new string[] { "MyRaygenShader", "MyClosestHitShader", "MyMissShader", });
-            RayTracingScene.ReloadPipelineStatesStep2(deviceResources, new string[] { "MyHitGroup" }, new string[] { "MyClosestHitShader" });
-            RayTracingScene.ReloadPipelineStatesStep3(16, 8, 1);
-            RayTracingScene.ReloadPipelineStatesStep4(deviceResources);
+            RayTracingScene.ReloadPipelineStatesStep1(await ReadAllBytes("ms-appx:///Coocoo3DGraphics/Raytracing2.cso"), new string[] { "MyRaygenShader", "ClosestHitShaderColor", "ClosestHitShaderTest", "MissShaderColor", "MissShaderTest"/*, "MyAnyHitShader"*/, });
+            RayTracingScene.ReloadPipelineStatesStep2(deviceResources, hitGroupDescs, 32, 8, 5);
             RayTracingScene.ReloadAllocScratchAndInstance(deviceResources, 1024 * 1024 * 64, 1024);
             PObjectMMD2.ReloadSkinningOnly(deviceResources, rootSignatureGraphics, VSMMDSkinning2, null);
             Ready = true;
@@ -78,7 +75,13 @@ namespace Coocoo3D.RenderPipeline
         public GraphicsSignature rootSignatureGraphics = new GraphicsSignature();
         #endregion
         string[] rayGenShaderNames = { "MyRaygenShader" };
-        string[] missShaderNames = { "MyMissShader" };
+        string[] missShaderNames = { "MissShaderColor", "MissShaderTest", };
+        string[] hitGroupNames = new string[] { "HitGroupColor", "HitGroupTest", };
+        HitGroupDesc[] hitGroupDescs = new HitGroupDesc[]
+        {
+            new HitGroupDesc { HitGroupName = "HitGroupColor"/*,AnyHitName="MyAnyHitShader"*/, ClosestHitName = "ClosestHitShaderColor" },
+            new HitGroupDesc { HitGroupName = "HitGroupTest",ClosestHitName="ClosestHitShaderTest" },
+        };
         public override void PrepareRenderData(RenderPipelineContext context)
         {
             var Entities = context.scene.Entities;
@@ -95,7 +98,16 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < cameras.Count; i++)
             {
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
-                cameraPresentDatas[i].UpdateBuffer(graphicsContext);
+
+                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
+                Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
+                graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize);
+            }
+            for (int i = 0; i < Entities.Count; i++)
+            {
+                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(Entities[i].Rotation) * Matrix4x4.CreateTranslation(Entities[i].Position);
+                Marshal.StructureToPtr(Matrix4x4.Transpose(world), Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
+                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_transformMatrixDataSize);
             }
 
 
@@ -107,14 +119,16 @@ namespace Coocoo3D.RenderPipeline
                 var Materials = Entities[i].rendererComponent.Materials;
                 for (int j = 0; j < Materials.Count; j++)
                 {
+                    Array.Clear(rcDataUploadBuffer, 0, c_materialDataSize);
                     Marshal.StructureToPtr(Materials[j].innerStruct, ptr_rc, true);
+                    WriteLightData(context.scene.Lightings, ptr_rc + MMDMatLit.c_materialDataSize);
                     graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, c_materialDataSize);
                     matIndex++;
                 }
             }
             #endregion
 
-            RayTracingScene.NextASIndex(2048);
+            RayTracingScene.NextASIndex(matIndex);
             RayTracingScene.NextSTIndex();
         }
 
@@ -122,12 +136,6 @@ namespace Coocoo3D.RenderPipeline
         {
             var graphicsContext = context.graphicsContext;
             IList<MMD3DEntity> Entities = context.scene.Entities;
-            for (int i = 0; i < Entities.Count; i++)
-            {
-                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(Entities[i].Rotation) * Matrix4x4.CreateTranslation(Entities[i].Position);
-                Marshal.StructureToPtr(Matrix4x4.Transpose(world), Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
-                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_transformMatrixDataSize);
-            }
             graphicsContext.SetRootSignature(rootSignatureGraphics);
             for (int i = 0; i < Entities.Count; i++)
                 EntitySkinning(graphicsContext, Entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
@@ -140,12 +148,11 @@ namespace Coocoo3D.RenderPipeline
                 int matIndex = 0;
                 for (int i = 0; i < context.scene.Entities.Count; i++)
                 {
-                    //graphicsContext.BuildBottomAccelerationStructures(RayTracingScene, entities[i].rendererComponent.mesh, 0, entities[i].rendererComponent.mesh.m_indexCount);
                     BuildEntityBAS(context, entities[i], ref matIndex);
                 }
                 graphicsContext.BuildTopAccelerationStructures(RayTracingScene);
                 RayTracingScene.BuildShaderTableStep1(context.deviceResources, rayGenShaderNames, missShaderNames, c_argumentsSizeInBytes);
-                RayTracingScene.BuildShaderTableStep2(context.deviceResources, "MyHitGroup", c_argumentsSizeInBytes, matIndex);
+                RayTracingScene.BuildShaderTableStep2(context.deviceResources, hitGroupNames, c_argumentsSizeInBytes, matIndex);
             }
         }
 
@@ -197,11 +204,6 @@ namespace Coocoo3D.RenderPipeline
             List<Texture2D> texs = rendererComponent.texs;
             for (int i = 0; i < Materials.Count; i++)
             {
-                if (Materials[i].innerStruct.DiffuseColor.W < 0)
-                {
-                    indexStartLocation += Materials[i].indexCount;
-                    continue;
-                }
                 Texture2D tex1 = null;
                 if (texs != null)
                 {
@@ -227,10 +229,29 @@ namespace Coocoo3D.RenderPipeline
                     tex1 = textureError;
                 }
 
-                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount, tex1, materialBuffers[matIndex]);
+                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount,2, tex1, materialBuffers[matIndex]);
                 matIndex++;
 
                 indexStartLocation += Materials[i].indexCount;
+            }
+        }
+
+        private void WriteLightData(IList<Lighting> lightings, IntPtr pBufferData)
+        {
+            int lightCount = 0;
+            for (int j = 0; j < lightings.Count; j++)
+            {
+                if (lightings[j].LightingType == LightingType.Directional)
+                    Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[j].rotateMatrix), pBufferData, true);
+                else
+                    Marshal.StructureToPtr(lightings[j].Rotation * 180 / MathF.PI, pBufferData, true);
+                Marshal.StructureToPtr((uint)lightings[j].LightingType, pBufferData + 12, true);
+                Marshal.StructureToPtr(lightings[j].Color, pBufferData + 16, true);
+                Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[j].vpMatrix), pBufferData + 32, true);
+                lightCount++;
+                pBufferData += 32;
+                if (lightCount >= 8)
+                    break;
             }
         }
 

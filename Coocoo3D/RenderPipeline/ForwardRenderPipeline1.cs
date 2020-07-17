@@ -20,13 +20,15 @@ namespace Coocoo3D.RenderPipeline
         public const int c_offsetLightingData = c_offsetTransformMatrixData + c_transformMatrixDataSize;
         public const int c_materialDataSize = 256;
         public const int c_offsetMaterialData = c_offsetLightingData + c_lightingDataSize;
+        public const int c_presentDataSize = 256;
+        public const int c_offsetPresentData = c_offsetMaterialData + c_materialDataSize;
         public void Reload(DeviceResources deviceResources)
         {
             for (int i = 0; i < c_maxCameraPerRender; i++)
             {
-                cameraPresentDatas[i].Reload(deviceResources);
+                cameraPresentDatas[i].Reload(deviceResources, c_presentDataSize);
             }
-            lightingCameraPresentData.Reload(deviceResources);
+            lightingCameraPresentData.Reload(deviceResources, c_presentDataSize);
             rootSignature.ReloadMMD(deviceResources);
         }
         #region graphics assets
@@ -74,7 +76,7 @@ namespace Coocoo3D.RenderPipeline
         public PresentData lightingCameraPresentData = new PresentData();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
-        byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize];
+        byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize + c_presentDataSize];
         public GCHandle gch_rcDataUploadBuffer;
 
         public ForwardRenderPipeline1()
@@ -124,14 +126,12 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < Entities.Count; i++)
             {
                 MMD3DEntity entity = Entities[i];
-                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
-                for (int j = 0; j < c_lightingDataSize; j += 4)
-                {
-                    Marshal.WriteInt32(pBufferData + j, 0);
-                }
+                #region Lighting
+                Array.Clear(rcDataUploadBuffer, c_offsetLightingData, c_lightingDataSize);
                 int mainLightIndex = -1;
                 int lightCount = 0;
                 var lightings = scene.Lightings;
+                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
                 for (int j = 0; j < lightings.Count; j++)
                 {
                     if (lightings[j].LightingType == LightingType.Directional)
@@ -163,7 +163,7 @@ namespace Coocoo3D.RenderPipeline
                             break;
                     }
                 }
-
+                #endregion
                 pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetTransformMatrixData);
                 Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
@@ -178,8 +178,8 @@ namespace Coocoo3D.RenderPipeline
                 var Materials = Entities[i].rendererComponent.Materials;
                 for (int j = 0; j < Materials.Count; j++)
                 {
-                    IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
-                    Marshal.StructureToPtr(Materials[j].innerStruct, ptr, true);
+                    IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
+                    Marshal.StructureToPtr(Materials[j].innerStruct, pBufferData, true);
                     graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
                     matIndex++;
                 }
@@ -189,7 +189,9 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < cameras.Count; i++)
             {
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
-                cameraPresentDatas[i].UpdateBuffer(graphicsContext);
+                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
+                Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
+                graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
             }
             IList<Lighting> Lightings = scene.Lightings;
             lightingIndex1 = -1;
@@ -200,7 +202,9 @@ namespace Coocoo3D.RenderPipeline
                     if (Lightings[i].LightingType == LightingType.Directional)
                     {
                         lightingCameraPresentData.UpdateCameraData(Lightings[i]);
-                        lightingCameraPresentData.UpdateBuffer(graphicsContext);
+                        IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
+                        Marshal.StructureToPtr(lightingCameraPresentData.innerStruct, pBufferData, true);
+                        graphicsContext.UpdateResource(lightingCameraPresentData.DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
                         lightingIndex1 = i;
                         break;
                     }

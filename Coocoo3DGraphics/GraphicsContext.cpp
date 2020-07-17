@@ -694,7 +694,7 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D^ texture)
 	}
 }
 
-void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount)
+void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount)
 {
 	int lastUpdateIndex = rayTracingAccelerationStructure->asLastUpdateIndex;
 
@@ -713,7 +713,7 @@ void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTrac
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = {};
 	bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
 	bottomLevelInputs.NumDescs = 1;
 	bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 	bottomLevelInputs.pGeometryDescs = &geometryDesc;
@@ -746,21 +746,24 @@ void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTrac
 	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
 	instanceDesc.InstanceMask = 1;
 	instanceDesc.InstanceID = index1;
-	instanceDesc.InstanceContributionToHitGroupIndex = index1;
+	instanceDesc.InstanceContributionToHitGroupIndex = index1 * rayTypeCount;
 	instanceDesc.AccelerationStructure = rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex][index1]->GetGPUVirtualAddress();
 	rayTracingAccelerationStructure->m_instanceDescs.push_back(instanceDesc);
 }
 
-void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat)
+void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	void* pBase = (byte*)rayTracingAccelerationStructure->pArgumentCache + (RayTracingScene::c_argumentCacheStride * rayTracingAccelerationStructure->m_instanceDescs.size());
 
-	//CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), diff->m_heapRefIndex, incrementSize);
-	*(D3D12_GPU_VIRTUAL_ADDRESS*)(pBase) = mat->GetCurrentVirtualAddress();
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), diff->m_heapRefIndex, incrementSize);
 
-	BuildBottomAccelerationStructures(rayTracingAccelerationStructure, mesh, vertexBegin, vertexCount);
+	*(D3D12_GPU_VIRTUAL_ADDRESS*)(pBase) = mat->GetCurrentVirtualAddress();
+	*(D3D12_GPU_VIRTUAL_ADDRESS*)((byte*)pBase + sizeof(D3D12_GPU_VIRTUAL_ADDRESS)) = mesh->m_skinnedVertice.Get()->GetGPUVirtualAddress() + MMDMesh::c_skinnedVerticeStride * vertexBegin;
+	*(D3D12_GPU_VIRTUAL_ADDRESS*)((byte*)pBase + sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * 2) = gpuHandle.ptr;
+
+	BuildBottomAccelerationStructures(rayTracingAccelerationStructure, mesh, vertexBegin, vertexCount, rayTypeCount);
 
 }
 
@@ -775,7 +778,7 @@ void GraphicsContext::BuildTopAccelerationStructures(RayTracingScene^ rayTracing
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& topLevelInputs = topLevelBuildDesc.Inputs;
 	topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 	topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	topLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	topLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
 	topLevelInputs.NumDescs = meshCount;
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};

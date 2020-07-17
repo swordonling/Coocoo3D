@@ -8,4 +8,6 @@
 	float3   g_vCamPos;\
 	float g_aspectRatio;\
 	float g_time;\
-	float g_deltaTime;
+	float g_deltaTime;\
+	float2 g_camera_preserved1;\
+	float4 g_camera_preserved2[6];

@@ -52,7 +52,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float3 strength = float3(0,0,0);
 	float3 viewDir = normalize(g_vCamPos - input.wPos);
 	float3 norm = normalize(input.Norm);
-	float4 texColor = texture0.Sample(s0, input.TexCoord)*_DiffuseColor;
+	float4 texColor = texture0.Sample(s0, input.TexCoord) * _DiffuseColor;
 	float3 diff = texColor.rgb;
 
 	for (int i = 0; i < 1; i++)
@@ -68,13 +68,13 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 				inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w + 0.001) > 0 ? 1 : 0;
 
 			float3 lightDir = normalize(Lightings[i].LightDir);
-			float3 lightStrength = max(Lightings[i].LightColor.rgb*Lightings[i].LightColor.a,0);
+			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
 			//specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
 			UnityLight light;
-			light.color = lightStrength * inShadow;
+			light.color = lightStrength / 6.28318530718f * inShadow;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.12f * diff;
+			indirect.diffuse = lightStrength * 0.01f * diff;
 			indirect.specular = lightStrength * 0.04f * 0.12f;
 			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, _Smoothness, norm, viewDir, light, indirect);
 		}
@@ -82,13 +82,13 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
-			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
+			float3 lightStrength = Lightings[i].LightColor.rgb / 6.28318530718f * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
 			UnityLight light;
 			light.color = lightStrength;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.12f * diff;
-			indirect.specular = lightStrength * 0.04f * 0.12f;
+			indirect.diffuse = 0;
+			indirect.specular = 0;
 			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, _Smoothness, norm, viewDir, light, indirect);
 		}
 	}
@@ -98,12 +98,12 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir);
-			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a;
+			float3 lightStrength = Lightings[i].LightColor.rgb/ 6.28318530718f * Lightings[i].LightColor.a;
 			UnityLight light;
 			light.color = lightStrength;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.12f * diff;
+			indirect.diffuse = lightStrength * 0.01f * diff;
 			indirect.specular = lightStrength * 0.04f * 0.12f;
 			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, _Smoothness, norm, viewDir, light, indirect);
 		}
@@ -111,16 +111,16 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
-			float3 lightStrength = Lightings[i].LightColor.rgb*Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
+			float3 lightStrength = Lightings[i].LightColor.rgb/ 6.28318530718f * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
 			UnityLight light;
 			light.color = lightStrength;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.12f * diff;
-			indirect.specular = lightStrength * 0.04f * 0.12f;
+			indirect.diffuse = 0;
+			indirect.specular = 0;
 			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, _Smoothness, norm, viewDir, light, indirect);
 		}
 	}
 	strength += _AmbientColor * diff;
-	return float4(strength, _DiffuseColor.a*texColor.a);
+	return float4(strength, _DiffuseColor.a * texColor.a);
 }

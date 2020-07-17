@@ -74,7 +74,7 @@ namespace Coocoo3D.UI
         {
             Lighting lighting = new Lighting();
             lighting.Name = "光源";
-            lighting.Color = new Vector4(1, 1, 1, 1);
+            lighting.Color = new Vector4(6.28318530718f, 6.28318530718f, 6.28318530718f, 1);
             lighting.Rotation = new Vector3(1.570796326794f, 0, 0);
             appBody.CurrentScene.AddSceneObject(lighting);
             appBody.RequireRender();

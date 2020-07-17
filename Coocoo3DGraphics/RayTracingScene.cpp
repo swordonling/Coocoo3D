@@ -29,17 +29,31 @@ void RayTracingScene::ReloadPipelineStatesStep1(const Platform::Array<byte>^ dat
 	}
 }
 
-void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ hitGroupNames, const Platform::Array<Platform::String^>^ closestHitNames)
+void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth)
 {
 
 	{
+		D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
+		staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
+		staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		staticSamplerDesc.MipLODBias = 0;
+		staticSamplerDesc.MaxAnisotropy = 0;
+		staticSamplerDesc.MinLOD = 0;
+		staticSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+		staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		staticSamplerDesc.RegisterSpace = 0;
+
 		CD3DX12_DESCRIPTOR_RANGE UAVDescriptor;
 		UAVDescriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
 		CD3DX12_ROOT_PARAMETER rootParameters[3];
 		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
 		rootParameters[1].InitAsShaderResourceView(0);
 		rootParameters[2].InitAsConstantBufferView(0);
-		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
+		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, 1, &staticSamplerDesc);
 
 		auto device = deviceResources->GetD3DDevice();
 		Microsoft::WRL::ComPtr<ID3DBlob> blob;
@@ -51,25 +65,21 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 	}
 
 	{
-		//CD3DX12_ROOT_PARAMETER rootParameters[1];
-		//rootParameters[0].InitAsConstants(SizeOfInUint32(RayGenConstantBuffer), 1);
-		//CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
+
 		CD3DX12_ROOT_PARAMETER rootParameters[8];
 		CD3DX12_DESCRIPTOR_RANGE range[6];
-		range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
-		range[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
-		range[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
-		range[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-		range[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-		range[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 6);
+		for (int i = 0; i < 6; i++)
+		{
+			range[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, i + 2, 1);
+		}
 		rootParameters[0].InitAsConstantBufferView(3);
-		rootParameters[1].InitAsDescriptorTable(1, &range[0]);
-		rootParameters[2].InitAsDescriptorTable(1, &range[1]);
-		rootParameters[3].InitAsDescriptorTable(1, &range[2]);
-		rootParameters[4].InitAsDescriptorTable(1, &range[3]);
-		rootParameters[5].InitAsDescriptorTable(1, &range[4]);
-		rootParameters[6].InitAsDescriptorTable(1, &range[5]);
-		rootParameters[7].InitAsShaderResourceView(1, 1);
+		rootParameters[1].InitAsShaderResourceView(1, 1);
+		rootParameters[2].InitAsDescriptorTable(1, &range[0]);
+		rootParameters[3].InitAsDescriptorTable(1, &range[1]);
+		rootParameters[4].InitAsDescriptorTable(1, &range[2]);
+		rootParameters[5].InitAsDescriptorTable(1, &range[3]);
+		rootParameters[6].InitAsDescriptorTable(1, &range[4]);
+		rootParameters[7].InitAsDescriptorTable(1, &range[5]);
 
 
 		CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
@@ -84,9 +94,12 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 	}
 
 
-	for (int i = 0; i < hitGroupNames->Length; i++)
+	for (int i = 0; i < hitGroups->Length; i++)
 	{
-		SubobjectHitGroup(raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(), hitGroupNames[i]->Begin(), nullptr, closestHitNames[i]->Begin());
+		SubobjectHitGroup(raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(),
+			hitGroups[i]->HitGroupName->Begin(),
+			hitGroups[i]->AnyHitName->Begin() != hitGroups[i]->AnyHitName->End() ? hitGroups[i]->AnyHitName->Begin() : nullptr,
+			hitGroups[i]->ClosestHitName->Begin() != hitGroups[i]->ClosestHitName->End() ? hitGroups[i]->ClosestHitName->Begin() : nullptr);
 	}
 
 
@@ -95,26 +108,19 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 	// Shader association
 	auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 	rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
-	for (int i = 0; i < hitGroupNames->Length; i++)
+	for (int i = 0; i < hitGroups->Length; i++)
 	{
-		rootSignatureAssociation->AddExport(hitGroupNames[i]->Begin());
+		rootSignatureAssociation->AddExport(hitGroups[i]->HitGroupName->Begin());
 	}
 
 	raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()->SetRootSignature(m_rootSignatures[0].Get());
-}
 
-void RayTracingScene::ReloadPipelineStatesStep3(UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth)
-{
 	auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
 	shaderConfig->Config(payloadSize, attributeSize);
 
 	auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
 	pipelineConfig->Config(maxRecursionDepth);
 
-}
-
-void RayTracingScene::ReloadPipelineStatesStep4(DeviceResources^ deviceResources)
-{
 	auto device = deviceResources->GetD3DDevice5();
 	DX::ThrowIfFailed(device->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 }
@@ -200,7 +206,7 @@ void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, co
 	}
 }
 
-void RayTracingScene::BuildShaderTableStep2(DeviceResources^ deviceResources, Platform::String^ hitGroupName, int argumentSize, int instances)
+void RayTracingScene::BuildShaderTableStep2(DeviceResources^ deviceResources, const Platform::Array <Platform::String^>^ hitGroupNames, int argumentSize, int instances)
 {
 
 	auto device = deviceResources->GetD3DDevice5();
@@ -209,12 +215,15 @@ void RayTracingScene::BuildShaderTableStep2(DeviceResources^ deviceResources, Pl
 	DX::ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
 	// Hit group shader table
 	{
-		UINT numShaderRecords = instances;
+		UINT numShaderRecords = instances * hitGroupNames->Length;
 		UINT shaderRecordSize = shaderIdentifierSize + argumentSize;
 		ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
-		for (int i = 0; i < numShaderRecords; i++)
+		for (int i = 0; i < instances; i++)
 		{
-			hitGroupShaderTable.push_back(ShaderRecord(stateObjectProperties->GetShaderIdentifier(hitGroupName->Begin()), shaderIdentifierSize, (byte*)pArgumentCache + (i * c_argumentCacheStride), argumentSize));
+			for (int j = 0; j < hitGroupNames->Length; j++)
+			{
+				hitGroupShaderTable.push_back(ShaderRecord(stateObjectProperties->GetShaderIdentifier(hitGroupNames[j]->Begin()), shaderIdentifierSize, (byte*)pArgumentCache + (i * c_argumentCacheStride), argumentSize));
+			}
 		}
 		m_hitGroupShaderTable[stLastUpdateIndex] = hitGroupShaderTable.GetResource();
 		m_hitGroupShaderTableStrideInBytes = hitGroupShaderTable.GetShaderRecordSize();
