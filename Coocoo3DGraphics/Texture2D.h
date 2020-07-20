@@ -9,15 +9,16 @@ namespace Coocoo3DGraphics
 		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
+		property Platform::Array<byte>^ m_textureData;
 
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
 		void ReloadPure(int width, int height,Windows::Foundation::Numerics::float4 color);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
 		void ReloadFromImage1(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
 		void Reload(Texture2D^ texture);
+		void Unload();
 
 		void ReleaseUploadHeapResource();
-		property Platform::Array<byte>^ m_textureData;
 
 		virtual ~Texture2D();
 	internal:

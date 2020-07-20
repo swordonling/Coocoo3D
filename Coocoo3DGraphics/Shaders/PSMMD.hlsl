@@ -1,3 +1,4 @@
+#define UNITY_BRDF_GGX 1
 #include "FromUnity/UnityStandardBRDF.hlsli"
 #include "CameraDataDefine.hlsli"
 struct LightInfo
@@ -38,7 +39,6 @@ Texture2D texture1 :register(t1);
 SamplerState s1 : register(s1);
 Texture2D ShadowMap0:register(t2);
 SamplerState sampleShadowMap0 : register(s2);
-
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -53,6 +53,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float3 viewDir = normalize(g_vCamPos - input.wPos);
 	float3 norm = normalize(input.Norm);
 	float4 texColor = texture0.Sample(s0, input.TexCoord) * _DiffuseColor;
+	clip(texColor.a - 0.01f);
 	float3 diff = texColor.rgb;
 
 	for (int i = 0; i < 1; i++)
@@ -69,7 +70,6 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
-			//specularStrength += saturate(pow(max(dot(halfAngle, norm), 0), _SpecularColor.a))*lightStrength*_SpecularColor.rgb*inShadow;
 			UnityLight light;
 			light.color = lightStrength / 6.28318530718f * inShadow;
 			light.dir = lightDir;

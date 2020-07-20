@@ -70,39 +70,11 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
 
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 	state.PS = {};
 	state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
 	state.NumRenderTargets = 0;
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])));
-
-	//struct PipelineStateStream
-	//{
-	//	CD3DX12_PIPELINE_STATE_STREAM_ROOT_SIGNATURE pROOTSIGNATURE;
-	//	CD3DX12_PIPELINE_STATE_STREAM_INPUT_LAYOUT INPUTLAYOUT;
-	//	CD3DX12_PIPELINE_STATE_STREAM_PRIMITIVE_TOPOLOGY PRIMITIVETOPOLOGY;
-	//	CD3DX12_PIPELINE_STATE_STREAM_VS VS;
-	//	CD3DX12_PIPELINE_STATE_STREAM_GS GS;
-	//	CD3DX12_PIPELINE_STATE_STREAM_STREAM_OUTPUT STREAMOUT;
-	//} pipelineStateStream;
-	//pipelineStateStream.pROOTSIGNATURE = graphicsSignature->m_rootSignatures[0].Get();
-	//if (type == PObjectType::mmd)
-	//	pipelineStateStream.INPUTLAYOUT = { inputLayout0, _countof(inputLayout0) };
-	//else if (type == PObjectType::postProcess)
-	//	pipelineStateStream.INPUTLAYOUT = { inputLayout1, _countof(inputLayout1) };
-	//pipelineStateStream.VS = CD3DX12_SHADER_BYTECODE(vertexShader->byteCode.Get());
-	//if (geometryShader != nullptr)
-	//	pipelineStateStream.GS = CD3DX12_SHADER_BYTECODE(geometryShader->byteCode.Get());
-	//D3D12_SO_DECLARATION_ENTRY declarations[] =
-	//{
-	//	{0,"SV_POSITION",0,0,4,0},
-	//	{0,"TEXCOORD",0,0,2,0},
-	//};
-	//UINT bufferStrides[] = { 64 };
-	//pipelineStateStream.STREAMOUT = { declarations ,_countof(declarations),bufferStrides,_countof(bufferStrides),0 };
-	//pipelineStateStream.PRIMITIVETOPOLOGY = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	//D3D12_PIPELINE_STATE_STREAM_DESC state2 = { sizeof(pipelineStateStream),&pipelineStateStream };
-	//DX::ThrowIfFailed(deviceResources->GetD3DDevice5()->CreatePipelineState(&state2, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateSkinning])));
 }
 
 void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat)
@@ -172,7 +144,7 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
 
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 	state.PS = {};
 	state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
 	state.NumRenderTargets = 0;
@@ -180,7 +152,7 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 
 }
 
-void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, DxgiFormat rtvFormat)
+void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip, DxgiFormat rtvFormat)
 {
 	m_vertexShader = vs;
 	m_geometryShader = gs;
@@ -277,12 +249,14 @@ void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graph
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
 
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	state.PS = {};
+	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+	if (psDepthAlphaClip != nullptr)
+		state.PS = CD3DX12_SHADER_BYTECODE(psDepthAlphaClip->byteCode.Get());
+	else
+		state.PS = {};
 	state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
 	state.NumRenderTargets = 0;
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])));
-
 }
 
 void PObject::ReloadSkinningOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs)

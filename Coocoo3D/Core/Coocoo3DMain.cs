@@ -119,8 +119,8 @@ namespace Coocoo3D.Core
                       {
                           bool actualRender = RenderFrame2();
                       }
-                      if(SaveCpuPower)
-                      System.Threading.Thread.Sleep(1);
+                      if (SaveCpuPower)
+                          System.Threading.Thread.Sleep(1);
                   }
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
         }
@@ -167,7 +167,7 @@ namespace Coocoo3D.Core
         }
 
         List<Texture2D> textureProcessing = new List<Texture2D>();
-        List<RenderTexture2D> rtProcessing = new List<RenderTexture2D>();
+        List<RenderTexture2D> renderTextureProcessing = new List<RenderTexture2D>();
         List<MMDMesh> meshProcessing = new List<MMDMesh>();
         RenderPipeline.RenderPipelineContext renderPipelineContext = new RenderPipeline.RenderPipelineContext();
         private bool RenderFrame2()
@@ -183,7 +183,7 @@ namespace Coocoo3D.Core
                 {
                     #region Render Preparing
                     mainCaches.textureLoadList.MoveTo_CC(textureProcessing);
-                    mainCaches.RenderTextureUpdateList.MoveTo_CC(rtProcessing);
+                    mainCaches.RenderTextureUpdateList.MoveTo_CC(renderTextureProcessing);
                     mainCaches.mmdMeshLoadList.MoveTo_CC(meshProcessing);
 
                     lock (CurrentScene)
@@ -206,7 +206,7 @@ namespace Coocoo3D.Core
                         Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
 
 
-                    if (textureProcessing.Count > 0 || rtProcessing.Count > 0 || meshProcessing.Count > 0 || worldViewer.RequireResize)
+                    if (textureProcessing.Count > 0 || renderTextureProcessing.Count > 0 || meshProcessing.Count > 0 || worldViewer.RequireResize)
                     {
                         GraphicsContext.BeginAlloctor(deviceResources);
                         graphicsContext.BeginCommand();
@@ -228,25 +228,26 @@ namespace Coocoo3D.Core
                             int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
                             int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
                             defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
-                            rtProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
+                            renderTextureProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
                             for (int i = 0; i < defaultResources.ScreenSizeRenderTextures.Length; i++)
                             {
                                 defaultResources.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
-                                rtProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
+                                renderTextureProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
                             }
                             defaultResources.ScreenSizeDepthStencilOutput.ReloadAsDepthStencil(deviceResources, x, y);
-                            rtProcessing.Add(defaultResources.ScreenSizeDepthStencilOutput);
+                            renderTextureProcessing.Add(defaultResources.ScreenSizeDepthStencilOutput);
                         }
-                        for (int i = 0; i < rtProcessing.Count; i++)
-                            graphicsContext.UpdateRenderTexture(rtProcessing[i]);
+                        for (int i = 0; i < renderTextureProcessing.Count; i++)
+                            graphicsContext.UpdateRenderTexture(renderTextureProcessing[i]);
                         for (int i = 0; i < textureProcessing.Count; i++)
                             textureProcessing[i].ReleaseUploadHeapResource();
                         for (int i = 0; i < meshProcessing.Count; i++)
                             meshProcessing[i].ReleaseUploadHeapResource();
                         textureProcessing.Clear();
                         meshProcessing.Clear();
-                        rtProcessing.Clear();
+                        renderTextureProcessing.Clear();
                     }
+                    #endregion
                     #region context preparing
                     renderPipelineContext.cameras = new Camera[] { camera };
                     renderPipelineContext.deviceResources = deviceResources;
@@ -260,7 +261,6 @@ namespace Coocoo3D.Core
                     renderPipelineContext.ndcQuadMesh = defaultResources.quadMesh;
                     renderPipelineContext.DSV0 = defaultResources.DepthStencil0;
                     #endregion
-                    #endregion
 
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
@@ -272,18 +272,22 @@ namespace Coocoo3D.Core
                     {
                         NeedUpdateEntities = false;
                         UpdateEntities();
-                        _currentRenderPipeline.TimeChange(PlayTime, deltaTime);
                     }
 
                     for (int i = 0; i < Entities.Count; i++)
                         Entities[i].UpdateGpuResources(graphicsContext);
 
-                    graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-                    if (_currentRenderPipeline.Ready)
+                    var currentRenderPipeline = _currentRenderPipeline;//避免在渲染时切换
+                    if (Playing || NeedUpdateEntities)
                     {
-                        _currentRenderPipeline.PrepareRenderData(renderPipelineContext);
-                        _currentRenderPipeline.BeforeRenderCameras(renderPipelineContext);
-                        _currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
+                        currentRenderPipeline.TimeChange(PlayTime, deltaTime);
+                    }
+                    graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
+                    if (currentRenderPipeline.Ready)
+                    {
+                        currentRenderPipeline.PrepareRenderData(renderPipelineContext);
+                        currentRenderPipeline.BeforeRenderCameras(renderPipelineContext);
+                        currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
                     }
                     if (postProcess.Ready)
                     {

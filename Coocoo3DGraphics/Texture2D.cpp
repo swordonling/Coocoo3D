@@ -119,6 +119,17 @@ void Texture2D::Reload(Texture2D ^ texture)
 	m_heapRefIndex = texture->m_heapRefIndex;
 }
 
+void Texture2D::Unload()
+{
+	m_width = 0;
+	m_height = 0;
+	m_textureData = nullptr;
+	m_texture.Reset();
+	m_textureUpload.Reset();
+	m_format = DXGI_FORMAT_UNKNOWN;
+	m_bindFlags = 0;
+}
+
 void Texture2D::ReleaseUploadHeapResource()
 {
 	m_textureUpload.Reset();

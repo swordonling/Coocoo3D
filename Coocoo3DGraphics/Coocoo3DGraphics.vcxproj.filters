@@ -123,8 +123,8 @@
     <FxCompile Include="Shaders\VSMMDTransform.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="RayTracing\Raytracing2.hlsl">
-      <Filter>RayTracing</Filter>
+    <FxCompile Include="Shaders\PSMMDAlphaClip.hlsl">
+      <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
