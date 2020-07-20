@@ -623,6 +623,7 @@
   <ItemGroup>
     <None Include="Shaders\CameraDataDefine.hlsli" />
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli" />
+    <None Include="Shaders\RandomNumberGenerator.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -22,7 +22,7 @@ namespace Coocoo3D.RenderPipeline
         byte[] rcDataUploadBuffer = new byte[c_tempDataSize];
         public GCHandle gch_rcDataUploadBuffer;
         RayTracingScene RayTracingScene = new RayTracingScene();
-
+        Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
@@ -80,7 +80,7 @@ namespace Coocoo3D.RenderPipeline
         HitGroupDesc[] hitGroupDescs = new HitGroupDesc[]
         {
             new HitGroupDesc { HitGroupName = "HitGroupColor"/*,AnyHitName="MyAnyHitShader"*/, ClosestHitName = "ClosestHitShaderColor" },
-            new HitGroupDesc { HitGroupName = "HitGroupTest",ClosestHitName="ClosestHitShaderTest" },
+            new HitGroupDesc { HitGroupName = "HitGroupTest", ClosestHitName="ClosestHitShaderTest" },
         };
         public override void PrepareRenderData(RenderPipelineContext context)
         {
@@ -98,7 +98,8 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < cameras.Count; i++)
             {
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
-
+                cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
+                cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
                 graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize);
@@ -229,7 +230,7 @@ namespace Coocoo3D.RenderPipeline
                     tex1 = textureError;
                 }
 
-                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount,2, tex1, materialBuffers[matIndex]);
+                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
                 matIndex++;
 
                 indexStartLocation += Materials[i].indexCount;

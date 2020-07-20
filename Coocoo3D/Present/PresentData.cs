@@ -18,8 +18,6 @@ namespace Coocoo3D.Present
         public float PlayTime { get => innerStruct.PlayTime; set => innerStruct.PlayTime = value; }
         public float DeltaTime { get => innerStruct.DeltaTime; set => innerStruct.DeltaTime = value; }
         public InnerStruct innerStruct;
-
-        public const int c_presentDataSize = 256;
         public ConstantBufferStatic DataBuffer = new ConstantBufferStatic();
 
 
@@ -56,6 +54,8 @@ namespace Coocoo3D.Present
             public float AspectRatio;
             public float PlayTime;
             public float DeltaTime;
+            public int RandomValue1;
+            public int RandomValue2;
         }
     }
 }

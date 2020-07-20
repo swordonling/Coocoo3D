@@ -134,5 +134,8 @@
     <None Include="Shaders\CameraDataDefine.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="Shaders\RandomNumberGenerator.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

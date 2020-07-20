@@ -9,5 +9,5 @@
 	float g_aspectRatio;\
 	float g_time;\
 	float g_deltaTime;\
-	float2 g_camera_preserved1;\
+	uint2 g_camera_randomValue;\
 	float4 g_camera_preserved2[6];

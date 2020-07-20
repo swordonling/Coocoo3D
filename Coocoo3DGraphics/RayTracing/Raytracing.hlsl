@@ -2,6 +2,7 @@
 #define RAYTRACING_HLSL
 
 #include "../Shaders/CameraDataDefine.hlsli"
+#include "../Shaders/RandomNumberGenerator.hlsli"
 
 static const int c_testRayIndex = 1;
 struct PSSkinnedIn
@@ -68,6 +69,7 @@ struct RayPayload
 struct TestRayPayload
 {
 	bool miss;
+	float3 hitPos;
 };
 
 inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToWorld)
@@ -109,20 +111,53 @@ void MyRaygenShader()
 void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 {
 	payload.depth++;
+	PSSkinnedIn triVert[3];
+	triVert[0] = Vertices[PrimitiveIndex() * 3];
+	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
+	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+	float3 triNorm = normalize(cross(triVert[0].Pos - triVert[1].Pos, triVert[1].Pos - triVert[2].Pos));
+	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Tex * (attr.barycentrics.x) +
+		triVert[2].Tex * (attr.barycentrics.y);
+	float3 pos = (triVert[0].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Pos * (attr.barycentrics.x) +
+		triVert[2].Pos * (attr.barycentrics.y)).xyz;
+	float3 normal = triVert[0].Norm * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Norm * (attr.barycentrics.x) +
+		triVert[2].Norm * (attr.barycentrics.y);
 
-	float2 uv = Vertices[PrimitiveIndex() * 3].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		Vertices[PrimitiveIndex() * 3 + 1].Tex * (attr.barycentrics.x) +
-		Vertices[PrimitiveIndex() * 3 + 2].Tex * (attr.barycentrics.y);
-	float4 color = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
+	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
+	float3 diffMulA = diffuseColor.rgb * diffuseColor.a;
 
-	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * color.rgb * color.a * float4(_AmbientColor, 1), payload.color.a + color.a - payload.color.a * color.a);
-	float3 pos = Vertices[PrimitiveIndex() * 3].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		Vertices[PrimitiveIndex() * 3 + 1].Pos * (attr.barycentrics.x) +
-		Vertices[PrimitiveIndex() * 3 + 2].Pos * (attr.barycentrics.y);
-	float3 normal = Vertices[PrimitiveIndex() * 3].Norm * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		Vertices[PrimitiveIndex() * 3 + 1].Norm * (attr.barycentrics.x) +
-		Vertices[PrimitiveIndex() * 3 + 2].Norm * (attr.barycentrics.y);
 	normal = normalize(normal);
+	uint randomState = DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue;
+	float AOFactor = 1.0f;
+	static const int c_AOITTime = 64;
+	static const float c_AOMaxDist = 10;
+	if (payload.depth == 1)
+		for (int i = 0; i < c_AOITTime; i++)
+		{
+			RayDesc ray2;
+			float startPosOffsetN = 0;
+			for (int j = 0; j < 3; j++)
+			{
+				startPosOffsetN = max(dot(triVert[j].Pos - pos, normal), startPosOffsetN);
+			}
+			ray2.Origin = pos + normal * startPosOffsetN;
+			ray2.Direction = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
+			if (dot(ray2.Direction, normal) < 0)
+			{
+				ray2.Direction = -ray2.Direction;
+			}
+			ray2.TMin = 0.001;
+			ray2.TMax = c_AOMaxDist;
+			TestRayPayload payload2 = { false,float3(0,0,0) };
+			TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+			if (!payload2.miss)
+			{
+				AOFactor -= (c_AOMaxDist - distance(payload2.hitPos, pos)) / c_AOMaxDist / c_AOITTime;
+			}
+		}
 	for (int i = 0; i < 8; i++)
 	{
 		if (_LightInfo[i].LightColor.r > 0 || _LightInfo[i].LightColor.g > 0 || _LightInfo[i].LightColor.b > 0)
@@ -134,12 +169,12 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 				ray2.Direction = _LightInfo[i].dir;
 				ray2.TMin = 0.0001;
 				ray2.TMax = 10000.0;
-				TestRayPayload payload2 = { false };
+				TestRayPayload payload2 = { false,float3(0,0,0) };
 				if (payload.depth < 3)
 					TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
 				if (payload2.miss)
-					payload.color += float4(_LightInfo[i].LightColor.rgb * color * saturate(dot(_LightInfo[i].dir, normal)) / 6.28318530718f, 0);
-				payload.color += float4(_LightInfo[i].LightColor.rgb * color * 0.01f, 0);
+					payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)) / 6.28318530718f, 0);
+				payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * 0.02f * AOFactor, 0);
 			}
 			else if (_LightInfo[i].LightType == 1)
 			{
@@ -148,14 +183,15 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 				ray2.Direction = normalize(_LightInfo[i].dir - pos);
 				ray2.TMin = 0.0001;
 				ray2.TMax = distance(_LightInfo[i].dir, pos);
-				TestRayPayload payload2 = { false };
+				TestRayPayload payload2 = { false,float3(0,0,0) };
 				if (payload.depth < 3)
 					TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
 				if (payload2.miss)
-					payload.color += float4(_LightInfo[i].LightColor.rgb * color * saturate(dot(_LightInfo[i].dir, normal)) / (6.28318530718f * pow(distance(_LightInfo[i].dir, pos), 2)), 0);
+					payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)) / (6.28318530718f * pow(distance(_LightInfo[i].dir, pos), 2)), 0);
 			}
 		}
 	}
+	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * diffMulA * _AmbientColor * AOFactor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
 
 
 
@@ -178,6 +214,10 @@ void MissShaderColor(inout RayPayload payload)
 void ClosestHitShaderTest(inout TestRayPayload payload, in MyAttributes attr)
 {
 	payload.miss = false;
+	float3 pos = (Vertices[PrimitiveIndex() * 3].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		Vertices[PrimitiveIndex() * 3 + 1].Pos * (attr.barycentrics.x) +
+		Vertices[PrimitiveIndex() * 3 + 2].Pos * (attr.barycentrics.y)).xyz;
+	payload.hitPos = pos;
 }
 
 [shader("miss")]

@@ -73,6 +73,7 @@ namespace Coocoo3D.RenderPipeline
         #endregion
 
         public override GraphicsSignature GraphicsSignature => rootSignature;
+        Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public PresentData lightingCameraPresentData = new PresentData();
@@ -196,6 +197,8 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < cameras.Count; i++)
             {
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
+                cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
+                cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
                 graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
