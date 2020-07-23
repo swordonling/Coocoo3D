@@ -160,9 +160,6 @@
     <Compile Include="PropertiesPages\LightingPropertiesPage.xaml.cs">
       <DependentUpon>LightingPropertiesPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PropertiesPages\MaterialPropertyPage.xaml.cs">
-      <DependentUpon>MaterialPropertyPage.xaml</DependentUpon>
-    </Compile>
     <Compile Include="PropertiesPages\PostProcessPage.xaml.cs">
       <DependentUpon>PostProcessPage.xaml</DependentUpon>
     </Compile>
@@ -235,10 +232,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="PropertiesPages\LightingPropertiesPage.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="PropertiesPages\MaterialPropertyPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -20,6 +20,9 @@
     <Filter Include="RayTracing">
       <UniqueIdentifier>{33d80bae-d791-47c2-adf9-087c0e11f84b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\FromDisney">
+      <UniqueIdentifier>{ed325251-453d-4a48-81a6-e8dbd3ecb061}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -126,6 +129,12 @@
     <FxCompile Include="Shaders\PSMMDAlphaClip.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PSMMD_DisneyBRDF.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\GSMMD.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli">
@@ -136,6 +145,9 @@
     </None>
     <None Include="Shaders\RandomNumberGenerator.hlsli">
       <Filter>Shaders</Filter>
+    </None>
+    <None Include="Shaders\FromDisney\DisneyBRDF.hlsli">
+      <Filter>Shaders\FromDisney</Filter>
     </None>
   </ItemGroup>
 </Project>

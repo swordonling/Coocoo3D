@@ -176,16 +176,16 @@ namespace Coocoo3D.Components
             public Vector4 ToonTexture;
             public uint IsTransparent;
             public float Metallic;
-            public float Smoothness;
+            public float Roughness;
             public float Emission;
-            public uint UseMetallicMap;
-            public uint UseSmoothnessMap;
-            public uint UseEmissionMap;
-            public uint UseOcclusionMap;
-            public uint UseNormalMap;
-            public uint UseSubSurfaceMap;
-            public uint UseAnisotropyMap;
-            public uint UseIridescenceMap;
+            public float Subsurface;
+            public float Specular;
+            public float SpecularTint;
+            public float Anisotropic;
+            public float Sheen;
+            public float SheenTint;
+            public float Clearcoat;
+            public float ClearcoatGloss;
         }
         public override string ToString()
         {
@@ -222,7 +222,7 @@ namespace Coocoo3D.FileFormat
                         EdgeSize = mmdMat.EdgeScale,
                         EdgeColor = mmdMat.EdgeColor,
                         AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f)),
-                        Smoothness=0.5f,
+                        Roughness=0.5f,
                     },
                     DrawFlags = mmdMat.DrawFlags,
                     toonIndex = mmdMat.ToonIndex,

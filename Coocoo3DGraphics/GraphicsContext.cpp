@@ -359,7 +359,6 @@ void GraphicsContext::DoRayTracing(RayTracingScene^ rayTracingScene, int asIndex
 
 	int lastUpdateIndexRtpso = rayTracingScene->stLastUpdateIndex;
 	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
-	// Since each shader table has only one shader record, the stride is same as the size.
 	dispatchDesc.HitGroupTable.StartAddress = rayTracingScene->m_hitGroupShaderTable[lastUpdateIndexRtpso]->GetGPUVirtualAddress();
 	dispatchDesc.HitGroupTable.SizeInBytes = rayTracingScene->m_hitGroupShaderTable[lastUpdateIndexRtpso]->GetDesc().Width;
 	dispatchDesc.HitGroupTable.StrideInBytes = rayTracingScene->m_hitGroupShaderTableStrideInBytes;
@@ -694,7 +693,7 @@ void GraphicsContext::UpdateRenderTexture(RenderTexture2D^ texture)
 	}
 }
 
-void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount)
+void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount)
 {
 	int lastUpdateIndex = rayTracingAccelerationStructure->asLastUpdateIndex;
 
@@ -740,18 +739,9 @@ void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTrac
 	mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 	m_commandList->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(asStruct.Get()));
-
-	int index1 = rayTracingAccelerationStructure->m_instanceDescs.size();
-	D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
-	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
-	instanceDesc.InstanceMask = 1;
-	instanceDesc.InstanceID = index1;
-	instanceDesc.InstanceContributionToHitGroupIndex = index1 * rayTypeCount;
-	instanceDesc.AccelerationStructure = rayTracingAccelerationStructure->m_bottomLevelASs[lastUpdateIndex][index1]->GetGPUVirtualAddress();
-	rayTracingAccelerationStructure->m_instanceDescs.push_back(instanceDesc);
 }
 
-void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat)
+void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh,UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -763,8 +753,16 @@ void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationSt
 	*(D3D12_GPU_VIRTUAL_ADDRESS*)((byte*)pBase + sizeof(D3D12_GPU_VIRTUAL_ADDRESS)) = mesh->m_skinnedVertice.Get()->GetGPUVirtualAddress() + MMDMesh::c_skinnedVerticeStride * vertexBegin;
 	*(D3D12_GPU_VIRTUAL_ADDRESS*)((byte*)pBase + sizeof(D3D12_GPU_VIRTUAL_ADDRESS) * 2) = gpuHandle.ptr;
 
-	BuildBottomAccelerationStructures(rayTracingAccelerationStructure, mesh, vertexBegin, vertexCount, rayTypeCount);
+	BuildBottomAccelerationStructures(rayTracingAccelerationStructure, mesh, vertexBegin, vertexCount);
 
+	int index1 = rayTracingAccelerationStructure->m_instanceDescs.size();
+	D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
+	instanceDesc.InstanceMask = instanceMask;
+	instanceDesc.InstanceID = index1;
+	instanceDesc.InstanceContributionToHitGroupIndex = index1 * rayTypeCount;
+	instanceDesc.AccelerationStructure = rayTracingAccelerationStructure->m_bottomLevelASs[rayTracingAccelerationStructure->asLastUpdateIndex][index1]->GetGPUVirtualAddress();
+	rayTracingAccelerationStructure->m_instanceDescs.push_back(instanceDesc);
 }
 
 void GraphicsContext::BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure)
@@ -923,10 +921,16 @@ void GraphicsContext::ResourceBarrierScreen(D3D12ResourceStates before, D3D12Res
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 }
 
-void GraphicsContext::ClearDepthStencil()
+void GraphicsContext::SetRenderTargetScreenAndClearDepth()
 {
-	//auto context = m_deviceResources->GetD3DDeviceContext();
-	//context->ClearDepthStencilView(m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	D3D12_VIEWPORT viewport = m_deviceResources->GetScreenViewport();
+	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
+	m_commandList->RSSetViewports(1, &viewport);
+	m_commandList->RSSetScissorRects(1, &scissorRect);
+	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = m_deviceResources->GetRenderTargetView();
+	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = m_deviceResources->GetDepthStencilView();
+	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
 }
 
 void GraphicsContext::BeginAlloctor(DeviceResources^ deviceResources)

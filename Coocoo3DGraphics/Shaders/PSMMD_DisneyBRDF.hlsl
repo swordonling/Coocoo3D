@@ -1,5 +1,6 @@
 #define UNITY_BRDF_GGX 1
-#include "FromUnity/UnityStandardBRDF.hlsli"
+#include "FromDisney/DisneyBRDF.hlsli"
+#include "RandomNumberGenerator.hlsli"
 #include "CameraDataDefine.hlsli"
 struct LightInfo
 {
@@ -28,6 +29,14 @@ cbuffer cb3 : register(b3)
 	float _Metallic;
 	float _Roughness;
 	float _Emission;
+	float _Subsurface;
+	float _Specular;
+	float _SpecularTint;
+	float _Anisotropic;
+	float _Sheen;
+	float _SheenTint;
+	float _Clearcoat;
+	float _ClearcoatGloss;
 };
 cbuffer cb2 : register(b2)
 {
@@ -50,6 +59,10 @@ struct PSSkinnedIn
 	float2 TexCoord	: TEXCOORD;		//Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
 };
+float3 brdf_s(float3 L, float3 V, float3 N, float3 X, float3 Y, float3 baseColor)
+{
+	return BRDF(L, V, N, X, Y, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
+}
 float4 main(PSSkinnedIn input) : SV_TARGET
 {
 	float3 strength = float3(0,0,0);
@@ -58,7 +71,15 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float4 texColor = texture0.Sample(s0, input.TexCoord) * _DiffuseColor;
 	clip(texColor.a - 0.01f);
 	float3 diff = texColor.rgb;
-
+	uint randomState = (uint)(input.Pos.x * input.Pos.w + (uint)(input.Pos.y * input.Pos.w) * 8192) * 8192 + g_camera_randomValue;
+	float3 randomDir = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
+	if (dot(randomDir, norm) < 0)
+	{
+		randomDir = -randomDir;
+	}
+	float3 X = normalize(input.Tangent);
+	float3 Y = cross(input.Norm,input.Tangent);
+	float3 inDirect = _AmbientColor;
 	for (int i = 0; i < 1; i++)
 	{
 		if (Lightings[i].LightColor.a != 0)
@@ -74,26 +95,16 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
-			UnityLight light;
-			light.color = lightStrength * inShadow;
-			light.dir = lightDir;
-			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.01f * diff;
-			indirect.specular = lightStrength * 0.01f;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+
+			strength += brdf_s(lightDir,viewDir,norm,X,Y,diff) * lightStrength * inShadow;
+			inDirect += lightStrength * 0.01f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
-			UnityLight light;
-			light.color = lightStrength;
-			light.dir = lightDir;
-			UnityIndirect indirect;
-			indirect.diffuse = 0;
-			indirect.specular = 0;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
 		}
 	}
 	for (int i = 1; i < 4; i++)
@@ -104,29 +115,31 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a;
-			UnityLight light;
-			light.color = lightStrength;
-			light.dir = lightDir;
-			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.01f * diff;
-			indirect.specular = lightStrength * 0.01f;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
+			inDirect += lightStrength * 0.1f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
-			UnityLight light;
-			light.color = lightStrength;
-			light.dir = lightDir;
-			UnityIndirect indirect;
-			indirect.diffuse = 0;
-			indirect.specular = 0;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, 1 - _Roughness, norm, viewDir, light, indirect);
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
 		}
 	}
-	strength += _AmbientColor * diff;
+	//strength += _AmbientColor * diff;
+	int sampleCount = pow(2, g_quality)*2;
+	if (dot(viewDir, norm) < 0)
+	{
+		norm = -norm;
+	}
+	for (int i = 0; i < sampleCount; i++)
+	{
+		randomDir = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
+		if (dot(randomDir, norm) < 0)
+		{
+			randomDir = -randomDir;
+		}
+		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * inDirect * 6.28 / sampleCount * dot(randomDir, norm);
+	}
 	return float4(strength, texColor.a);
-	//return float4(input.Tangent*0.5+0.5, texColor.a);
 }

@@ -31,20 +31,31 @@
                     <mu:NumberBox Grid.Row="2" Grid.Column="0" Header="X" Value="{x:Bind VRX,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="2" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="2" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
-                    <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" Minimum="0.1" Maximum="179.9" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" AcceptsExpression="True" Minimum="0.1" Maximum="179.9"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
-                    <TextBlock x:Name="ViewFrameRate"/>
+                <Button Content="设置">
+                    <Button.Flyout>
+                        <Flyout Placement="RightEdgeAlignedTop">
+                            <StackPanel>
+                                <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
+                                <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+                                <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
+                                <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
+                                <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
+                                <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="ComboBox_SelectionChanged_1" SelectedIndex="0"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
-                <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
-                    <mu:NumberBox Grid.Column="1" Header="FPS限制" Value="{x:Bind VSetFps,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Column="0" Header="FPS限制" Value="{x:Bind VSetFps,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <TextBlock x:Name="ViewFrameRate" Grid.Column="1"/>
                 </Grid>
-                <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
-                <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
                 <ComboBox Header="渲染管线" SelectedIndex="0" SelectionChanged="ComboBox_SelectionChanged">
                     <ComboBoxItem Content="forward"/>
                     <ComboBoxItem Content="光线追踪1"/>

@@ -17,7 +17,7 @@ namespace Coocoo3D.RenderPipeline
         public const int c_transformMatrixDataSize = 64;
         const int c_materialDataSize = 512;
         const int c_argumentsSizeInBytes = 64;
-        const int c_presentDataSize = 256;
+        const int c_presentDataSize = 512;
         public override GraphicsSignature GraphicsSignature => rootSignatureGraphics;
         byte[] rcDataUploadBuffer = new byte[c_tempDataSize];
         public GCHandle gch_rcDataUploadBuffer;
@@ -95,6 +95,7 @@ namespace Coocoo3D.RenderPipeline
             DesireEntityBuffers(deviceResources, Entities.Count);
             var graphicsContext = context.graphicsContext;
             var cameras = context.cameras;
+            ref var settings = ref context.settings;
             for (int i = 0; i < cameras.Count; i++)
             {
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
@@ -102,6 +103,9 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
+                Marshal.WriteInt32(pBufferData + 256, settings.EnableAO ? 1 : 0);
+                Marshal.WriteInt32(pBufferData + 256 + 4, settings.EnableShadow ? 1 : 0);
+                Marshal.WriteInt32(pBufferData + 256 + 8, (int)settings.Quality);
                 graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize);
             }
             for (int i = 0; i < Entities.Count; i++)
@@ -230,7 +234,7 @@ namespace Coocoo3D.RenderPipeline
                     tex1 = textureError;
                 }
 
-                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
+                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, 0x1, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
                 matIndex++;
 
                 indexStartLocation += Materials[i].indexCount;

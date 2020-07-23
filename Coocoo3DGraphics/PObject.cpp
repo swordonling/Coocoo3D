@@ -5,6 +5,7 @@ using namespace Coocoo3DGraphics;
 
 void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader)
 {
+	Unload();
 	m_vertexShader = vertexShader;
 	m_geometryShader = geometryShader;
 	m_pixelShader = pixelShader;
@@ -79,6 +80,7 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 
 void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat)
 {
+	Unload();
 	m_vertexShader = vertexShader;
 	m_geometryShader = geometryShader;
 	m_pixelShader = pixelShader;
@@ -152,8 +154,9 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 
 }
 
-void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip, DxgiFormat rtvFormat)
+void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, DxgiFormat rtvFormat)
 {
+	Unload();
 	m_vertexShader = vs;
 	m_geometryShader = gs;
 	m_pixelShader = ps;
@@ -248,8 +251,54 @@ void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graph
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_FRONT, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[5])));
 
+	//state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	//state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+	//if (psDepthAlphaClip != nullptr)
+	//	state.PS = CD3DX12_SHADER_BYTECODE(psDepthAlphaClip->byteCode.Get());
+	//else
+	//	state.PS = {};
+	//state.RTVFormats[0] = DXGI_FORMAT_UNKNOWN;
+	//state.NumRenderTargets = 0;
+	//DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])));
+}
+
+void PObject::ReloadDepthOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip)
+{
+	Unload();
+	m_vertexShader = nullptr;
+	m_geometryShader = nullptr;
+	m_pixelShader = psDepthAlphaClip;
+	m_vsTransform = vsTransform;
+	static const D3D12_INPUT_ELEMENT_DESC inputLayout0[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "EDGESCALE", 0, DXGI_FORMAT_R32_FLOAT, 0, 20, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "BONES", 0, DXGI_FORMAT_R32G32B32A32_UINT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 40, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 56, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+	static const D3D12_INPUT_ELEMENT_DESC inputLayout1[] =
+	{
+		{ "SV_POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "EDGESCALE", 0, DXGI_FORMAT_R32_FLOAT, 0, 48, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC state = {};
+	state.InputLayout = { inputLayout1, _countof(inputLayout1) };
+	state.pRootSignature = graphicsSignature->m_rootSignatures[0].Get();
+	state.VS = CD3DX12_SHADER_BYTECODE(vsTransform->byteCode.Get());
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 0, 0.0f, 0.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+	state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	state.SampleMask = UINT_MAX;
+	state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	state.DSVFormat = deviceResources->GetDepthBufferFormat();
+	state.SampleDesc.Count = 1;
+	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, 10000, 0.0f, 1.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 	if (psDepthAlphaClip != nullptr)
 		state.PS = CD3DX12_SHADER_BYTECODE(psDepthAlphaClip->byteCode.Get());
 	else
@@ -261,6 +310,7 @@ void PObject::Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graph
 
 void PObject::ReloadSkinningOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs)
 {
+	Unload();
 	m_vertexShader = vs;
 	m_geometryShader = gs;
 	m_pixelShader = nullptr;

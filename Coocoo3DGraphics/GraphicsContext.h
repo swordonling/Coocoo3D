@@ -76,8 +76,8 @@ namespace Coocoo3DGraphics
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(Texture2D^ texture);
 		void UpdateRenderTexture(RenderTexture2D^ texture);
-		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount);
-		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMeshSkinned(MMDMesh^ mesh);
@@ -87,7 +87,7 @@ namespace Coocoo3DGraphics
 		void SetRootSignature(GraphicsSignature^ rootSignature);
 		void SetRootSignatureRayTracing(RayTracingScene^ rootSignature);
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
-		void ClearDepthStencil();
+		void SetRenderTargetScreenAndClearDepth();
 		static void BeginAlloctor(DeviceResources^ deviceResources);
 		void SetDescriptorHeapDefault();
 		void BeginCommand();

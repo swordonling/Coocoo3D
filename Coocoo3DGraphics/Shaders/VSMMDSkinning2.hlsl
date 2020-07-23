@@ -101,6 +101,7 @@ PSSkinnedIn main(VSSkinnedIn input)
 	output.Norm = normalize(mul(vSkinned.Norm, (float3x3)g_mWorld));
 	output.Tangent = normalize(mul(vSkinned.Tan, (float3x3)g_mWorld));
 	output.Tex = input.Tex;
+	output.EdgeScale = input.EdgeScale;
 
 	return output;
 }

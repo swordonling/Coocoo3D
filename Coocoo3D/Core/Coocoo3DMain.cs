@@ -77,7 +77,9 @@ namespace Coocoo3D.Core
             viewSelectedEntityBone = true,
             HighResolutionShadow = false,
             backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
-            ExtendShadowMapRange = 32
+            ExtendShadowMapRange = 32,
+            EnableAO = true,
+            EnableShadow = true,
         };
         public float AspectRatio;
         IAsyncAction RenderLoop;
@@ -394,5 +396,8 @@ namespace Coocoo3D.Core
         public bool HighResolutionShadow;
         public Vector4 backgroundColor;
         public float ExtendShadowMapRange;
+        public bool EnableAO;
+        public bool EnableShadow;
+        public uint Quality;
     }
 }

@@ -33,7 +33,7 @@ namespace Coocoo3D.PropertiesPages
         public event PropertyChangedEventHandler PropertyChanged;
         Coocoo3DMain appBody;
 
-
+        uint[] comboBox1Values = new uint[6];
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
@@ -49,6 +49,11 @@ namespace Coocoo3D.PropertiesPages
                 {
                     VRayTracingSupport.Text = "使用的显卡支持光线追踪";
                 }
+                for(int i=0;i< comboBox1Values.Length;i++)
+                {
+                    comboBox1Values[i] = (uint)i;
+                }
+                vQuality.ItemsSource = comboBox1Values;
             }
             else
             {
@@ -197,6 +202,23 @@ namespace Coocoo3D.PropertiesPages
             }
         }
 
+        public float VSetFps
+        {
+            get => appBody.Fps; set
+            {
+                appBody.Fps = Math.Max(value, 1);
+                appBody.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
+            }
+        }
+
+        public bool VSaveCpuPower
+        {
+            get => appBody.SaveCpuPower; set
+            {
+                appBody.SaveCpuPower = value;
+            }
+        }
+
         public bool VHighResolutionShadow
         {
             get
@@ -225,21 +247,20 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
-
-        public float VSetFps
+        public bool VEnableAO
         {
-            get => appBody.Fps; set
+            get => appBody.settings.EnableAO; set
             {
-                appBody.Fps = Math.Max(value, 1);
-                appBody.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
+                appBody.settings.EnableAO = value;
+                appBody.RequireRender();
             }
         }
-
-        public bool VSaveCpuPower
+        public bool VEnableShadow
         {
-            get => appBody.SaveCpuPower; set
+            get => appBody.settings.EnableShadow; set
             {
-                appBody.SaveCpuPower = value;
+                appBody.settings.EnableShadow = value;
+                appBody.RequireRender();
             }
         }
         #endregion
@@ -256,6 +277,12 @@ namespace Coocoo3D.PropertiesPages
             {
                 appBody.SwitchToRenderPipeline(selectedIndex);
             }
+            appBody.RequireRender();
+        }
+
+        private void ComboBox_SelectionChanged_1(object sender, SelectionChangedEventArgs e)
+        {
+            appBody.settings.Quality = (uint)(sender as ComboBox).SelectedValue;
             appBody.RequireRender();
         }
     }

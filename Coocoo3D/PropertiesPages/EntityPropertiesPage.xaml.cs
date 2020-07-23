@@ -251,10 +251,20 @@ namespace Coocoo3D.PropertiesPages
             }
         }
 
-        private void Grid_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+        //private void Grid_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+        //{
+        //    MMDMatLit matLit = (sender as Grid).DataContext as MMDMatLit;
+        //    appBody.ShowDetailPage(typeof(MaterialPropertyPage), new Bundle_Main_Entity_Mat() { main = appBody, entity = mmd3dEntity, matLit = matLit });
+        //}
+
+        private void NumberBox_ValueChanged(Microsoft.UI.Xaml.Controls.NumberBox sender, Microsoft.UI.Xaml.Controls.NumberBoxValueChangedEventArgs args)
         {
-            MMDMatLit matLit = (sender as Grid).DataContext as MMDMatLit;
-            appBody.ShowDetailPage(typeof(MaterialPropertyPage), new Bundle_Main_Entity_Mat() { main = appBody, entity = mmd3dEntity, matLit = matLit });
+            appBody.RequireRender();
+        }
+
+        private void Slider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            appBody.RequireRender();
         }
     }
     public struct Bundle_Main_Entity_Mat
