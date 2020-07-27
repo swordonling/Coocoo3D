@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Coocoo3D.MMDSupport;
 using Coocoo3D.Components;
 using Coocoo3DGraphics;
+using Coocoo3DPhysics;
 
 namespace Coocoo3D.Components
 {
@@ -15,14 +16,24 @@ namespace Coocoo3D.Components
     {
         public bool GpuUsable = false;
         public const int c_boneMatrixDataSize = 65536;
-        public byte[] boneMatricesData = new byte[c_boneMatrixDataSize];
+        public const int c_boneMatricesSize = 1024;
+        public Matrix4x4[] boneMatricesData = new Matrix4x4[c_boneMatricesSize];
         GCHandle gch_boneMatricesData;
-        public ConstantBuffer boneMatrices = new ConstantBuffer();
+        public ConstantBuffer boneMatricesBuffer = new ConstantBuffer();
 
         public List<BoneEntity> bones = new List<BoneEntity>();
         public Dictionary<string, BoneEntity> stringBoneMap = new Dictionary<string, BoneEntity>();
 
         public List<MorphBoneStruct[]> boneMorphCache;
+        public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
+        public List<Physics3DJoint> physic3DJoints = new List<Physics3DJoint>();
+        public List<MMDJoint> jointDescs = new List<MMDJoint>();
+        public List<MMDRigidBody> rigidBodyDescs = new List<MMDRigidBody>();
+
+        public Matrix4x4 LocalToWorld = Matrix4x4.Identity;
+        public Matrix4x4 WorldToLocal = Matrix4x4.Identity;
+
+        public Dictionary<int, List<List<int>>> IKNeedUpdateMatIndexs;
 
         public MMDBoneComponent()
         {
@@ -35,33 +46,27 @@ namespace Coocoo3D.Components
 
         public void ComputeMatricesData()
         {
-            Matrix4x4 matrix4X4 = Matrix4x4.Identity;
-            int size = 64;
-            IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(boneMatricesData, 0);
             for (int i = 0; i < bones.Count; i++)
             {
-                matrix4X4 = Matrix4x4.Transpose(bones[i].GetTransformMatrixG(bones));
-                Marshal.StructureToPtr(matrix4X4, ptr, true);
-
-                ptr += size;
+                boneMatricesData[i] = Matrix4x4.Transpose(bones[i].GetTransformMatrixG(bones));
+            }
+        }
+        void WriteMatriticesData()
+        {
+            for (int i = 0; i < bones.Count; i++)
+            {
+                boneMatricesData[i] = Matrix4x4.Transpose(bones[i].GeneratedTransform);
             }
         }
         public void SetPose(MMDMotionComponent motionComponent, MMDMorphStateComponent morphStateComponent, float time)
         {
             foreach (var pair in stringBoneMap)
             {
-                if (motionComponent.BoneKeyFrameSet.TryGetValue(pair.Key, out var value))
-                {
-                    var keyframe = MMDMotionComponent.GetBoneMotion(value, time);
-                    pair.Value.rotation = keyframe.rotation;
-                    pair.Value.dynamicPosition = keyframe.translation;
-                }
-                else
-                {
-                    pair.Value.rotation = Quaternion.Identity;
-                    pair.Value.dynamicPosition = Vector3.Zero;
-                }
+                var keyframe = motionComponent.GetBoneMotion(pair.Key, time);
+                pair.Value.rotation = keyframe.rotation;
+                pair.Value.dynamicPosition = keyframe.translation;
             }
+            UpdateAllMatrix();
             for (int i = 0; i < bones.Count; i++)
             {
                 if (bones[i].IKTargetIndex != -1)
@@ -74,13 +79,13 @@ namespace Coocoo3D.Components
             {
                 if (morphStateComponent.morphs[i].Type == MorphType.Bone && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
                 {
-                    MorphBoneStruct[] morphBoneStructs = boneMorphCache[i];
-                    MorphBoneStruct[] morphBoneStructs2 = morphStateComponent.morphs[i].MorphBones;
+                    MorphBoneStruct[] morphBoneStructs0 = boneMorphCache[i];
+                    MorphBoneStruct[] morphBoneStructs1 = morphStateComponent.morphs[i].MorphBones;
                     float computedWeight = morphStateComponent.computedWeights[i];
-                    for (int j = 0; j < morphBoneStructs.Length; j++)
+                    for (int j = 0; j < morphBoneStructs0.Length; j++)
                     {
-                        morphBoneStructs[j].Rotation = Quaternion.Slerp(Quaternion.Identity, morphBoneStructs2[j].Rotation, computedWeight);
-                        morphBoneStructs[j].Translation = morphBoneStructs2[j].Translation * computedWeight;
+                        morphBoneStructs0[j].Rotation = Quaternion.Slerp(Quaternion.Identity, morphBoneStructs1[j].Rotation, computedWeight);
+                        morphBoneStructs0[j].Translation = morphBoneStructs1[j].Translation * computedWeight;
                     }
                 }
             }
@@ -110,7 +115,33 @@ namespace Coocoo3D.Components
             }
         }
 
+        public void SetPhysicsPose(Physics3DScene physics3DScene)
+        {
+            for (int i = 0; i < rigidBodyDescs.Count; i++)
+            {
+                var desc = rigidBodyDescs[i];
+                if (desc.Type != 0) continue;
+                int index = desc.AssociatedBoneIndex;
+                var mat1 = bones[index].GeneratedTransform * LocalToWorld;
+                Matrix4x4.Decompose(mat1, out _, out var rot, out _);
 
+                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], Vector3.Transform(/*bones[index].staticPosition*/desc.Position, mat1), rot * ToQuaternion(desc.Rotation));
+            }
+        }
+
+        public void SetPoseAfterPhysics(Physics3DScene physics3DScene)
+        {
+            for (int i = 0; i < rigidBodyDescs.Count; i++)
+            {
+                var desc = rigidBodyDescs[i];
+                if (desc.Type == 0) continue;
+                int index = desc.AssociatedBoneIndex;
+                if (index == -1) continue;
+                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / ToQuaternion(desc.Rotation))
+                    * Matrix4x4.CreateTranslation(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]) - desc.Position + bones[index].staticPosition) * WorldToLocal;
+            }
+            WriteMatriticesData();
+        }
 
         void IK(int index, List<BoneEntity> bones)
         {
@@ -119,180 +150,172 @@ namespace Coocoo3D.Components
             var entity = bones[index];
             var entitySource = bones[ikTargetIndex];
 
-            entity.GetPositionAndRotation(bones, out var posTarget, out var rot0);
+            entity.GetPosRot2(out var posTarget, out var rot0);
 
 
-            bool skipOne = false;
-            if (entity.boneIKLinks.Length == 2)
-            {
-                int cLimit = 0;
-                int cIndex = 0;
-                if (entity.boneIKLinks[0].HasLimit) { cLimit++; cIndex = 0; }
-                if (entity.boneIKLinks[1].HasLimit) { cLimit++; cIndex = 1; }
-                if (cLimit == 1)
-                {
-                    if (entitySource.ParentIndex == entity.boneIKLinks[cIndex].LinkedIndex)
-                    {
-                        BoneEntity ikS1 = bones[entity.boneIKLinks[1 - cIndex].LinkedIndex];
-                        BoneEntity ikLimited = bones[entity.boneIKLinks[cIndex].LinkedIndex];
-                        Quaternion cacheRot = ikS1.rotation;
-                        ikS1.rotation = Quaternion.Identity;
-                        ikS1.GetPositionAndRotation(bones, out Vector3 pos1, out Quaternion rot);
-                        entitySource.GetPositionAndRotation(bones, out var posSource, out var rot1);
-                        void _switchTo(Vector3 _angle)
-                        {
-                            switch (entity.IkTransformOrders[cIndex])
-                            {
-                                case IKTransformOrder.OrderZxy:
-                                    ikLimited.rotation = Quaternion.Normalize(ZxyToQuaternion(_angle));
-                                    break;
-                                case IKTransformOrder.OrderXyz:
-                                    ikLimited.rotation = Quaternion.Normalize(XyzToQuaternion(_angle));
-                                    break;
-                                case IKTransformOrder.OrderYzx:
-                                    ikLimited.rotation = Quaternion.Normalize(YzxToQuaternion(_angle));
-                                    break;
-                            }
-                            entitySource.GetPositionAndRotation(bones, out posSource, out rot1);
-                        }
-                        Vector3 LimitMax = entity.boneIKLinks[cIndex].LimitMax;
-                        Vector3 LimitMin = entity.boneIKLinks[cIndex].LimitMin;
-
-                        float targetDistance = Vector3.Distance(posTarget, pos1);
-                        Vector3 minAng = entity.boneIKLinks[cIndex].LimitMin;
-                        _switchTo(entity.boneIKLinks[cIndex].LimitMin);
-                        float distMin = MathF.Abs(Vector3.Distance(posSource, pos1) - targetDistance);
-                        for (int j = 0; j < 17; j++)
-                        {
-                            Vector3 eularAngle = Vector3.Lerp(LimitMin, LimitMax, j / 16.0f);
-                            _switchTo(eularAngle);
-                            float currentDDistance = MathF.Abs(Vector3.Distance(posSource, pos1) - targetDistance);
-                            if (currentDDistance < distMin)
-                            {
-                                distMin = currentDDistance;
-                                minAng = eularAngle;
-                            }
-                        }
-                        void _toMin(int times, float sp)
-                        {
-                            Vector3 svec = (LimitMax - LimitMin) / sp;
-                            for (int j = 0; j < times; j++)
-                            {
-                                Vector3 eularAngle = Vector3.Clamp(minAng + svec, LimitMin, LimitMax);
-                                _switchTo(eularAngle);
-                                float currentDDistance = MathF.Abs(Vector3.Distance(posSource, pos1) - targetDistance);
-                                if (currentDDistance < distMin)
-                                {
-                                    distMin = currentDDistance;
-                                    minAng = eularAngle;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                            for (int j = 0; j < times; j++)
-                            {
-                                Vector3 eularAngle = Vector3.Clamp(minAng - svec, LimitMin, LimitMax);
-                                _switchTo(eularAngle);
-                                float currentDDistance = MathF.Abs(Vector3.Distance(posSource, pos1) - targetDistance);
-                                if (currentDDistance < distMin)
-                                {
-                                    distMin = currentDDistance;
-                                    minAng = eularAngle;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        _toMin(3, 32);
-                        _toMin(3, 128);
-                        _toMin(3, 512);
-                        _toMin(3, 2048);
-                        _toMin(3, 8192);
-                        _toMin(3, 32768);
-                        _toMin(3, 131072);
-                        _switchTo(minAng);
-                        ikS1.rotation = cacheRot;
-                        skipOne = true;
-                    }
-                }
-            }
+            var ax = IKNeedUpdateMatIndexs[index];
+            int h1 = entity.CCDIterateLimit / 2;
+            Vector3 posSource = entitySource.GetPos2();
+            if ((posTarget - posSource).LengthSquared() < 1e-8f) return;
             for (int i = 0; i < entity.CCDIterateLimit; i++)
             {
+                bool axis_lim = i < h1;
                 for (int j = 0; j < entity.boneIKLinks.Length; j++)
                 {
-                    if (skipOne && entity.boneIKLinks[j].HasLimit) { skipOne = false; continue; }
-
+                    posSource = entitySource.GetPos2();
                     BoneEntity itEntity = bones[entity.boneIKLinks[j].LinkedIndex];
-                    entitySource.GetPositionAndRotation(bones, out var posSource, out var rot1);
-                    Vector3 VSourceTarget = posTarget - posSource;
-                    Quaternion rotationSnapshot = itEntity.rotation;
-                    float lengthSnapshot = VSourceTarget.Length();
-                    if (lengthSnapshot < 1e-3f) return;
 
-                    itEntity.GetPositionAndRotation(bones, out var itPosition, out var itRot);
+                    itEntity.GetPosRot2(out var itPosition, out var itRot);
 
                     Vector3 targetDirection = Vector3.Normalize(itPosition - posTarget);
                     Vector3 ikDirection = Vector3.Normalize(itPosition - posSource);
-                    if (Vector3.Dot(targetDirection, ikDirection) > 0.999999f) continue;
+                    float dotV = Vector3.Dot(targetDirection, ikDirection);
+                    dotV = Math.Clamp(dotV, -1, 1);
 
-
-                    Vector3 ikRotateAxis = Vector3.Normalize(Vector3.Transform(Vector3.Cross(targetDirection, ikDirection),
-                       Quaternion.Inverse(itRot / itEntity.rotation)));
-
-                    itEntity.rotation = Quaternion.Normalize(itEntity.rotation * Quaternion.CreateFromAxisAngle(Vector3.Normalize(ikRotateAxis),
-                         -(float)AngleBetween(targetDirection, ikDirection)));
+                    Matrix4x4 matXi = Matrix4x4.Transpose(itEntity.GeneratedTransform);
+                    Vector3 ikRotateAxis = SafeNormalize(Vector3.TransformNormal(Vector3.Cross(targetDirection, ikDirection), matXi));
 
                     var itl = entity.boneIKLinks[j];
+                    if (axis_lim)
+                        switch (itl.FixTypes)
+                        {
+                            case AxisFixType.FixX:
+                                ikRotateAxis.X = ikRotateAxis.X >= 0 ? 1 : -1;
+                                ikRotateAxis.Y = 0;
+                                ikRotateAxis.Z = 0;
+                                break;
+                            case AxisFixType.FixY:
+                                ikRotateAxis.Y = ikRotateAxis.Y >= 0 ? 1 : -1;
+                                ikRotateAxis.X = 0;
+                                ikRotateAxis.Z = 0;
+                                break;
+                            case AxisFixType.FixZ:
+                                ikRotateAxis.Z = ikRotateAxis.Z >= 0 ? 1 : -1;
+                                ikRotateAxis.X = 0;
+                                ikRotateAxis.Y = 0;
+                                break;
+                        }
+
+                    float ikAngle = Math.Min((float)Math.Acos(dotV), entity.CCDAngleLimit * (i + 1));
+
+                    itEntity.rotation = Quaternion.Normalize(itEntity.rotation * Quaternion.CreateFromAxisAngle(ikRotateAxis, -ikAngle));
+
                     if (itl.HasLimit)
                     {
-                        switch (entity.IkTransformOrders[j])
+                        Vector3 angle = Vector3.Zero;
+                        switch (entity.boneIKLinks[j].TransformOrder)
                         {
-                            case IKTransformOrder.OrderZxy:
+                            case IKTransformOrder.Zxy:
                                 {
-                                    var eularAngle = QuaternionToZxy(itEntity.rotation);
-                                    Vector3 cachedE = eularAngle;
-                                    eularAngle = Vector3.Clamp(eularAngle, itl.LimitMin, itl.LimitMax);
-                                    if (cachedE != eularAngle)
-                                        itEntity.rotation = Quaternion.Normalize(ZxyToQuaternion(eularAngle));
+                                    angle = QuaternionToZxy(itEntity.rotation);
+                                    Vector3 cachedE = angle;
+                                    angle = LimitAngle(angle, axis_lim, itl.LimitMin, itl.LimitMax);
+                                    if (cachedE != angle)
+                                        itEntity.rotation = Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitZ, angle.Z) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, angle.X) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle.Y));
                                     break;
                                 }
-                            case IKTransformOrder.OrderXyz:
+                            case IKTransformOrder.Xyz:
                                 {
-                                    var eularAngle = QuaternionToXyz(itEntity.rotation);
-                                    Vector3 cachedE = eularAngle;
-                                    eularAngle = Vector3.Clamp(eularAngle, itl.LimitMin, itl.LimitMax);
-                                    if (cachedE != eularAngle)
-                                        itEntity.rotation = Quaternion.Normalize(XyzToQuaternion(eularAngle));
+                                    angle = QuaternionToXyz(itEntity.rotation);
+                                    Vector3 cachedE = angle;
+                                    angle = LimitAngle(angle, axis_lim, itl.LimitMin, itl.LimitMax);
+                                    if (cachedE != angle)
+                                        itEntity.rotation = Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitX, angle.X) * Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle.Y) * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, angle.Z));
                                     break;
                                 }
-                            case IKTransformOrder.OrderYzx:
+                            case IKTransformOrder.Yzx:
                                 {
-                                    var eularAngle = QuaternionToYzx(itEntity.rotation);
-                                    Vector3 cachedE = eularAngle;
-                                    eularAngle = Vector3.Clamp(eularAngle, itl.LimitMin, itl.LimitMax);
-                                    if (cachedE != eularAngle)
-                                        itEntity.rotation = Quaternion.Normalize(YzxToQuaternion(eularAngle));
+                                    angle = QuaternionToYzx(itEntity.rotation);
+                                    Vector3 cachedE = angle;
+                                    angle = LimitAngle(angle, axis_lim, itl.LimitMin, itl.LimitMax);
+                                    if (cachedE != angle)
+                                        itEntity.rotation = Quaternion.Normalize(Quaternion.CreateFromAxisAngle(Vector3.UnitY, angle.Y) * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, angle.Z) * Quaternion.CreateFromAxisAngle(Vector3.UnitX, angle.X));
                                     break;
                                 }
                             default:
                                 throw new NotImplementedException();
                         }
-                        entitySource.GetPositionAndRotation(bones, out var tempPos, out var rot2);
-                        if ((posTarget - tempPos).Length() > lengthSnapshot + 0.01f)//阻止乱转
-                        {
-                            itEntity.rotation = rotationSnapshot;
-                        }
                     }
+                    UpdateMatrixs(ax[j]);
+                }
+                posSource = entitySource.GetPos2();
+                if ((posTarget - posSource).LengthSquared() < 1e-8f) return;
+            }
+        }
+
+        public void BakeIKMatrixsIndex()
+        {
+            IKNeedUpdateMatIndexs = new Dictionary<int, List<List<int>>>();
+            bool[] testArray = new bool[bones.Count];
+
+            for (int i = 0; i < bones.Count; i++)
+            {
+                int ikTargetIndex = bones[i].IKTargetIndex;
+                if (ikTargetIndex != -1)
+                {
+                    List<List<int>> ax = new List<List<int>>();
+                    var entity = bones[i];
+                    var entitySource = bones[ikTargetIndex];
+                    for (int j = 0; j < entity.boneIKLinks.Length; j++)
+                    {
+                        List<int> bx = new List<int>();
+
+                        Array.Clear(testArray, 0, bones.Count);
+                        testArray[entity.boneIKLinks[j].LinkedIndex] = true;
+                        for (int k = 0; k < bones.Count; k++)
+                        {
+                            if (bones[k].ParentIndex != -1)
+                            {
+                                testArray[k] |= testArray[bones[k].ParentIndex];
+                                if (testArray[k])
+                                {
+                                    bx.Add(k);
+                                }
+                            }
+                        }
+                        ax.Add(bx);
+                    }
+                    IKNeedUpdateMatIndexs[i] = ax;
                 }
             }
         }
+
+        Vector3 SafeNormalize(Vector3 vector3)
+        {
+            float dp3 = Math.Max(0.00001f, Vector3.Dot(vector3, vector3));
+            return vector3 / MathF.Sqrt(dp3);
+        }
+
+        void UpdateAllMatrix()
+        {
+            for (int i = 0; i < bones.Count; i++)
+            {
+                bones[i].GetTransformMatrixG(bones);
+            }
+        }
+        void UpdateMatrixs(List<int> indexs)
+        {
+            for (int i = 0; i < indexs.Count; i++)
+            {
+                bones[indexs[i]].GetTransformMatrixG(bones);
+            }
+        }
+        public void TransformToNew(Physics3DScene physics3DScene, Vector3 position, Quaternion rotation)
+        {
+            LocalToWorld = Matrix4x4.CreateFromQuaternion(rotation) * Matrix4x4.CreateTranslation(position);
+            Matrix4x4.Invert(LocalToWorld, out WorldToLocal);
+            for (int i = 0; i < rigidBodyDescs.Count; i++)
+            {
+                var desc = rigidBodyDescs[i];
+                if (desc.Type != 0) continue;
+                int index = desc.AssociatedBoneIndex;
+                var bone = bones[index];
+                Matrix4x4.Decompose(bone.GeneratedTransform, out _, out Quaternion rot, out Vector3 trans);
+                Vector3 pos = Vector3.Transform(bone.staticPosition, bone.GeneratedTransform * LocalToWorld);
+                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], pos, rot);
+            }
+        }
         #region helpers
-
-
         static Vector3 QuaternionToXyz(Quaternion quaternion)
         {
             double ii = quaternion.X * quaternion.X;
@@ -487,19 +510,45 @@ namespace Coocoo3D.Components
             return result;
         }
 
-        double[] m1 = new double[8];
-        double[] m2 = new double[8];
-        double AngleBetween(Vector3 a, Vector3 b)
+
+        public static Quaternion ToQuaternion(Vector3 angle)
         {
-            m1[0] = a.X;
-            m1[1] = a.Y;
-            m1[2] = a.Z;
-            m2[0] = b.X;
-            m2[1] = b.Y;
-            m2[2] = b.Z;
-            Vector<double> v1 = new Vector<double>(m1);
-            Vector<double> v2 = new Vector<double>(m2);
-            return Math.Acos(Vector.Dot(v1, v2));
+            return Quaternion.CreateFromYawPitchRoll(-angle.Y, angle.X, angle.Z);
+        }
+
+        private Vector3 LimitAngle(Vector3 angle, bool axis_lim, Vector3 low, Vector3 high)
+        {
+            if (!axis_lim)
+            {
+                return Vector3.Clamp(angle, low, high);
+            }
+            Vector3 vecL1 = 2.0f * low - angle;
+            Vector3 vecH1 = 2.0f * high - angle;
+            if (angle.X < low.X)
+            {
+                angle.X = (vecL1.X <= high.X) ? vecL1.X : low.X;
+            }
+            else if (angle.X > high.X)
+            {
+                angle.X = (vecH1.X >= low.X) ? vecH1.X : high.X;
+            }
+            if (angle.Y < low.Y)
+            {
+                angle.Y = (vecL1.Y <= high.Y) ? vecL1.Y : low.Y;
+            }
+            else if (angle.Y > high.Y)
+            {
+                angle.Y = (vecH1.Y >= low.Y) ? vecH1.Y : high.Y;
+            }
+            if (angle.Z < low.Z)
+            {
+                angle.Z = (vecL1.Z <= high.Z) ? vecL1.Z : low.Z;
+            }
+            else if (angle.Z > high.Z)
+            {
+                angle.Z = (vecH1.Z >= low.Z) ? vecH1.Z : high.Z;
+            }
+            return angle;
         }
         #endregion
     }
@@ -511,8 +560,8 @@ namespace Coocoo3D.Components
         public Vector3 staticPosition;
         public Quaternion rotation;
 
-        Matrix4x4 generatedTransform;
-        public Matrix4x4 GeneratedTransform { get => generatedTransform; }
+        public Matrix4x4 _generatedTransform = Matrix4x4.Identity;
+        public Matrix4x4 GeneratedTransform { get => _generatedTransform; }
 
         public int ParentIndex = -1;
         public string Name;
@@ -521,8 +570,7 @@ namespace Coocoo3D.Components
         public int IKTargetIndex = -1;
         public int CCDIterateLimit = 0;
         public float CCDAngleLimit = 0;
-        public BoneIKLink[] boneIKLinks;
-        public IKTransformOrder[] IkTransformOrders;
+        public IKLink[] boneIKLinks;
 
         public int AppendParentIndex = -1;
         public float AppendRatio;
@@ -551,40 +599,33 @@ namespace Coocoo3D.Components
                 return Quaternion.Identity;
         }
 
-        public void GetPositionAndRotation(List<BoneEntity> list, out Vector3 position, out Quaternion rotation)
-        {
-            if (ParentIndex != -1)
-            {
-                var parnet = list[ParentIndex];
-                parnet.GetPositionAndRotation(list, out Vector3 pPos, out Quaternion pRot);
-                position = pPos + Vector3.Transform(relativePosition + dynamicPosition, pRot);
-                rotation = pRot * this.rotation;
-            }
-            else
-            {
-                position = relativePosition + dynamicPosition;
-                rotation = this.rotation;
-            }
-        }
         /// <summary>在调用之前确保它的父级已经更新。一般从前向后调用即可。</summary>
         public Matrix4x4 GetTransformMatrixG(List<BoneEntity> list)
         {
             if (ParentIndex != -1)
             {
-                generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
+                _generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
                    Matrix4x4.CreateFromQuaternion(rotation) *
-                   Matrix4x4.CreateTranslation(staticPosition + dynamicPosition) * list[ParentIndex].generatedTransform;
+                   Matrix4x4.CreateTranslation(staticPosition + dynamicPosition) * list[ParentIndex]._generatedTransform;
             }
             else
             {
-                generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
+                _generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
                    Matrix4x4.CreateFromQuaternion(rotation) *
                    Matrix4x4.CreateTranslation(staticPosition + dynamicPosition);
             }
-            return generatedTransform;
+            return _generatedTransform;
         }
-        public List<BoneEntity> Child = new List<BoneEntity>();
+        public Vector3 GetPos2()
+        {
+            return Vector3.Transform(staticPosition, _generatedTransform);
+        }
 
+        public void GetPosRot2(out Vector3 pos, out Quaternion rot)
+        {
+            pos = Vector3.Transform(staticPosition, _generatedTransform);
+            Matrix4x4.Decompose(_generatedTransform, out _, out rot, out _);
+        }
         public BoneEntity GetCopy()
         {
             return new BoneEntity()
@@ -601,15 +642,22 @@ namespace Coocoo3D.Components
                 NameEN = NameEN,
                 IKTargetIndex = IKTargetIndex,
                 boneIKLinks = boneIKLinks,
-                IkTransformOrders = IkTransformOrders,
-                generatedTransform = generatedTransform,
+                _generatedTransform = _generatedTransform,
                 Flags = Flags,
                 AppendParentIndex = AppendParentIndex,
                 AppendRatio = AppendRatio,
                 AppendRotation = AppendRotation,
                 AppendTranslation = AppendTranslation,
-                Child = new List<BoneEntity>(Child),
             };
+        }
+        public struct IKLink
+        {
+            public int LinkedIndex;
+            public bool HasLimit;
+            public Vector3 LimitMin;
+            public Vector3 LimitMax;
+            public IKTransformOrder TransformOrder;
+            public AxisFixType FixTypes;
         }
         public override string ToString()
         {
@@ -618,10 +666,20 @@ namespace Coocoo3D.Components
     }
     public enum IKTransformOrder
     {
-        OrderYzx = 0,
-        OrderZxy = 1,
-        OrderXyz = 2,
+        Yzx = 0,
+        Zxy = 1,
+        Xyz = 2,
     }
+
+    public enum AxisFixType
+    {
+        FixNone,
+        FixX,
+        FixY,
+        FixZ,
+        FixAll
+    }
+
 }
 
 
@@ -640,6 +698,7 @@ namespace Coocoo3D.FileFormat
         {
             boneComponent.bones.Clear();
             boneComponent.stringBoneMap.Clear();
+            boneComponent.physics3DRigidBodys.Clear();
             boneComponent.GpuUsable = false;
             var _bones = modelResource.Bones;
             for (int i = 0; i < _bones.Count; i++)
@@ -658,7 +717,6 @@ namespace Coocoo3D.FileFormat
                 if (boneEntity.ParentIndex != -1)
                 {
                     boneEntity.relativePosition = _bone.Position - _bones[boneEntity.ParentIndex].Position;
-                    boneComponent.bones[boneEntity.ParentIndex].Child.Add(boneEntity);//不知道稳定不
                 }
                 else
                 {
@@ -669,23 +727,63 @@ namespace Coocoo3D.FileFormat
                     boneEntity.IKTargetIndex = _bone.boneIK.IKTargetIndex;
                     boneEntity.CCDIterateLimit = _bone.boneIK.CCDIterateLimit;
                     boneEntity.CCDAngleLimit = _bone.boneIK.CCDAngleLimit;
-                    boneEntity.boneIKLinks = new BoneIKLink[_bone.boneIK.IKLinks.Length];
-                    boneEntity.IkTransformOrders = new IKTransformOrder[_bone.boneIK.IKLinks.Length];
+                    boneEntity.boneIKLinks = new BoneEntity.IKLink[_bone.boneIK.IKLinks.Length];
                     for (int j = 0; j < boneEntity.boneIKLinks.Length; j++)
                     {
-                        boneEntity.boneIKLinks[j] = _bone.boneIK.IKLinks[j].GetCopy();
-                        Vector3 tempMin = boneEntity.boneIKLinks[j].LimitMin;
-                        Vector3 tempMax = boneEntity.boneIKLinks[j].LimitMax;
-                        boneEntity.boneIKLinks[j].LimitMin = Vector3.Min(tempMin, tempMax);
-                        boneEntity.boneIKLinks[j].LimitMax = Vector3.Max(tempMin, tempMax);
+                        var ikLink = new BoneEntity.IKLink();
+                        ikLink.HasLimit = _bone.boneIK.IKLinks[j].HasLimit;
+                        ikLink.LimitMax = _bone.boneIK.IKLinks[j].LimitMax;
+                        ikLink.LimitMin = _bone.boneIK.IKLinks[j].LimitMin;
+                        ikLink.LinkedIndex = _bone.boneIK.IKLinks[j].LinkedIndex;
 
-                        if (boneEntity.boneIKLinks[j].LimitMin.X > -Math.PI * 0.5 && boneEntity.boneIKLinks[j].LimitMax.X < Math.PI * 0.5)
-                            boneEntity.IkTransformOrders[j] = IKTransformOrder.OrderZxy;
-                        else if (boneEntity.boneIKLinks[j].LimitMin.Y > -Math.PI * 0.5 && boneEntity.boneIKLinks[j].LimitMax.Y < Math.PI * 0.5)
-                            boneEntity.IkTransformOrders[j] = IKTransformOrder.OrderXyz;
+
+                        Vector3 tempMin = ikLink.LimitMin;
+                        Vector3 tempMax = ikLink.LimitMax;
+                        ikLink.LimitMin = Vector3.Min(tempMin, tempMax);
+                        ikLink.LimitMax = Vector3.Max(tempMin, tempMax);
+
+                        if (ikLink.LimitMin.X > -Math.PI * 0.5 && ikLink.LimitMax.X < Math.PI * 0.5)
+                            ikLink.TransformOrder = IKTransformOrder.Zxy;
+                        else if (ikLink.LimitMin.Y > -Math.PI * 0.5 && ikLink.LimitMax.Y < Math.PI * 0.5)
+                            ikLink.TransformOrder = IKTransformOrder.Xyz;
                         else
-                            boneEntity.IkTransformOrders[j] = IKTransformOrder.OrderYzx;
+                            ikLink.TransformOrder = IKTransformOrder.Yzx;
+                        const float epsilon = 1e-6f;
+                        if (ikLink.HasLimit)
+                        {
+                            if (Math.Abs(ikLink.LimitMin.X) < epsilon &&
+                                Math.Abs(ikLink.LimitMax.X) < epsilon
+                                && Math.Abs(ikLink.LimitMin.Y) < epsilon &&
+                                Math.Abs(ikLink.LimitMax.Y) < epsilon
+                                && Math.Abs(ikLink.LimitMin.Z) < epsilon &&
+                                Math.Abs(ikLink.LimitMax.Z) < epsilon)
+                            {
+                                ikLink.FixTypes = AxisFixType.FixAll;
+                            }
+                            else if (Math.Abs(ikLink.LimitMin.Y) < epsilon &&
+                                     Math.Abs(ikLink.LimitMax.Y) < epsilon
+                                     && Math.Abs(ikLink.LimitMin.Z) < epsilon &&
+                                     Math.Abs(ikLink.LimitMax.Z) < epsilon)
+                            {
+                                ikLink.FixTypes = AxisFixType.FixX;
+                            }
+                            else if (Math.Abs(ikLink.LimitMin.X) < epsilon &&
+                                     Math.Abs(ikLink.LimitMin.X) < epsilon &&
+                                     Math.Abs(ikLink.LimitMin.Z) < epsilon &&
+                                     Math.Abs(ikLink.LimitMax.Z) < epsilon)
+                            {
+                                ikLink.FixTypes = AxisFixType.FixY;
+                            }
+                            else if (Math.Abs(ikLink.LimitMin.X) < epsilon &&
+                                     Math.Abs(ikLink.LimitMin.X) < epsilon
+                                     && Math.Abs(ikLink.LimitMin.Y) < epsilon &&
+                                     Math.Abs(ikLink.LimitMax.Y) < epsilon)
+                            {
+                                ikLink.FixTypes = AxisFixType.FixZ;
+                            }
+                        }
 
+                        boneEntity.boneIKLinks[j] = ikLink;
                     }
                 }
                 if (_bone.AppendBoneIndex >= 0 && _bone.AppendBoneIndex < _bones.Count)
@@ -707,6 +805,22 @@ namespace Coocoo3D.FileFormat
                 boneComponent.stringBoneMap.Add(_bone.Name, boneEntity);
             }
 
+            boneComponent.BakeIKMatrixsIndex();
+
+            var rigidBodys = modelResource.RigidBodies;
+            for (int i = 0; i < rigidBodys.Count; i++)
+            {
+                var rigidBodyData = rigidBodys[i];
+                Physics3DRigidBody physics3DRigidBody = new Physics3DRigidBody();
+                boneComponent.physics3DRigidBodys.Add(physics3DRigidBody);
+                boneComponent.rigidBodyDescs.Add(rigidBodyData.GetCopy());
+            }
+            var joints = modelResource.Joints;
+            for (int i = 0; i < joints.Count; i++)
+            {
+                boneComponent.jointDescs.Add(joints[i].GetCopy());
+                boneComponent.physic3DJoints.Add(new Physics3DJoint());
+            }
 
             int morphCount = modelResource.Morphs.Count;
             boneComponent.boneMorphCache = new List<MorphBoneStruct[]>();

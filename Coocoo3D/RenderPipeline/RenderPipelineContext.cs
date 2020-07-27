@@ -15,7 +15,7 @@ namespace Coocoo3D.RenderPipeline
         public RenderTexture2D outputDSV;
 
         public RenderTexture2D DSV0;
-        
+
         public Texture2D TextureLoading;
         public Texture2D TextureError;
 
@@ -25,7 +25,17 @@ namespace Coocoo3D.RenderPipeline
         public GraphicsContext graphicsContext;
 
         public Settings settings;
-        public Scene scene;
-        public IReadOnlyList<Camera> cameras;
+        //public Scene scene;
+
+        public List<MMD3DEntity> entities = new List<MMD3DEntity>();
+        public List<Lighting> lightings = new List<Lighting>();
+        public List<Camera> cameras=new List<Camera>();
+
+        public void ClearCollections()
+        {
+            entities.Clear();
+            lightings.Clear();
+            cameras.Clear();
+        }
     }
 }

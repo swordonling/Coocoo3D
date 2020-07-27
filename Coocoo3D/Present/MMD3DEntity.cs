@@ -17,6 +17,9 @@ namespace Coocoo3D.Present
     {
         public Vector3 Position;
         public Quaternion Rotation;
+        public Vector3 PositionNextFrame;
+        public Quaternion RotationNextFrame;
+        public bool NeedTransform;
 
         public string Name;
         public string Description;
@@ -67,7 +70,7 @@ namespace Coocoo3D.Present
             }
             if (needUpdateMotion)
             {
-                graphicsContext.UpdateResource(boneComponent.boneMatrices, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize);
+                graphicsContext.UpdateResource(boneComponent.boneMatricesBuffer, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize,0);
                 needUpdateMotion = false;
             }
         }
@@ -151,7 +154,7 @@ namespace Coocoo3D.FileFormat
 
             entity.morphStateComponent.Reload(modelResource);
             entity.boneComponent.Reload(modelResource);
-            entity.boneComponent.boneMatrices.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
+            entity.boneComponent.boneMatricesBuffer.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
 
             entity.rendererComponent.Reload(mainCaches, modelResource);
             entity.ComponentReady = true;

@@ -262,6 +262,27 @@ namespace Coocoo3D.MMDSupport
         {
             return string.Format("{0}", Name);
         }
+        public MMDRigidBody GetCopy()
+        {
+            return new MMDRigidBody()
+            {
+                Name = Name,
+                NameEN = NameEN,
+                AssociatedBoneIndex = AssociatedBoneIndex,
+                CollisionGroup = CollisionGroup,
+                CollisionMask = CollisionMask,
+                Shape = Shape,
+                Dimemsions = Dimemsions,
+                Position = Position,
+                Rotation = Rotation,
+                Mass = Mass,
+                TranslateDamp = TranslateDamp,
+                RotateDamp = RotateDamp,
+                Restitution = Restitution,
+                Friction = Friction,
+                Type = Type,
+            };
+        }
     }
     public enum RigidBodyShape
     {
@@ -277,7 +298,7 @@ namespace Coocoo3D.MMDSupport
         PhysicsGhost = 3
     }
 
-    public class Joint
+    public class MMDJoint
     {
         public string Name;
         public string NameEN;
@@ -295,6 +316,25 @@ namespace Coocoo3D.MMDSupport
         public override string ToString()
         {
             return string.Format("{0}", Name);
+        }
+        public MMDJoint GetCopy()
+        {
+            return new MMDJoint()
+            {
+                Name = Name,
+                NameEN = NameEN,
+                Type = Type,
+                AssociatedRigidBodyIndex1 = AssociatedRigidBodyIndex1,
+                AssociatedRigidBodyIndex2 = AssociatedRigidBodyIndex2,
+                Position = Position,
+                Rotation = Rotation,
+                PositionMinimum = PositionMinimum,
+                PositionMaximum = PositionMaximum,
+                RotationMinimum = RotationMinimum,
+                RotationMaximum = RotationMaximum,
+                PositionSpring = PositionSpring,
+                RotationSpring = RotationSpring,
+            };
         }
     }
 

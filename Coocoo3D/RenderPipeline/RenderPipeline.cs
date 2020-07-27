@@ -26,7 +26,7 @@ namespace Coocoo3D.RenderPipeline
 
         public volatile bool Ready;
 
-        public virtual void TimeChange(float time, float deltaTime)
+        public virtual void TimeChange(double time, double deltaTime)
         {
 
         }

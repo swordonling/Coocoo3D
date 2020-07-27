@@ -22,14 +22,10 @@ namespace Coocoo3D.Core
 
         public List<MMD3DEntity> EntityLoadList = new List<MMD3DEntity>();
         public List<Lighting> LightingLoadList = new List<Lighting>();
+        public List<MMD3DEntity> EntityRemoveList = new List<MMD3DEntity>();
 
         public void AddSceneObject(MMD3DEntity entity)
         {
-            //lock (AppBody.deviceResources)
-            //{
-            //    Entities.Add(entity);
-            //    sceneObjects.Add(entity);
-            //}
             lock (this)
             {
                 EntityLoadList.Add(entity);
@@ -38,16 +34,19 @@ namespace Coocoo3D.Core
         }
         public void AddSceneObject(Lighting lighting)
         {
-            //lock (AppBody.deviceResources)
-            //{
-            //    Lightings.Add(lighting);
-            //    sceneObjects.Add(lighting);
-            //}
             lock(this)
             {
                 LightingLoadList.Add(lighting);
             }
             sceneObjects.Add(lighting);
+        }
+        public void RemoveSceneObject(MMD3DEntity entity)
+        {
+            lock(this)
+            {
+                Entities.Remove(entity);
+                EntityRemoveList.Add(entity);
+            }
         }
         public void SortObjects()
         {

@@ -110,7 +110,7 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>true</Prefer32Bit>
-    <UseDotNetNativeToolchain>false</UseDotNetNativeToolchain>
+    <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
   <PropertyGroup>
     <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
@@ -193,6 +193,10 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Textures\UI_0.png" />
+    <Content Include="PhysXCommon_64.dll" />
+    <Content Include="PhysXCooking_64.dll" />
+    <Content Include="PhysXFoundation_64.dll" />
+    <Content Include="PhysX_64.dll" />
     <Content Include="Properties\Default.rd.xml" />
     <Content Include="Assets\LockScreenLogo.scale-200.png" />
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -271,6 +275,10 @@
     <ProjectReference Include="..\Coocoo3DGraphics\Coocoo3DGraphics.vcxproj">
       <Project>{8f8bf5cc-3dee-4f9f-abd5-8fa89ba6109c}</Project>
       <Name>Coocoo3DGraphics</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Coocoo3DPhysics\Coocoo3DPhysics.vcxproj">
+      <Project>{3a646f41-2ae9-436f-8b6d-d399f6fb3f79}</Project>
+      <Name>Coocoo3DPhysics</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup />

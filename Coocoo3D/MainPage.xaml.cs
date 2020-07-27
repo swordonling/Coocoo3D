@@ -33,7 +33,6 @@ namespace Coocoo3D
             this.InitializeComponent();
             appBody = new Coocoo3DMain()
             {
-                worldViewer = worldViewer,
                 mediaElement = mediaElement,
             };
             worldViewer.AppBody = appBody;

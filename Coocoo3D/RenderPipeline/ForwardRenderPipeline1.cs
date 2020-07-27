@@ -104,15 +104,15 @@ namespace Coocoo3D.RenderPipeline
             gch_rcDataUploadBuffer.Free();
         }
 
-        public override void TimeChange(float time, float deltaTime)
+        public override void TimeChange(double time, double deltaTime)
         {
             for (int i = 0; i < cameraPresentDatas.Length; i++)
             {
-                cameraPresentDatas[i].PlayTime = time;
-                cameraPresentDatas[i].DeltaTime = deltaTime;
+                cameraPresentDatas[i].PlayTime = (float)time;
+                cameraPresentDatas[i].DeltaTime = (float)deltaTime;
             }
-            lightingCameraPresentData.PlayTime = time;
-            lightingCameraPresentData.PlayTime = deltaTime;
+            lightingCameraPresentData.PlayTime = (float)time;
+            lightingCameraPresentData.PlayTime = (float)deltaTime;
         }
 
         int mainLightIndex;
@@ -120,10 +120,10 @@ namespace Coocoo3D.RenderPipeline
         {
             var deviceResources = context.deviceResources;
             var cameras = context.cameras;
-            var scene = context.scene;
+            //var scene = context.scene;
             var graphicsContext = context.graphicsContext;
             var settings = context.settings;
-            var Entities = scene.Entities;
+            var Entities = context.entities;
             int countMaterials = 0;
             if(settings.Quality==0)
             {
@@ -137,10 +137,10 @@ namespace Coocoo3D.RenderPipeline
             {
                 countMaterials += Entities[i].rendererComponent.Materials.Count;
             }
-            DesireEntityBuffers(deviceResources, scene.Entities.Count);
+            DesireEntityBuffers(deviceResources, context.entities.Count);
             DesireMaterialBuffers(deviceResources, countMaterials);
 
-            var lightings = scene.Lightings;
+            var lightings = context.lightings;
             mainLightIndex = -1;
             for (int i = 0; i < lightings.Count; i++)
             {
@@ -233,7 +233,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetRootSignature(rootSignature);
             graphicsContext.SetSRV(PObjectType.mmd, null, 2);
             graphicsContext.SetAndClearDSV(DSV0);
-            IList<MMD3DEntity> Entities = context.scene.Entities;
+            IList<MMD3DEntity> Entities = context.entities;
             for (int i = 0; i < Entities.Count; i++)
                 EntitySkinning(graphicsContext, Entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
             if (mainLightIndex != -1)
@@ -246,15 +246,15 @@ namespace Coocoo3D.RenderPipeline
         public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
             var graphicsContext = context.graphicsContext;
-            var scene = context.scene;
+            //var scene = context.scene;
 
             graphicsContext.SetRootSignature(rootSignature);
             graphicsContext.SetAndClearRTVDSV(context.outputRTV, context.outputDSV, Vector4.Zero);
             graphicsContext.SetSRV_RT(PObjectType.mmd, context.DSV0, 2);
             int matIndex = 0;
-            for (int i = 0; i < scene.Entities.Count; i++)
+            for (int i = 0; i < context.entities.Count; i++)
             {
-                MMD3DEntity entity = scene.Entities[i];
+                MMD3DEntity entity = context.entities[i];
                 RenderEntity(context, entity, cameraPresentDatas[cameraIndex], entityDataBuffers[i], ref matIndex);
             }
         }
@@ -282,7 +282,7 @@ namespace Coocoo3D.RenderPipeline
         private void EntitySkinning(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
         {
             var Materials = entity.rendererComponent.Materials;
-            graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+            graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
             graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
             graphicsContext.SetMesh(entity.rendererComponent.mesh);
@@ -311,7 +311,7 @@ namespace Coocoo3D.RenderPipeline
             Texture2D textureLoading = context.TextureLoading;
             Texture2D textureError = context.TextureError;
             var graphicsContext = context.graphicsContext;
-            graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+            graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
             graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
 
@@ -403,7 +403,7 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
                     graphicsContext.SetSRV(PObjectType.mmd, textureError, 1);
                 }
-                graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+                graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
                 graphicsContext.SetCBVR(entityDataBuffer, 1);
                 graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
                 graphicsContext.SetCBVR(materialBuffers[matIndex], 3);

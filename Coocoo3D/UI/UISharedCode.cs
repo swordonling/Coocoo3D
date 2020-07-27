@@ -81,15 +81,16 @@ namespace Coocoo3D.UI
         }
         public static void RemoveSceneObject(Coocoo3DMain appBody, Scene scene, ISceneObject sceneObject)
         {
-            lock (appBody.deviceResources)
+            if (scene.sceneObjects.Remove(sceneObject))
             {
-                if (scene.sceneObjects.Remove(sceneObject))
+                if (sceneObject is MMD3DEntity entity)
                 {
-                    if (sceneObject is MMD3DEntity entity)
-                    {
-                        scene.Entities.Remove(entity);
-                    }
-                    else if (sceneObject is Lighting lighting)
+                    //scene.Entities.Remove(entity);
+                    scene.RemoveSceneObject(entity);
+                }
+                else if (sceneObject is Lighting lighting)
+                {
+                    lock (appBody.CurrentScene)
                     {
                         scene.Lightings.Remove(lighting);
                     }
@@ -285,7 +286,7 @@ namespace Coocoo3D.UI
                 }
             }
         }
-        
+
         private static async Task<byte[]> ReadAllBytes(StorageFile storageFile)
         {
             var stream = await storageFile.OpenReadAsync();

@@ -34,9 +34,6 @@ namespace Coocoo3D.Controls
         }
         Coocoo3DMain _appBody;
 
-        public bool RequireResize;
-        public Size NewSize;
-
         public WorldViewer()
         {
             this.InitializeComponent();
@@ -53,8 +50,9 @@ namespace Coocoo3D.Controls
             if (_appBody == null) return;
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
-            NewSize = new Size(ActualWidth, ActualHeight);
-            RequireResize = true;
+            AppBody.NewSize = new Size(ActualWidth, ActualHeight);
+            AppBody.RequireResize = true;
+            AppBody.swapChainReady = true;
             //AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
             AppBody.RequireRender();
             swapChainPanel.SizeChanged -= SwapChainPanel_SizeChanged;
@@ -64,8 +62,8 @@ namespace Coocoo3D.Controls
         private void SwapChainPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
-            NewSize = e.NewSize;
-            RequireResize = true;
+            AppBody.NewSize = e.NewSize;
+            AppBody.RequireResize = true;
             //AppBody.deviceResources.SetLogicalSize(e.NewSize);
             AppBody.RequireRender();
         }

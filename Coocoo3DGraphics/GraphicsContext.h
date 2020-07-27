@@ -53,8 +53,10 @@ namespace Coocoo3DGraphics
 		void SetPObjectStreamOut(PObject^ pObject);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
+		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
+		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);

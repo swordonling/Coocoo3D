@@ -21,15 +21,8 @@ namespace Coocoo3D.Components
             foreach (var pair in stringMorphIndexMap)
             {
                 ref float weight = ref weightInput[pair.Value];
-                if (motionComponent.MorphKeyFrameSet.TryGetValue(pair.Key, out var value))
-                {
-                    var keyframe = MMDMotionComponent.GetMorphMotion(value, time);
-                    weight = keyframe.Weight;
-                }
-                else
-                {
-                    weight = 0;
-                }
+                var keyframe = motionComponent.GetMorphMotion(pair.Key, time);
+                weight = keyframe.Weight;
             }
         }
         public void ComputeWeight()

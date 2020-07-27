@@ -44,8 +44,8 @@ namespace Coocoo3D.PropertiesPages
                 appBody = _appBody;
                 mmd3dEntity = _appBody.SelectedEntities[0];
                 appBody.FrameUpdated += FrameUpdated;
-                _cacheP = mmd3dEntity.Position;
-                _cacheR = QuaternionToEularYXZ(mmd3dEntity.Rotation);
+                _cacheP = mmd3dEntity.PositionNextFrame;
+                _cacheR = QuaternionToEularYXZ(mmd3dEntity.RotationNextFrame);
                 ViewMaterials.ItemsSource = mmd3dEntity.rendererComponent.Materials;
             }
             else
@@ -64,16 +64,16 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVRZ = new PropertyChangedEventArgs("VRZ");
         private void FrameUpdated(object sender, EventArgs e)
         {
-            if (_cacheP != mmd3dEntity.Position)
+            if (_cacheP != mmd3dEntity.PositionNextFrame)
             {
-                _cacheP = mmd3dEntity.Position;
+                _cacheP = mmd3dEntity.PositionNextFrame;
                 PropertyChanged?.Invoke(this, eaVPX);
                 PropertyChanged?.Invoke(this, eaVPY);
                 PropertyChanged?.Invoke(this, eaVPZ);
             }
-            if (_cacheRQ != mmd3dEntity.Rotation)
+            if (_cacheRQ != mmd3dEntity.RotationNextFrame)
             {
-                _cacheRQ = mmd3dEntity.Rotation;
+                _cacheRQ = mmd3dEntity.RotationNextFrame;
                 _cacheR = QuaternionToEularYXZ(_cacheRQ) * 180 / MathF.PI;
                 PropertyChanged?.Invoke(this, eaVRX);
                 PropertyChanged?.Invoke(this, eaVRY);
@@ -136,13 +136,15 @@ namespace Coocoo3D.PropertiesPages
 
         void UpdatePositionFromUI()
         {
-            mmd3dEntity.Position = _cacheP;
+            mmd3dEntity.PositionNextFrame = _cacheP;
+            mmd3dEntity.NeedTransform = true;
             appBody.RequireRender();
         }
         void UpdateRotationFromUI()
         {
             _cacheRQ = EularToQuaternionYXZ(_cacheR / 180 * MathF.PI);
-            mmd3dEntity.Rotation = _cacheRQ;
+            mmd3dEntity.RotationNextFrame = _cacheRQ;
+            mmd3dEntity.NeedTransform = true;
             appBody.RequireRender();
         }
 

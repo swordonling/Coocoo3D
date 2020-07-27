@@ -123,6 +123,12 @@ void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Arr
 	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin() + dataOffset, sizeInByte);
 }
 
+void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset)
+{
+	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
+	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin() + dataOffset, sizeInByte);
+}
+
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
 {
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
@@ -138,6 +144,20 @@ void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platfor
 }
 
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
+{
+	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
+	int lastUpdateIndex = buffer->lastUpdateIndex;
+
+	D3D12_SUBRESOURCE_DATA bufferData = {};
+	bufferData.pData = data->begin() + dataOffset;
+	bufferData.RowPitch = sizeInByte;
+	bufferData.SlicePitch = sizeInByte;
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffers[lastUpdateIndex].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
+	UpdateSubresources(m_commandList.Get(), buffer->m_constantBuffers[lastUpdateIndex].Get(), buffer->m_constantBufferUpload.Get(), 0, 0, 1, &bufferData);
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffers[lastUpdateIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+}
+
+void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset)
 {
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
 	int lastUpdateIndex = buffer->lastUpdateIndex;

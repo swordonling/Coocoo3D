@@ -26,8 +26,8 @@ namespace Coocoo3D.FileFormat
         public List<Bone> Bones = new List<Bone>();
         public List<Morph> Morphs = new List<Morph>();
         public List<MMDEntry> Entries = new List<MMDEntry>();
-        List<MMDRigidBody> RigidBodies = new List<MMDRigidBody>();
-        List<Joint> Joints = new List<Joint>();
+        public List<MMDRigidBody> RigidBodies = new List<MMDRigidBody>();
+        public List<MMDJoint> Joints = new List<MMDJoint>();
 
         public static PMXFormat Load(BinaryReader reader)
         {
@@ -383,7 +383,7 @@ namespace Coocoo3D.FileFormat
             Joints.Capacity = countOfJoint;
             for (int i = 0; i < countOfJoint; i++)
             {
-                Joint joint = new Joint();
+                MMDJoint joint = new MMDJoint();
                 joint.Name = ReadString(reader, encoding);
                 joint.NameEN = ReadString(reader, encoding);
                 joint.Type = reader.ReadByte();

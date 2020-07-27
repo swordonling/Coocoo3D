@@ -84,7 +84,7 @@ namespace Coocoo3D.RenderPipeline
         };
         public override void PrepareRenderData(RenderPipelineContext context)
         {
-            var Entities = context.scene.Entities;
+            var Entities = context.entities;
             var deviceResources = context.deviceResources;
             int countMaterials = 0;
             for (int i = 0; i < Entities.Count; i++)
@@ -126,7 +126,7 @@ namespace Coocoo3D.RenderPipeline
                 {
                     Array.Clear(rcDataUploadBuffer, 0, c_materialDataSize);
                     Marshal.StructureToPtr(Materials[j].innerStruct, ptr_rc, true);
-                    WriteLightData(context.scene.Lightings, ptr_rc + MMDMatLit.c_materialDataSize);
+                    WriteLightData(context.lightings, ptr_rc + MMDMatLit.c_materialDataSize);
                     graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, c_materialDataSize);
                     matIndex++;
                 }
@@ -140,18 +140,17 @@ namespace Coocoo3D.RenderPipeline
         public override void BeforeRenderCameras(RenderPipelineContext context)
         {
             var graphicsContext = context.graphicsContext;
-            IList<MMD3DEntity> Entities = context.scene.Entities;
+            var entities = context.entities;
             graphicsContext.SetRootSignature(rootSignatureGraphics);
-            for (int i = 0; i < Entities.Count; i++)
-                EntitySkinning(graphicsContext, Entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
+            for (int i = 0; i < entities.Count; i++)
+                EntitySkinning(graphicsContext, entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
             graphicsContext.SetSOMesh(null);
 
-            var entities = context.scene.Entities;
 
             if (entities.Count > 0)
             {
                 int matIndex = 0;
-                for (int i = 0; i < context.scene.Entities.Count; i++)
+                for (int i = 0; i < context.entities.Count; i++)
                 {
                     BuildEntityBAS(context, entities[i], ref matIndex);
                 }
@@ -165,7 +164,7 @@ namespace Coocoo3D.RenderPipeline
         {
             context.graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
             context.graphicsContext.SetUAVCT(context.outputRTV, 0);
-            var entities = context.scene.Entities;
+            var entities = context.entities;
 
             context.graphicsContext.SetCBVCR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
 
@@ -178,7 +177,7 @@ namespace Coocoo3D.RenderPipeline
         private void EntitySkinning(GraphicsContext graphicsContext, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
         {
             var Materials = entity.rendererComponent.Materials;
-            graphicsContext.SetCBVR(entity.boneComponent.boneMatrices, 0);
+            graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
             graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
             graphicsContext.SetMesh(entity.rendererComponent.mesh);
