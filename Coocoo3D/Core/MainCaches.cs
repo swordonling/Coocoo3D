@@ -19,31 +19,5 @@ namespace Coocoo3D.Core
         public Dictionary<string, PObject> pObjectShadowCaches = new Dictionary<string, PObject>();
 
         public Dictionary<string, PMXFormat> pmxCaches = new Dictionary<string, PMXFormat>();
-
-        public List<Texture2D> textureLoadList = new List<Texture2D>();
-        public List<RenderTexture2D> RenderTextureUpdateList = new List<RenderTexture2D>();
-        public List<MMDMesh> mmdMeshLoadList = new List<MMDMesh>();
-
-        public void AddMeshToLoadList(MMDMesh mesh)
-        {
-            lock (mmdMeshLoadList)
-            {
-                mmdMeshLoadList.Add(mesh);
-            }
-        }
-        public void AddTextureToLoadList(Texture2D texture)
-        {
-            lock (textureLoadList)
-            {
-                textureLoadList.Add(texture);
-            }
-        }
-        public void AddRenderTextureToUpdateList(RenderTexture2D texture)
-        {
-            lock (RenderTextureUpdateList)
-            {
-                RenderTextureUpdateList.Add(texture);
-            }
-        }
     }
 }

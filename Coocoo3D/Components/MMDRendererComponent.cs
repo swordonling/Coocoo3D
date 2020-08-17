@@ -4,6 +4,7 @@ using Coocoo3D.FileFormat;
 using Coocoo3D.MMDSupport;
 using Coocoo3D.Present;
 using Coocoo3DGraphics;
+using Coocoo3DNativeInteroperable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace Coocoo3D.Components
         public GCHandle gch_meshPosDataUploadBuffer;
         bool meshNeedUpdate;
 
-        public List<MorphVertexStruct[]> vertexMorphCache;
+        public List<NMMD_MorphVertexDesc[]> vertexMorphCache;
 
         public MMDRendererComponent()
         {
@@ -54,10 +55,10 @@ namespace Coocoo3D.Components
         {
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == MorphType.Vertex && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Vertex && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
                 {
-                    MorphVertexStruct[] morphVertexStructs = vertexMorphCache[i];
-                    MorphVertexStruct[] morphVertexStructs2 = morphStateComponent.morphs[i].MorphVertexs;
+                    NMMD_MorphVertexDesc[] morphVertexStructs = vertexMorphCache[i];
+                    NMMD_MorphVertexDesc[] morphVertexStructs2 = morphStateComponent.morphs[i].MorphVertexs;
                     float computedWeight = morphStateComponent.computedWeights[i];
                     for (int j = 0; j < morphVertexStructs.Length; j++)
                     {
@@ -73,11 +74,10 @@ namespace Coocoo3D.Components
             for (int i = 0; i < vertexMorphCache.Count; i++)
             {
                 if (vertexMorphCache[i] == null) continue;
-                MorphVertexStruct[] morphVertexStructs = vertexMorphCache[i];
+                NMMD_MorphVertexDesc[] morphVertexStructs = vertexMorphCache[i];
                 for (int j = 0; j < morphVertexStructs.Length; j++)
                 {
-                    MorphVertexStruct morphVertexStruct = morphVertexStructs[j];
-                    meshPosDataUploadBuffer[morphVertexStruct.VertexIndex] += morphVertexStruct.Offset;
+                    meshPosDataUploadBuffer[morphVertexStructs[j].VertexIndex] += morphVertexStructs[j].Offset;
                 }
             }
         }
@@ -90,7 +90,7 @@ namespace Coocoo3D.Components
             }
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == MorphType.Material && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Material && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
                 {
                     MorphMaterialStruct[] morphMaterialStructs = morphStateComponent.morphs[i].MorphMaterials;
                     float computedWeight = morphStateComponent.computedWeights[i];
@@ -99,7 +99,7 @@ namespace Coocoo3D.Components
                         MorphMaterialStruct morphMaterialStruct = morphMaterialStructs[j];
                         int k = morphMaterialStruct.MaterialIndex;
                         MMDMatLit.InnerStruct struct1 = computedMaterialsData[k];
-                        if (morphMaterialStruct.MorphMethon == MorphMaterialMorphMethon.Add)
+                        if (morphMaterialStruct.MorphMethon == NMMDE_MorphMaterialMethon.Add)
                         {
                             struct1.AmbientColor += morphMaterialStruct.Ambient * computedWeight;
                             struct1.DiffuseColor += morphMaterialStruct.Diffuse * computedWeight;
@@ -110,7 +110,7 @@ namespace Coocoo3D.Components
                             struct1.Texture += morphMaterialStruct.Texture * computedWeight;
                             struct1.ToonTexture += morphMaterialStruct.ToonTexture * computedWeight;
                         }
-                        else if (morphMaterialStruct.MorphMethon == MorphMaterialMorphMethon.Mul)
+                        else if (morphMaterialStruct.MorphMethon == NMMDE_MorphMaterialMethon.Mul)
                         {
                             struct1.AmbientColor = Vector3.Lerp(struct1.AmbientColor, struct1.AmbientColor * morphMaterialStruct.Ambient, computedWeight);
                             struct1.DiffuseColor = Vector4.Lerp(struct1.DiffuseColor, struct1.DiffuseColor * morphMaterialStruct.Diffuse, computedWeight);
@@ -160,7 +160,7 @@ namespace Coocoo3D.Components
         public int indexCount;
         public int texIndex;
         public int toonIndex;
-        public DrawFlags DrawFlags;
+        public NMMDE_DrawFlag DrawFlags;
 
         public InnerStruct innerStruct;
         public struct InnerStruct
@@ -197,11 +197,11 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static void Reload(this MMDRendererComponent rendererComponent, MainCaches mainCaches, PMXFormat modelResource)
+        public static void Reload(this MMDRendererComponent rendererComponent, ProcessingList processingList, PMXFormat modelResource)
         {
             rendererComponent.ReloadBase();
             rendererComponent.mesh = modelResource.GetMesh();
-            mainCaches.AddMeshToLoadList(rendererComponent.mesh);
+            processingList.AddObject(rendererComponent.mesh);
             rendererComponent.meshPosDataUploadBuffer = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosDataUploadBuffer = GCHandle.Alloc(rendererComponent.meshPosDataUploadBuffer);
 
@@ -233,13 +233,13 @@ namespace Coocoo3D.FileFormat
             }
 
             int morphCount = modelResource.Morphs.Count;
-            rendererComponent.vertexMorphCache = new List<MorphVertexStruct[]>();
+            rendererComponent.vertexMorphCache = new List<NMMD_MorphVertexDesc[]>();
             for (int i = 0; i < morphCount; i++)
             {
-                if (modelResource.Morphs[i].Type == MorphType.Vertex)
+                if (modelResource.Morphs[i].Type == NMMDE_MorphType.Vertex)
                 {
-                    MorphVertexStruct[] morphVertexStructs = new MorphVertexStruct[modelResource.Morphs[i].MorphVertexs.Length];
-                    MorphVertexStruct[] morphVertexStructs2 = modelResource.Morphs[i].MorphVertexs;
+                    NMMD_MorphVertexDesc[] morphVertexStructs = new NMMD_MorphVertexDesc[modelResource.Morphs[i].MorphVertexs.Length];
+                    NMMD_MorphVertexDesc[] morphVertexStructs2 = modelResource.Morphs[i].MorphVertexs;
                     for (int j = 0; j < morphVertexStructs.Length; j++)
                     {
                         morphVertexStructs[j].VertexIndex = morphVertexStructs2[j].VertexIndex;

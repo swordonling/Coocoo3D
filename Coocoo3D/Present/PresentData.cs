@@ -18,27 +18,29 @@ namespace Coocoo3D.Present
         public float PlayTime { get => innerStruct.PlayTime; set => innerStruct.PlayTime = value; }
         public float DeltaTime { get => innerStruct.DeltaTime; set => innerStruct.DeltaTime = value; }
         public InnerStruct innerStruct;
-        public ConstantBufferStatic DataBuffer = new ConstantBufferStatic();
+        public ConstantBuffer DataBuffer = new ConstantBuffer();
 
 
-        public void UpdateCameraData(Camera camera)
+        public void UpdateCameraData(Camera camera, ref Core.Settings settings)
         {
             wpMatrix = Matrix4x4.Transpose(camera.vpMatrix);
             Matrix4x4.Invert(camera.vpMatrix, out innerStruct.pwMatrix);
             pwMatrix = Matrix4x4.Transpose(pwMatrix);
             CameraPosition = camera.Pos;
             AspectRatio = camera.AspectRatio;
+            innerStruct.SkyBoxMultiple = settings.SkyBoxLightMultiple;
         }
-        public void UpdateCameraData(Lighting lighting)
+        public void UpdateCameraData(Lighting lighting, ref Core.Settings settings)
         {
             wpMatrix = Matrix4x4.Transpose(lighting.vpMatrix);
             Matrix4x4.Invert(lighting.vpMatrix, out innerStruct.pwMatrix);
             pwMatrix = Matrix4x4.Transpose(pwMatrix);
             CameraPosition = lighting.Rotation;
             AspectRatio = 1;
+            innerStruct.SkyBoxMultiple = settings.SkyBoxLightMultiple;
         }
 
-        public void Reload(DeviceResources deviceResources,int presentDataSize)
+        public void Reload(DeviceResources deviceResources, int presentDataSize)
         {
             DataBuffer.Reload(deviceResources, presentDataSize);
         }
@@ -56,6 +58,7 @@ namespace Coocoo3D.Present
             public float DeltaTime;
             public int RandomValue1;
             public int RandomValue2;
+            public float SkyBoxMultiple;
         }
     }
 }

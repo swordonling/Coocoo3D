@@ -60,15 +60,6 @@ bool IsDirectXRaytracingSupported(IDXGIAdapter1* adapter)
 // 配置不依赖于 Direct3D 设备的资源。
 void Coocoo3DGraphics::DeviceResources::CreateDeviceIndependentResources()
 {
-	// 初始化 Windows 图像处理组件(WIC)工厂。
-	DX::ThrowIfFailed(
-		CoCreateInstance(
-			CLSID_WICImagingFactory2,
-			nullptr,
-			CLSCTX_INPROC_SERVER,
-			IID_PPV_ARGS(&m_wicFactory)
-		)
-	);
 }
 
 // 配置 Direct3D 设备，并存储设备句柄和设备上下文。
@@ -552,6 +543,11 @@ void Coocoo3DGraphics::DeviceResources::WaitForGpu()
 bool Coocoo3DGraphics::DeviceResources::IsRayTracingSupport()
 {
 	return m_isRayTracingSupport;
+}
+
+Coocoo3DGraphics::DxgiFormat Coocoo3DGraphics::DeviceResources::GetBackBufferFormat1()
+{
+	return DxgiFormat(m_backBufferFormat);
 }
 
 // 准备呈现下一帧。

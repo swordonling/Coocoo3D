@@ -31,7 +31,7 @@ namespace Coocoo3D.Present
 
         public bool RenderReady = false;
         public bool ComponentReady = false;
-        public bool needUpdateMotion = false;
+        public volatile bool needUpdateMotion = false;
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void PropChange(PropertyChangedEventArgs e)
@@ -64,7 +64,7 @@ namespace Coocoo3D.Present
             rendererComponent.UpdateGPUResources(graphicsContext);
             if (!boneComponent.GpuUsable)
             {
-                boneComponent.ComputeMatricesData();
+                boneComponent.WriteMatriticesData();
                 boneComponent.GpuUsable = true;
                 needUpdateMotion = true;
             }
@@ -145,7 +145,7 @@ namespace Coocoo3D.FileFormat
     }
     public static partial class PMXFormatExtension
     {
-        public static void Reload2(this MMD3DEntity entity, DeviceResources deviceResources, MainCaches mainCaches, PMXFormat modelResource)
+        public static void Reload2(this MMD3DEntity entity, DeviceResources deviceResources, ProcessingList processingList, PMXFormat modelResource)
         {
             entity.ReloadBase();
             entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);
@@ -156,7 +156,7 @@ namespace Coocoo3D.FileFormat
             entity.boneComponent.Reload(modelResource);
             entity.boneComponent.boneMatricesBuffer.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
 
-            entity.rendererComponent.Reload(mainCaches, modelResource);
+            entity.rendererComponent.Reload(processingList, modelResource);
             entity.ComponentReady = true;
         }
     }

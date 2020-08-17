@@ -42,7 +42,7 @@ namespace Coocoo3D.UI
             }
             if (!pmx.Ready && pmx.LoadTask != null) await pmx.LoadTask;
             MMD3DEntity entity = new MMD3DEntity();
-            entity.Reload2(appBody.deviceResources, appBody.mainCaches, pmx);
+            entity.Reload2(appBody.deviceResources, appBody.ProcessingList, pmx);
             //entity.rendererComponent.texs = await LoadTextureForModel(appBody, storageFolder, pmx);
             entity.rendererComponent.texs = GetTextureListForModel(appBody, storageFolder, pmx);
             scene.AddSceneObject(entity);
@@ -53,21 +53,21 @@ namespace Coocoo3D.UI
 
         public static void Play(Coocoo3DMain appBody)
         {
-            appBody.Playing = true;
-            appBody.PlaySpeed = 1.0f;
-            appBody.LatestRenderTime = DateTime.Now - appBody.FrameInterval;
+            appBody.GameDriverContext.Playing = true;
+            appBody.GameDriverContext.PlaySpeed = 1.0f;
+            appBody.LatestRenderTime = DateTime.Now - appBody.GameDriverContext.FrameInterval;
             appBody.RequireRender();
         }
         public static void Pause(Coocoo3DMain appBody)
         {
-            appBody.Playing = false;
+            appBody.GameDriverContext.Playing = false;
             appBody.ForceAudioAsync();
         }
         public static void Stop(Coocoo3DMain appBody)
         {
-            appBody.Playing = false;
+            appBody.GameDriverContext.Playing = false;
             appBody.ForceAudioAsync();
-            appBody.PlayTime = 0;
+            appBody.GameDriverContext.PlayTime = 0;
             appBody.RequireRender(true);
         }
         public static void NewLighting(Coocoo3DMain appBody)
@@ -243,8 +243,8 @@ namespace Coocoo3D.UI
                                 byte[] texBytes = new byte[texStream.Length];
                                 texStream.Read(texBytes, 0, (int)texStream.Length);
                                 texStream.Dispose();
-                                tex.ReloadFromImage1(appBody.deviceResources, texBytes);
-                                appBody.mainCaches.AddTextureToLoadList(tex);
+                                tex.ReloadFromImage1(appBody.wicFactory, texBytes);
+                                appBody.ProcessingList.AddObject(tex);
                                 tex.Status = GraphicsObjectStatus.loaded;
                                 appBody.RequireRender();
                             }

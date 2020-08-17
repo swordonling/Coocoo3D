@@ -9,6 +9,7 @@ using Coocoo3D.MMDSupport;
 using Coocoo3D.Components;
 using Coocoo3DGraphics;
 using Coocoo3DPhysics;
+using Coocoo3DNativeInteroperable;
 
 namespace Coocoo3D.Components
 {
@@ -24,16 +25,18 @@ namespace Coocoo3D.Components
         public List<BoneEntity> bones = new List<BoneEntity>();
         public Dictionary<string, BoneEntity> stringBoneMap = new Dictionary<string, BoneEntity>();
 
-        public List<MorphBoneStruct[]> boneMorphCache;
+        public List<NMMD_MorphBoneDesc[]> boneMorphCache;
         public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
-        public List<Physics3DJoint> physic3DJoints = new List<Physics3DJoint>();
-        public List<MMDJoint> jointDescs = new List<MMDJoint>();
-        public List<MMDRigidBody> rigidBodyDescs = new List<MMDRigidBody>();
+        public List<Physics3DJoint> physics3DJoints = new List<Physics3DJoint>();
+        public List<NMMD_JointDesc> jointDescs = new List<NMMD_JointDesc>();
+        public List<NMMD_RigidBodyDesc> rigidBodyDescs = new List<NMMD_RigidBodyDesc>();
 
         public Matrix4x4 LocalToWorld = Matrix4x4.Identity;
         public Matrix4x4 WorldToLocal = Matrix4x4.Identity;
 
         public Dictionary<int, List<List<int>>> IKNeedUpdateMatIndexs;
+        public List<int> AppendNeedUpdateMatIndexs = new List<int>();
+        public List<int> PhysicsNeedUpdateMatIndexs = new List<int>();
 
         public MMDBoneComponent()
         {
@@ -48,10 +51,10 @@ namespace Coocoo3D.Components
         {
             for (int i = 0; i < bones.Count; i++)
             {
-                boneMatricesData[i] = Matrix4x4.Transpose(bones[i].GetTransformMatrixG(bones));
+                bones[i].GetTransformMatrixG(bones);
             }
         }
-        void WriteMatriticesData()
+        public void WriteMatriticesData()
         {
             for (int i = 0; i < bones.Count; i++)
             {
@@ -77,10 +80,10 @@ namespace Coocoo3D.Components
 
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == MorphType.Bone && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Bone && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
                 {
-                    MorphBoneStruct[] morphBoneStructs0 = boneMorphCache[i];
-                    MorphBoneStruct[] morphBoneStructs1 = morphStateComponent.morphs[i].MorphBones;
+                    NMMD_MorphBoneDesc[] morphBoneStructs0 = boneMorphCache[i];
+                    NMMD_MorphBoneDesc[] morphBoneStructs1 = morphStateComponent.morphs[i].MorphBones;
                     float computedWeight = morphStateComponent.computedWeights[i];
                     for (int j = 0; j < morphBoneStructs0.Length; j++)
                     {
@@ -92,27 +95,27 @@ namespace Coocoo3D.Components
             for (int i = 0; i < boneMorphCache.Count; i++)
             {
                 if (boneMorphCache[i] == null) continue;
-                MorphBoneStruct[] morphBoneStructs = boneMorphCache[i];
+                NMMD_MorphBoneDesc[] morphBoneStructs = boneMorphCache[i];
                 for (int j = 0; j < morphBoneStructs.Length; j++)
                 {
-                    MorphBoneStruct morphBoneStruct = morphBoneStructs[j];
+                    NMMD_MorphBoneDesc morphBoneStruct = morphBoneStructs[j];
                     bones[morphBoneStruct.BoneIndex].rotation *= morphBoneStruct.Rotation;
                     bones[morphBoneStruct.BoneIndex].dynamicPosition += morphBoneStruct.Translation;
                 }
             }
 
-            for (int i = 0; i < bones.Count; i++)
-            {
-                var bone = bones[i];
-                if (bone.AppendTranslation)
-                {
-                    bone.dynamicPosition += Vector3.Transform(bones[bone.AppendParentIndex].dynamicPosition, bones[bone.AppendParentIndex].GetParentRotation(bones)) * bone.AppendRatio;
-                }
-                if (bone.AppendRotation)
-                {
-                    bone.rotation *= Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
-                }
-            }
+            //for (int i = 0; i < bones.Count; i++)
+            //{
+            //    var bone = bones[i];
+            //    if (bone.AppendTranslation)
+            //    {
+            //        bone.dynamicPosition += Vector3.Transform(bones[bone.AppendParentIndex].dynamicPosition, bones[bone.AppendParentIndex].GetParentRotation(bones)) * bone.AppendRatio;
+            //    }
+            //    if (bone.AppendRotation)
+            //    {
+            //        bone.rotation *= Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
+            //    }
+            //}
         }
 
         public void SetPhysicsPose(Physics3DScene physics3DScene)
@@ -125,22 +128,45 @@ namespace Coocoo3D.Components
                 var mat1 = bones[index].GeneratedTransform * LocalToWorld;
                 Matrix4x4.Decompose(mat1, out _, out var rot, out _);
 
-                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], Vector3.Transform(/*bones[index].staticPosition*/desc.Position, mat1), rot * ToQuaternion(desc.Rotation));
+                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], Vector3.Transform(desc.Position, mat1), rot * desc.Rotation);
             }
         }
 
         public void SetPoseAfterPhysics(Physics3DScene physics3DScene)
         {
+            Matrix4x4.Decompose(WorldToLocal, out _, out var q1, out var t1);
             for (int i = 0; i < rigidBodyDescs.Count; i++)
             {
                 var desc = rigidBodyDescs[i];
                 if (desc.Type == 0) continue;
                 int index = desc.AssociatedBoneIndex;
                 if (index == -1) continue;
-                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / ToQuaternion(desc.Rotation))
-                    * Matrix4x4.CreateTranslation(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]) - desc.Position + bones[index].staticPosition) * WorldToLocal;
+                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1)
+                    * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal) - desc.Position + bones[index].staticPosition);
+
+                //Matrix4x4 x4 = physics3DScene.GetRigidBodyTransform(physics3DRigidBodys[i]) * WorldToLocal;
+                //bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-desc.Position) * x4;
             }
-            WriteMatriticesData();
+
+            for (int i = 0; i < bones.Count; i++)
+            {
+                var bone = bones[i];
+                if (bone.AppendTranslation || bone.AppendRotation)
+                {
+                    var mat1 = bones[bone.AppendParentIndex].GeneratedTransform;
+                    Matrix4x4.Decompose(mat1, out _, out var rot, out var tran);
+                    if (bone.AppendTranslation)
+                    {
+                        bone.dynamicPosition += tran * bone.AppendRatio;
+                    }
+                    if (bone.AppendRotation)
+                    {
+                        bone.rotation *= Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
+                    }
+                }
+            }
+            UpdateMatrixs(PhysicsNeedUpdateMatIndexs);
+            UpdateMatrixs(AppendNeedUpdateMatIndexs);
         }
 
         void IK(int index, List<BoneEntity> bones)
@@ -243,7 +269,23 @@ namespace Coocoo3D.Components
             }
         }
 
-        public void BakeIKMatrixsIndex()
+        public void ResetPhysics(Physics3DScene physics3DScene)
+        {
+            ComputeMatricesData();
+            WriteMatriticesData();
+            for (int i = 0; i < rigidBodyDescs.Count; i++)
+            {
+                var desc = rigidBodyDescs[i];
+                if (desc.Type == 0) continue;
+                int index = desc.AssociatedBoneIndex;
+                if (index == -1) continue;
+                var mat1 = bones[index].GeneratedTransform * LocalToWorld;
+                Matrix4x4.Decompose(mat1, out _, out var rot, out _);
+                physics3DScene.ResetRigidBody(physics3DRigidBodys[i], Vector3.Transform(desc.Position, mat1), rot * desc.Rotation);
+            }
+        }
+
+        public void BakeSequenceProcessMatrixsIndex()
         {
             IKNeedUpdateMatIndexs = new Dictionary<int, List<List<int>>>();
             bool[] testArray = new bool[bones.Count];
@@ -278,12 +320,34 @@ namespace Coocoo3D.Components
                     IKNeedUpdateMatIndexs[i] = ax;
                 }
             }
-        }
-
-        Vector3 SafeNormalize(Vector3 vector3)
-        {
-            float dp3 = Math.Max(0.00001f, Vector3.Dot(vector3, vector3));
-            return vector3 / MathF.Sqrt(dp3);
+            Array.Clear(testArray, 0, bones.Count);
+            AppendNeedUpdateMatIndexs.Clear();
+            for (int i = 0; i < bones.Count; i++)
+            {
+                var bone = bones[i];
+                if (bones[i].ParentIndex != -1)
+                    testArray[i] |= testArray[bones[i].ParentIndex];
+                testArray[i] |= bone.AppendTranslation || bone.AppendRotation;
+                if (testArray[i])
+                {
+                    AppendNeedUpdateMatIndexs.Add(i);
+                }
+            }
+            Array.Clear(testArray, 0, bones.Count);
+            PhysicsNeedUpdateMatIndexs.Clear();
+            for (int i = 0; i < bones.Count; i++)
+            {
+                var bone = bones[i];
+                if (bones[i].ParentIndex == -1)
+                    continue;
+                var parent = bones[bones[i].ParentIndex];
+                testArray[i] |= testArray[bones[i].ParentIndex];
+                testArray[i] |= parent.IsPhysicsFreeBone;
+                if (testArray[i])
+                {
+                    PhysicsNeedUpdateMatIndexs.Add(i);
+                }
+            }
         }
 
         void UpdateAllMatrix()
@@ -315,6 +379,34 @@ namespace Coocoo3D.Components
                 physics3DScene.MoveRigidBody(physics3DRigidBodys[i], pos, rot);
             }
         }
+
+        public void AddPhysics(Physics3DScene physics3DScene)
+        {
+            for (int j = 0; j < rigidBodyDescs.Count; j++)
+            {
+                var desc = rigidBodyDescs[j];
+                physics3DScene.AddRigidBody(physics3DRigidBodys[j], desc.Position, desc.Rotation, desc.Dimemsions, desc.Mass, desc.Restitution, desc.Friction, desc.TranslateDamp, desc.RotateDamp, (byte)desc.Shape, (byte)desc.Type, desc.CollisionGroup, desc.CollisionMask);
+            }
+            for (int j = 0; j < jointDescs.Count; j++)
+            {
+                var desc = jointDescs[j];
+                physics3DScene.AddJoint(physics3DJoints[j], desc.Position, MMDBoneComponent.ToQuaternion(desc.Rotation), physics3DRigidBodys[desc.AssociatedRigidBodyIndex1], physics3DRigidBodys[desc.AssociatedRigidBodyIndex2],
+                    desc.PositionMinimum, desc.PositionMaximum, desc.RotationMinimum, desc.RotationMaximum, desc.PositionSpring, desc.RotationSpring);
+            }
+        }
+
+        public void RemovePhysics(Physics3DScene physics3DScene)
+        {
+            for (int j = 0; j < physics3DRigidBodys.Count; j++)
+            {
+                physics3DScene.RemoveRigidBody(physics3DRigidBodys[j]);
+            }
+            for (int j = 0; j < physics3DJoints.Count; j++)
+            {
+                physics3DScene.RemoveJoint(physics3DJoints[j]);
+            }
+        }
+
         #region helpers
         static Vector3 QuaternionToXyz(Quaternion quaternion)
         {
@@ -550,7 +642,47 @@ namespace Coocoo3D.Components
             }
             return angle;
         }
+
+        Vector3 SafeNormalize(Vector3 vector3)
+        {
+            float dp3 = Math.Max(0.00001f, Vector3.Dot(vector3, vector3));
+            return vector3 / MathF.Sqrt(dp3);
+        }
         #endregion
+        public static NMMD_RigidBodyDesc GetRigidBodyDesc(MMDRigidBody rigidBody)
+        {
+            NMMD_RigidBodyDesc desc = new NMMD_RigidBodyDesc();
+            desc.AssociatedBoneIndex = rigidBody.AssociatedBoneIndex;
+            desc.CollisionGroup = rigidBody.CollisionGroup;
+            desc.CollisionMask = rigidBody.CollisionMask;
+            desc.Shape = rigidBody.Shape;
+            desc.Dimemsions = rigidBody.Dimemsions;
+            desc.Position = rigidBody.Position;
+            desc.Rotation = ToQuaternion(rigidBody.Rotation);
+            desc.Mass = rigidBody.Mass;
+            desc.TranslateDamp = rigidBody.TranslateDamp;
+            desc.RotateDamp = rigidBody.RotateDamp;
+            desc.Restitution = rigidBody.Restitution;
+            desc.Friction = rigidBody.Friction;
+            desc.Type = rigidBody.Type;
+            return desc;
+        }
+        public static NMMD_JointDesc GetJointDesc(MMDJoint joint)
+        {
+            NMMD_JointDesc desc = new NMMD_JointDesc();
+            desc.Type = joint.Type;
+            desc.AssociatedRigidBodyIndex1 = joint.AssociatedRigidBodyIndex1;
+            desc.AssociatedRigidBodyIndex2 = joint.AssociatedRigidBodyIndex2;
+            desc.Position = joint.Position;
+            desc.Rotation = joint.Rotation;
+            desc.PositionMinimum = joint.PositionMinimum;
+            desc.PositionMaximum = joint.PositionMaximum;
+            desc.RotationMinimum = joint.RotationMinimum;
+            desc.RotationMaximum = joint.RotationMaximum;
+            desc.PositionSpring = joint.PositionSpring;
+            desc.RotationSpring = joint.RotationSpring;
+            return desc;
+        }
     }
     public class BoneEntity
     {
@@ -576,7 +708,8 @@ namespace Coocoo3D.Components
         public float AppendRatio;
         public bool AppendRotation;
         public bool AppendTranslation;
-        public BoneFlags Flags;
+        public bool IsPhysicsFreeBone;
+        public NMMDE_BoneFlag Flags;
 
         public Quaternion GetRotation(List<BoneEntity> list)
         {
@@ -722,7 +855,7 @@ namespace Coocoo3D.FileFormat
                 {
                     boneEntity.relativePosition = _bone.Position;
                 }
-                if (_bone.Flags.HasFlag(BoneFlags.HasIK))
+                if (_bone.Flags.HasFlag(NMMDE_BoneFlag.HasIK))
                 {
                     boneEntity.IKTargetIndex = _bone.boneIK.IKTargetIndex;
                     boneEntity.CCDIterateLimit = _bone.boneIK.CCDIterateLimit;
@@ -790,8 +923,8 @@ namespace Coocoo3D.FileFormat
                 {
                     boneEntity.AppendParentIndex = _bone.AppendBoneIndex;
                     boneEntity.AppendRatio = _bone.AppendBoneRatio;
-                    boneEntity.AppendRotation = _bone.Flags.HasFlag(BoneFlags.AcquireRotate);
-                    boneEntity.AppendTranslation = _bone.Flags.HasFlag(BoneFlags.AcquireTranslate);
+                    boneEntity.AppendRotation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireRotate);
+                    boneEntity.AppendTranslation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireTranslate);
                 }
                 else
                 {
@@ -805,7 +938,7 @@ namespace Coocoo3D.FileFormat
                 boneComponent.stringBoneMap.Add(_bone.Name, boneEntity);
             }
 
-            boneComponent.BakeIKMatrixsIndex();
+            boneComponent.BakeSequenceProcessMatrixsIndex();
 
             var rigidBodys = modelResource.RigidBodies;
             for (int i = 0; i < rigidBodys.Count; i++)
@@ -813,23 +946,25 @@ namespace Coocoo3D.FileFormat
                 var rigidBodyData = rigidBodys[i];
                 Physics3DRigidBody physics3DRigidBody = new Physics3DRigidBody();
                 boneComponent.physics3DRigidBodys.Add(physics3DRigidBody);
-                boneComponent.rigidBodyDescs.Add(rigidBodyData.GetCopy());
+                boneComponent.rigidBodyDescs.Add(MMDBoneComponent.GetRigidBodyDesc(rigidBodyData));
+                if (rigidBodyData.Type != NMMDE_RigidBodyType.Kinematic && rigidBodyData.AssociatedBoneIndex != -1)
+                    boneComponent.bones[rigidBodyData.AssociatedBoneIndex].IsPhysicsFreeBone = true;
             }
             var joints = modelResource.Joints;
             for (int i = 0; i < joints.Count; i++)
             {
-                boneComponent.jointDescs.Add(joints[i].GetCopy());
-                boneComponent.physic3DJoints.Add(new Physics3DJoint());
+                boneComponent.jointDescs.Add(MMDBoneComponent.GetJointDesc(joints[i]));
+                boneComponent.physics3DJoints.Add(new Physics3DJoint());
             }
 
             int morphCount = modelResource.Morphs.Count;
-            boneComponent.boneMorphCache = new List<MorphBoneStruct[]>();
+            boneComponent.boneMorphCache = new List<NMMD_MorphBoneDesc[]>();
             for (int i = 0; i < morphCount; i++)
             {
-                if (modelResource.Morphs[i].Type == MorphType.Bone)
+                if (modelResource.Morphs[i].Type == NMMDE_MorphType.Bone)
                 {
-                    MorphBoneStruct[] morphBoneStructs = new MorphBoneStruct[modelResource.Morphs[i].MorphBones.Length];
-                    MorphBoneStruct[] morphBoneStructs2 = modelResource.Morphs[i].MorphBones;
+                    NMMD_MorphBoneDesc[] morphBoneStructs = new NMMD_MorphBoneDesc[modelResource.Morphs[i].MorphBones.Length];
+                    NMMD_MorphBoneDesc[] morphBoneStructs2 = modelResource.Morphs[i].MorphBones;
                     for (int j = 0; j < morphBoneStructs.Length; j++)
                     {
                         morphBoneStructs[j].BoneIndex = morphBoneStructs2[j].BoneIndex;

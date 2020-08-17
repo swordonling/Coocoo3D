@@ -51,6 +51,8 @@ Texture2D texture1 :register(t1);
 SamplerState s1 : register(s1);
 Texture2D ShadowMap0:register(t2);
 SamplerState sampleShadowMap0 : register(s2);
+TextureCube EnvCube : register (t3);
+TextureCube IrradianceCube : register (t4);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -79,7 +81,8 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	}
 	float3 X = normalize(input.Tangent);
 	float3 Y = cross(input.Norm,input.Tangent);
-	float3 inDirect = _AmbientColor;
+	//float3 inDirect = _AmbientColor;
+	float3 inDirect = float3(0,0,0);
 	for (int i = 0; i < 1; i++)
 	{
 		if (Lightings[i].LightColor.a != 0)
@@ -97,7 +100,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
 
 			strength += brdf_s(lightDir,viewDir,norm,X,Y,diff) * lightStrength * inShadow;
-			inDirect += lightStrength * 0.01f;
+			inDirect += lightStrength * 0.0628f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
@@ -116,7 +119,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a;
 			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
-			inDirect += lightStrength * 0.1f;
+			inDirect += lightStrength * 0.0628f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
@@ -127,7 +130,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		}
 	}
 	//strength += _AmbientColor * diff;
-	int sampleCount = pow(2, g_quality)*2;
+	int sampleCount = pow(2, g_quality) * 2;
 	if (dot(viewDir, norm) < 0)
 	{
 		norm = -norm;
@@ -139,7 +142,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			randomDir = -randomDir;
 		}
-		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * inDirect * 6.28 / sampleCount * dot(randomDir, norm);
+		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * (EnvCube.Sample(s1, randomDir)* g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, norm);
 	}
 	return float4(strength, texColor.a);
 }

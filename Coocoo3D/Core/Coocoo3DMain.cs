@@ -19,6 +19,7 @@ using Coocoo3DPhysics;
 using System.Globalization;
 using Coocoo3D.FileFormat;
 using Coocoo3D.Components;
+using Coocoo3D.RenderPipeline;
 
 namespace Coocoo3D.Core
 {
@@ -26,7 +27,7 @@ namespace Coocoo3D.Core
     public class Coocoo3DMain
     {
         public DeviceResources deviceResources = new DeviceResources();
-        public GraphicsContext graphicsContext = new GraphicsContext();
+        public WICFactory wicFactory = new WICFactory();
         public DefaultResources defaultResources = new DefaultResources();
         public MainCaches mainCaches = new MainCaches();
 
@@ -48,23 +49,19 @@ namespace Coocoo3D.Core
             openedStorageFolder = storageFolder;
             OpenedStorageFolderChanged?.Invoke(this, null);
         }
+        GameDriver GameDriver = new GeneralGameDriver();
+        public GameDriverContext GameDriverContext = new GameDriverContext() { FrameInterval = TimeSpan.FromSeconds(1 / 120.0) };
         #region Time
         ThreadPoolTimer threadPoolTimer;
-        volatile bool NeedRender = false;
         volatile bool NeedUpdateEntities = false;
         public bool SaveCpuPower = true;
-        public DateTime LatestUserOperating = DateTime.Now;
 
-        public double PlayTime;
-        public float PlaySpeed = 1.0f;
-        public bool Playing;
         public DateTime LatestRenderTime = DateTime.Now;
-        public TimeSpan FrameInterval = TimeSpan.FromSeconds(1 / 120.0);
         public float Fps = 120;
         public CoreDispatcher Dispatcher;
         public event EventHandler FrameUpdated;
 
-        public int RenderCount = 0;
+        public volatile int RenderCount = 0;
         private async void Tick(ThreadPoolTimer timer)
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
@@ -80,9 +77,11 @@ namespace Coocoo3D.Core
             HighResolutionShadow = false,
             backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
             ExtendShadowMapRange = 32,
+            SkyBoxLightMultiple = 1.0f,
             EnableAO = true,
             EnableShadow = true,
         };
+        public bool HighResolutionShadowNow = false;
         public Physics3D physics3D = new Physics3D();
         public Physics3DScene physics3DScene = new Physics3DScene();
         public float AspectRatio;
@@ -91,6 +90,7 @@ namespace Coocoo3D.Core
         {
             _currentRenderPipeline = forwardRenderPipeline1;
             graphicsContext.Reload(deviceResources);
+            graphicsContext2.Reload(deviceResources);
             defaultResources.LoadTask = Task.Run(async () =>
             {
                 forwardRenderPipeline1.Reload(deviceResources);
@@ -99,10 +99,11 @@ namespace Coocoo3D.Core
                 {
                     rayTracingRenderPipeline1.Reload(deviceResources);
                 }
-                await defaultResources.ReloadDefalutResources(deviceResources, mainCaches);
+                await defaultResources.ReloadDefalutResources(wicFactory, ProcessingList, miscProcessContext);
                 await forwardRenderPipeline1.ReloadAssets(deviceResources);
                 forwardRenderPipeline1.ChangeRenderTargetFormat(deviceResources, RTFormat);
                 await postProcess.ReloadAssets(deviceResources);
+                await miscProcess.ReloadAssets(deviceResources);
                 //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
                 if (deviceResources.IsRayTracingSupport())
                 {
@@ -118,29 +119,34 @@ namespace Coocoo3D.Core
 
             CurrentScene = new Scene(this);
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
-            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 15.0));
+            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 10.0));
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
                   while (action.Status == AsyncStatus.Started)
                   {
                       DateTime now = DateTime.Now;
-                      if (now - LatestRenderTime < FrameInterval) continue;
-                      if (NeedRender || Playing)
-                      {
-                          bool actualRender = RenderFrame2();
-                      }
+                      if (now - LatestRenderTime < GameDriverContext.FrameInterval) continue;
+                      //if (NeedRender || Playing)
+                      //{
+                      bool actualRender = RenderFrame2();
+                      //}
                       if (SaveCpuPower)
                           System.Threading.Thread.Sleep(1);
                   }
               }, WorkItemPriority.Low, WorkItemOptions.TimeSliced);
         }
         #region Rendering
-        RenderPipeline.ForwardRenderPipeline1 forwardRenderPipeline1 = new RenderPipeline.ForwardRenderPipeline1();
-        RenderPipeline.RayTracingRenderPipeline1 rayTracingRenderPipeline1 = new RenderPipeline.RayTracingRenderPipeline1();
-        public RenderPipeline.PostProcess postProcess = new RenderPipeline.PostProcess();
+        ForwardRenderPipeline1 forwardRenderPipeline1 = new ForwardRenderPipeline1();
+        RayTracingRenderPipeline1 rayTracingRenderPipeline1 = new RayTracingRenderPipeline1();
+        MiscProcess miscProcess = new MiscProcess();
+        public MiscProcessContext miscProcessContext = new MiscProcessContext();
+        MiscProcessContext _miscProcessContext = new MiscProcessContext();
+        public PostProcess postProcess = new PostProcess();
         public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => _currentRenderPipeline; }
         RenderPipeline.RenderPipeline _currentRenderPipeline;
         public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
+        public bool UseNewFun;
+        //public long[] StopwatchTimes = new long[8];
         Task[] poolTasks1;
         private void UpdateEntities(float playTime)
         {
@@ -167,42 +173,69 @@ namespace Coocoo3D.Core
                 Task.WaitAll(poolTasks1);
             }
             else for (int i = 0; i < Entities.Count; i++)
-                    Entities[i].SetMotionTime(playTime);
+                {
+                    //Entities[i].SetMotionTime(playTime);
+                    var entity = Entities[i];
+                    if (!entity.ComponentReady) continue;
+
+                    entity.morphStateComponent.SetPose(entity.motionComponent, playTime);
+                    entity.morphStateComponent.ComputeWeight();
+
+
+                    //stopwatch1.Restart();
+                    entity.boneComponent.SetPose(entity.motionComponent, entity.morphStateComponent, playTime);
+
+                    //stopwatch1.Stop();
+                    //StopwatchTimes[0] = stopwatch1.ElapsedTicks;
+                    //stopwatch1.Restart();
+                    entity.boneComponent.ComputeMatricesData();
+                    entity.rendererComponent.SetPose(entity.morphStateComponent);
+                    entity.needUpdateMotion = true;
+
+                    //stopwatch1.Stop();
+                    //StopwatchTimes[1] = stopwatch1.ElapsedTicks;
+                }
         }
         bool rendering = false;
         public void RequireRender(bool updateEntities = false)
         {
             NeedUpdateEntities |= updateEntities;
-            NeedRender = true;
+            GameDriverContext.NeedRender = true;
         }
 
-        List<Texture2D> textureProcessing = new List<Texture2D>();
-        List<RenderTexture2D> renderTextureProcessing = new List<RenderTexture2D>();
-        List<MMDMesh> meshProcessing = new List<MMDMesh>();
+        public ProcessingList ProcessingList = new ProcessingList();
+        ProcessingList _processingList = new ProcessingList();
         RenderPipeline.RenderPipelineContext renderPipelineContext = new RenderPipeline.RenderPipelineContext();
 
+        public bool RequireResetPhysics;
         public bool RequireResize;
+        public bool RequireInterruptRender;
         public Size NewSize;
         public bool swapChainReady;
+        //System.Diagnostics.Stopwatch stopwatch1 = new System.Diagnostics.Stopwatch();
+        public GraphicsContext graphicsContext = new GraphicsContext();
+        public GraphicsContext graphicsContext2 = new GraphicsContext();
         private bool RenderFrame2()
         {
-            if (DateTime.Now - LatestRenderTime < FrameInterval || rendering)
+            //if (DateTime.Now - LatestRenderTime < FrameInterval || rendering)
+            //{
+            //    NeedRender = true;
+            //    return false;
+            //}
+
+            //rendering = true;
+            //NeedRender = false;
+            //DateTime now = DateTime.Now;
+            //double deltaTime = Math.Clamp((now - LatestRenderTime).TotalSeconds * PlaySpeed, -0.17f, 0.17f);
+            //LatestRenderTime = now;
+
+            if (!GameDriver.Next(ref GameDriverContext) || rendering)
             {
-                NeedRender = true;
                 return false;
             }
-
-            rendering = true;
-            NeedRender = false;
-            DateTime now = DateTime.Now;
-            double deltaTime = MathF.Min((float)(now - LatestRenderTime).TotalSeconds, 0.17f) * PlaySpeed;
-            LatestRenderTime = now;
             lock (deviceResources)
             {
                 #region Render Preparing
-                mainCaches.textureLoadList.MoveTo_CC(textureProcessing);
-                mainCaches.RenderTextureUpdateList.MoveTo_CC(renderTextureProcessing);
-                mainCaches.mmdMeshLoadList.MoveTo_CC(meshProcessing);
 
                 renderPipelineContext.ClearCollections();
                 lock (CurrentScene)
@@ -210,21 +243,7 @@ namespace Coocoo3D.Core
                     for (int i = 0; i < CurrentScene.EntityLoadList.Count; i++)
                     {
                         CurrentScene.Entities.Add(CurrentScene.EntityLoadList[i]);
-                        var physics3DRigidBodys = CurrentScene.EntityLoadList[i].boneComponent.physics3DRigidBodys;
-                        var rigidBodyDescs = CurrentScene.EntityLoadList[i].boneComponent.rigidBodyDescs;
-                        for (int j = 0; j < rigidBodyDescs.Count; j++)
-                        {
-                            var desc = rigidBodyDescs[j];
-                            physics3DScene.AddRigidBody(physics3DRigidBodys[j], desc.Position, MMDBoneComponent.ToQuaternion(desc.Rotation), desc.Dimemsions, desc.Mass, desc.Restitution, desc.Friction, desc.TranslateDamp, desc.RotateDamp, (byte)desc.Shape, (byte)desc.Type, desc.CollisionGroup, desc.CollisionMask);
-                        }
-                        var jointDescs = CurrentScene.EntityLoadList[i].boneComponent.jointDescs;
-                        var joints = CurrentScene.EntityLoadList[i].boneComponent.physic3DJoints;
-                        for (int j = 0; j < jointDescs.Count; j++)
-                        {
-                            var desc = jointDescs[j];
-                            physics3DScene.AddJoint(joints[j], desc.Position, MMDBoneComponent.ToQuaternion(desc.Rotation), physics3DRigidBodys[desc.AssociatedRigidBodyIndex1], physics3DRigidBodys[desc.AssociatedRigidBodyIndex2],
-                                desc.PositionMinimum, desc.PositionMaximum, desc.RotationMinimum, desc.RotationMaximum, desc.PositionSpring, desc.RotationSpring);
-                        }
+                        CurrentScene.EntityLoadList[i].boneComponent.AddPhysics(physics3DScene);
                     }
                     for (int i = 0; i < CurrentScene.LightingLoadList.Count; i++)
                     {
@@ -232,16 +251,7 @@ namespace Coocoo3D.Core
                     }
                     for (int i = 0; i < CurrentScene.EntityRemoveList.Count; i++)
                     {
-                        var physics3DRigidBodys = CurrentScene.EntityRemoveList[i].boneComponent.physics3DRigidBodys;
-                        for (int j = 0; j < physics3DRigidBodys.Count; j++)
-                        {
-                            physics3DScene.RemoveRigidBody(physics3DRigidBodys[j]);
-                        }
-                        var physics3DJoints = CurrentScene.EntityRemoveList[i].boneComponent.physic3DJoints;
-                        for(int j=0;j< physics3DJoints.Count;j++)
-                        {
-                            physics3DScene.RemoveJoint(physics3DJoints[j]);
-                        }
+                        CurrentScene.EntityRemoveList[i].boneComponent.RemovePhysics(physics3DScene);
                     }
                     CurrentScene.EntityLoadList.Clear();
                     CurrentScene.LightingLoadList.Clear();
@@ -250,10 +260,10 @@ namespace Coocoo3D.Core
                     renderPipelineContext.lightings.AddRange(CurrentScene.Lightings);
                 }
                 var entities = renderPipelineContext.entities;
-                for(int i=0;i<entities.Count;i++)
+                for (int i = 0; i < entities.Count; i++)
                 {
                     var entity = entities[i];
-                    if(entity.NeedTransform)
+                    if (entity.NeedTransform)
                     {
                         entity.NeedTransform = false;
                         entity.Position = entity.PositionNextFrame;
@@ -267,89 +277,132 @@ namespace Coocoo3D.Core
                     CurrentScene.Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
                 bool needUpdateEntities = NeedUpdateEntities;
                 NeedUpdateEntities = false;
-                double t1 = deltaTime;
-                if (t1 >= 0)
+                if (RequireResetPhysics)
                 {
-                    while (t1 > 1e-7f)
+                    RequireResetPhysics = false;
+                    for (int i = 0; i < entities.Count; i++)
                     {
-                        const float c_stepTime = 1 / 30.0f;
-                        double t2 = t1 > c_stepTime ? c_stepTime : t1;
-                        if (Playing)
-                            PlayTime += t2;
-                        if (Playing || needUpdateEntities)
-                        {
-                            UpdateEntities((float)PlayTime);
-                        }
+                        entities[i].boneComponent.ResetPhysics(physics3DScene);
+                    }
+                }
+                double t1 = GameDriverContext.deltaTime;
+                if (GameDriverContext.Playing || needUpdateEntities)
+                {
+                    if (t1 >= 0)
+                    {
+                        //while (t1 > 1e-7f)
+                        //{
+                        //    const float c_stepTime = 1 / 60.0f;
+                        //    double t2 = t1 > c_stepTime ? c_stepTime : t1;
+                        //    if (Playing)
+                        //        PlayTime += t2;
+                        //    UpdateEntities((float)PlayTime);
+                        //    for (int i = 0; i < entities.Count; i++)
+                        //    {
+                        //        entities[i].boneComponent.SetPhysicsPose(physics3DScene);
+                        //    }
+                        //    physics3DScene.Simulate(t2);
+                        //    t1 -= c_stepTime;
+                        //    if (t1 < 0.0f)
+                        //        t1 = 0.0f;
+                        //    physics3DScene.FetchResults();
+                        //}
+                        //if (Playing)
+                        //    PlayTime += t1;
+                        UpdateEntities((float)GameDriverContext.PlayTime);
                         for (int i = 0; i < entities.Count; i++)
                         {
                             entities[i].boneComponent.SetPhysicsPose(physics3DScene);
                         }
-                        physics3DScene.Simulate(t2);
-                        t1 -= c_stepTime;
-                        if (t1 < 0.0f)
-                            t1 = 0.0f;
+                        physics3DScene.Simulate(t1);
                         physics3DScene.FetchResults();
                     }
-                }
-                else
-                {
-                    if (Playing)
-                        PlayTime += t1;
-                    UpdateEntities((float)PlayTime);
-                    for (int i = 0; i < entities.Count; i++)
+                    else
                     {
-                        entities[i].boneComponent.SetPhysicsPose(physics3DScene);
+                        //if (Playing)
+                        //    PlayTime += t1;
+                        UpdateEntities((float)GameDriverContext.PlayTime);
+                        for (int i = 0; i < entities.Count; i++)
+                        {
+                            entities[i].boneComponent.SetPhysicsPose(physics3DScene);
+                        }
+                        physics3DScene.Simulate(-t1);
+                        physics3DScene.FetchResults();
                     }
-                    physics3DScene.Simulate(-t1);
-                    physics3DScene.FetchResults();
                 }
                 for (int i = 0; i < entities.Count; i++)
                 {
                     entities[i].boneComponent.SetPoseAfterPhysics(physics3DScene);
+                    entities[i].boneComponent.WriteMatriticesData();
                 }
 
-                if (textureProcessing.Count > 0 || renderTextureProcessing.Count > 0 || meshProcessing.Count > 0 || RequireResize)
+                ////test code-------------------
+
+                ////stopwatch1.Restart();
+                //if (Playing)
+                //    PlayTime += t1;
+                //if (Playing || needUpdateEntities)
+                //    UpdateEntities((float)PlayTime);
+                ////stopwatch1.Stop();
+                ////StopwatchTimes[0] = stopwatch1.ElapsedTicks;
+                ////stopwatch1.Restart();
+                //for (int i = 0; i < entities.Count; i++)
+                //    entities[i].boneComponent.WriteMatriticesData();
+                ////stopwatch1.Stop();
+                ////StopwatchTimes[1] = stopwatch1.ElapsedTicks;
+                ////endtest code-------------------
+
+                ProcessingList.MoveToAnother(_processingList);
+                if (!_processingList.IsEmpty() || RequireInterruptRender)
                 {
+                    RequireInterruptRender = false;
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
-                    for (int i = 0; i < textureProcessing.Count; i++)
-                    {
-                        graphicsContext.UploadTexture(textureProcessing[i]);
-                    }
-                    for (int i = 0; i < meshProcessing.Count; i++)
-                    {
-                        graphicsContext.UploadMesh(meshProcessing[i]);
-                    }
+                    _processingList._DealStep1(graphicsContext);
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
-                    deviceResources.WaitForGpu();
                     if (RequireResize)
                     {
                         RequireResize = false;
                         deviceResources.SetLogicalSize(NewSize);
                         int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
                         int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
-                        defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
-                        renderTextureProcessing.Add(defaultResources.ScreenSizeRenderTextureOutput);
+                        defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRTVUAV(x, y, RTFormat);
+                        _processingList.UnsafeAdd(defaultResources.ScreenSizeRenderTextureOutput);
+                        defaultResources.ScreenSizeDepthStencilOutput.ReloadAsDepthStencil(x, y);
+                        _processingList.UnsafeAdd(defaultResources.ScreenSizeDepthStencilOutput);
                         for (int i = 0; i < defaultResources.ScreenSizeRenderTextures.Length; i++)
                         {
-                            defaultResources.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(deviceResources, x, y, RTFormat);
-                            renderTextureProcessing.Add(defaultResources.ScreenSizeRenderTextures[i]);
+                            defaultResources.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(x, y, RTFormat);
+                            _processingList.UnsafeAdd(defaultResources.ScreenSizeRenderTextures[i]);
                         }
-                        defaultResources.ScreenSizeDepthStencilOutput.ReloadAsDepthStencil(deviceResources, x, y);
-                        renderTextureProcessing.Add(defaultResources.ScreenSizeDepthStencilOutput);
                     }
-                    for (int i = 0; i < renderTextureProcessing.Count; i++)
-                        graphicsContext.UpdateRenderTexture(renderTextureProcessing[i]);
-                    for (int i = 0; i < textureProcessing.Count; i++)
-                        textureProcessing[i].ReleaseUploadHeapResource();
-                    for (int i = 0; i < meshProcessing.Count; i++)
-                        meshProcessing[i].ReleaseUploadHeapResource();
-                    textureProcessing.Clear();
-                    meshProcessing.Clear();
-                    renderTextureProcessing.Clear();
+                    if (HighResolutionShadowNow != settings.HighResolutionShadow)
+                    {
+                        HighResolutionShadowNow = settings.HighResolutionShadow;
+                        if (HighResolutionShadowNow)
+                            defaultResources.DepthStencil0.ReloadAsDepthStencil(8192, 8192);
+                        else
+                            defaultResources.DepthStencil0.ReloadAsDepthStencil(4096, 4096);
+                        _processingList.UnsafeAdd(defaultResources.DepthStencil0);
+                    }
+                    deviceResources.WaitForGpu();
+                    _processingList._DealStep2(graphicsContext);
+                    _processingList.Clear();
                 }
                 #endregion
+
+                GraphicsContext.BeginAlloctor(deviceResources);
+
+                {
+                    miscProcessContext.MoveToAnother(_miscProcessContext);
+                    _miscProcessContext.graphicsContext = graphicsContext2;
+                    graphicsContext2.BeginCommand();
+                    graphicsContext2.SetDescriptorHeapDefault();
+                    miscProcess.Process(_miscProcessContext);
+                    graphicsContext2.EndCommand();
+                    graphicsContext2.Execute();
+                }
 
                 if (swapChainReady && !RequireResize)
                 {
@@ -359,27 +412,29 @@ namespace Coocoo3D.Core
                     renderPipelineContext.graphicsContext = graphicsContext;
                     renderPipelineContext.outputDSV = defaultResources.ScreenSizeDepthStencilOutput;
                     renderPipelineContext.outputRTV = defaultResources.ScreenSizeRenderTextureOutput;
-                    //renderPipelineContext.scene = CurrentScene;
+
                     renderPipelineContext.TextureLoading = defaultResources.TextureLoading;
                     renderPipelineContext.TextureError = defaultResources.TextureError;
                     renderPipelineContext.settings = settings;
                     renderPipelineContext.ndcQuadMesh = defaultResources.quadMesh;
                     renderPipelineContext.DSV0 = defaultResources.DepthStencil0;
+                    renderPipelineContext.EnvCubeMap = defaultResources.EnvironmentCube;
+                    renderPipelineContext.IrradianceMap = defaultResources.IrradianceMap;
                     #endregion
 
-                    GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
-                    graphicsContext.BeginEvent();
                     graphicsContext.SetDescriptorHeapDefault();
 
 
                     for (int i = 0; i < entities.Count; i++)
+                    {
                         entities[i].UpdateGpuResources(graphicsContext);
+                    }
 
                     var currentRenderPipeline = _currentRenderPipeline;//避免在渲染时切换
-                    if (Playing || needUpdateEntities)
+                    if (GameDriverContext.Playing || needUpdateEntities)
                     {
-                        currentRenderPipeline.TimeChange(PlayTime, deltaTime);
+                        currentRenderPipeline.TimeChange(GameDriverContext.PlayTime, GameDriverContext.deltaTime);
                     }
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
                     if (currentRenderPipeline.Ready)
@@ -387,6 +442,19 @@ namespace Coocoo3D.Core
                         currentRenderPipeline.PrepareRenderData(renderPipelineContext);
                         currentRenderPipeline.BeforeRenderCameras(renderPipelineContext);
                         currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
+
+                        //stopwatch1.Restart();
+                        //currentRenderPipeline.PrepareRenderData(renderPipelineContext);
+                        //stopwatch1.Stop();
+                        //StopwatchTimes[2] = stopwatch1.ElapsedTicks;
+                        //stopwatch1.Restart();
+                        //currentRenderPipeline.BeforeRenderCameras(renderPipelineContext);
+                        //stopwatch1.Stop();
+                        //StopwatchTimes[3] = stopwatch1.ElapsedTicks;
+                        //stopwatch1.Restart();
+                        //currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
+                        //stopwatch1.Stop();
+                        //StopwatchTimes[4] = stopwatch1.ElapsedTicks;
                     }
                     if (postProcess.Ready)
                     {
@@ -404,9 +472,11 @@ namespace Coocoo3D.Core
                     //    }
                     //}
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
-                    graphicsContext.EndEvent();
                     graphicsContext.EndCommand();
+                    //stopwatch1.Restart();
                     graphicsContext.Execute();
+                    //stopwatch1.Stop();
+                    //StopwatchTimes[2] = stopwatch1.ElapsedTicks;
                     RenderCount++;
                     deviceResources.Present(false);
                 }
@@ -433,11 +503,11 @@ namespace Coocoo3D.Core
             }
         }
 
-        public void ForceAudioAsync() => AudioAsync(PlayTime, Playing);
+        public void ForceAudioAsync() => AudioAsync(GameDriverContext.PlayTime, GameDriverContext.Playing);
         TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);
         private void AudioAsync(double time, bool playing)
         {
-            if (playing && PlaySpeed == 1.0f)
+            if (playing && GameDriverContext.PlaySpeed == 1.0f)
             {
                 if (mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Paused ||
                     mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Stopped)
@@ -488,6 +558,7 @@ namespace Coocoo3D.Core
         public bool HighResolutionShadow;
         public Vector4 backgroundColor;
         public float ExtendShadowMapRange;
+        public float SkyBoxLightMultiple;
         public bool EnableAO;
         public bool EnableShadow;
         public uint Quality;

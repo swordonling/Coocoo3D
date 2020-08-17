@@ -19,7 +19,8 @@ namespace Coocoo3D.RenderPipeline
         public GCHandle gch_rcDataUploadBuffer;
 
         public InnerStruct innerStruct;
-        ConstantBuffer postProcessDataBuffer = new ConstantBuffer();
+        public InnerStruct prevData;
+        ConstantBufferStatic postProcessDataBuffer = new ConstantBufferStatic();
 
         public PostProcess()
         {
@@ -48,8 +49,12 @@ namespace Coocoo3D.RenderPipeline
 
         public override void BeforeRenderCameras(RenderPipelineContext context)
         {
-            Marshal.StructureToPtr(innerStruct, Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
-            context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize);
+            if (innerStruct != prevData)
+            {
+                Marshal.StructureToPtr(innerStruct, Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
+                context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize);
+                prevData = innerStruct;
+            }
         }
 
         public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
@@ -81,6 +86,34 @@ namespace Coocoo3D.RenderPipeline
         public struct InnerStruct
         {
             public float GammaCorrection;
+
+            public static bool operator ==(InnerStruct i1, InnerStruct i2)
+            {
+                if (i1.GammaCorrection == i2.GammaCorrection)
+                    return true;
+                else
+                    return false;
+            }
+            public static bool operator !=(InnerStruct i1, InnerStruct i2)
+            {
+                return !(i1 == i2);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (obj == null || GetType() != obj.GetType())
+                {
+                    return false;
+                }
+
+                if (obj is InnerStruct i1 && this == i1) return true;
+                return false;
+            }
+
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
+            }
         }
 
     }

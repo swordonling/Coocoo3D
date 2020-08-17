@@ -11,7 +11,7 @@
 
     <Grid>
         <ScrollViewer Padding="0,0,20,0">
-            <StackPanel Orientation="Vertical">
+            <StackPanel>
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -34,20 +34,23 @@
                     <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" AcceptsExpression="True" Minimum="0.1" Maximum="179.9"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
-                <Button Content="设置">
-                    <Button.Flyout>
-                        <Flyout Placement="RightEdgeAlignedTop">
-                            <StackPanel>
-                                <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
-                                <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
-                                <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
-                                <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
-                                <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
-                                <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="ComboBox_SelectionChanged_1" SelectedIndex="0"/>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="设置">
+                        <Button.Flyout>
+                            <Flyout Placement="RightEdgeAlignedTop">
+                                <StackPanel>
+                                    <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
+                                    <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
+                                    <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="ComboBox_SelectionChanged_1" SelectedIndex="0"/>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Content="重置物理" Click="PhysicsReset_Click"/>
+                </StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
@@ -61,6 +64,13 @@
                     <ComboBoxItem Content="光线追踪1"/>
                 </ComboBox>
                 <TextBlock x:Name="VRayTracingSupport" Text="使用的显卡不支持光线追踪"/>
+                <TextBlock Text="在设置-系统-显示-图形设置 里更改使用的显卡"/>
+                <!--<ToggleSwitch Header="测试新代码" Toggled="NewFun_Click"/>
+                <TextBlock Text="time1" Name="showt1"/>
+                <TextBlock Text="time2" Name="showt2"/>
+                <TextBlock Text="time3" Name="showt3"/>
+                <TextBlock Text="time4" Name="showt4"/>
+                <TextBlock Text="time5" Name="showt5"/>-->
             </StackPanel>
         </ScrollViewer>
     </Grid>

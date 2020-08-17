@@ -11,7 +11,7 @@ struct wicToDxgiFormat
 };
 struct GUIDComparer
 {
-	bool operator()(const GUID & Left, const GUID & Right) const
+	bool operator()(const GUID& Left, const GUID& Right) const
 	{
 		return memcmp(&Left, &Right, sizeof(GUID)) < 0;
 	}
@@ -49,7 +49,7 @@ void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics:
 	m_textureData = ref new Platform::Array<byte, 1>(count * 16);
 
 	void* p = m_textureData->begin();
-	float*p1 = (float*)p;
+	float* p1 = (float*)p;
 	for (int i = 0; i < count; i++) {
 		*p1 = color.x;
 		*(p1 + 1) = color.y;
@@ -59,7 +59,7 @@ void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics:
 	}
 }
 
-void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platform::Array<byte>^ data)
+void Texture2D::ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<byte>^ data)
 {
 	HGLOBAL HGlobalImage = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, data->Length);
 	ComPtr<IStream> memStream = nullptr;
@@ -67,7 +67,7 @@ void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platfo
 	DX::ThrowIfFailed(memStream->Write(data->begin(), data->Length, nullptr));
 	DX::ThrowIfFailed(memStream->Seek(LARGE_INTEGER{ 0,0 }, STREAM_SEEK_SET, nullptr));
 
-	auto factory = deviceResources->GetWicImagingFactory();
+	auto factory = wicFactory->GetWicImagingFactory();
 	ComPtr<IWICBitmapDecoder> decoder = nullptr;
 	ComPtr<IWICBitmapFrameDecode> frameDecode = nullptr;
 	DX::ThrowIfFailed(factory->CreateDecoderFromStream(memStream.Get(), nullptr, WICDecodeMetadataCacheOnDemand, &decoder));
@@ -87,8 +87,12 @@ void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platfo
 		fallbackDxgiFormat = wicdata.dxgiFormat;
 		bytesPerPixel = dxgiFormatBytesPerPixel.at(fallbackDxgiFormat);
 	}
+	UINT width1;
+	UINT height1;
 
-	DX::ThrowIfFailed(frameDecode->GetSize(&m_width, &m_height));
+	DX::ThrowIfFailed(frameDecode->GetSize(&width1, &height1));
+	m_width = width1;
+	m_height = height1;
 	m_textureData = ref new Platform::Array<byte, 1>(m_width * m_height * bytesPerPixel);
 	m_bindFlags = D3D11_BIND_SHADER_RESOURCE;
 	WICRect rect = {};
@@ -97,20 +101,20 @@ void Texture2D::ReloadFromImage1(DeviceResources ^ deviceResources, const Platfo
 
 
 	if (dxgiFormat != DXGI_FORMAT_UNKNOWN) {
-		DX::ThrowIfFailed(frameDecode->CopyPixels(&rect, m_width* bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
+		DX::ThrowIfFailed(frameDecode->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
 		m_format = dxgiFormat;
 	}
 	else {
 		ComPtr<IWICBitmapSource> convertedBitmap = nullptr;
 		DX::ThrowIfFailed(WICConvertBitmapSource(fallbackWicFormat, frameDecode.Get(), &convertedBitmap));
 
-		DX::ThrowIfFailed(convertedBitmap->CopyPixels(&rect, m_width* bytesPerPixel, m_width*m_height * bytesPerPixel, m_textureData->begin()));
+		DX::ThrowIfFailed(convertedBitmap->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
 		m_format = fallbackDxgiFormat;
 	}
 	GlobalUnlock(HGlobalImage);
 }
 
-void Texture2D::Reload(Texture2D ^ texture)
+void Texture2D::Reload(Texture2D^ texture)
 {
 	m_width = texture->m_width;
 	m_height = texture->m_height;

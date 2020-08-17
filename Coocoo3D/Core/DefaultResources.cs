@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using System.Numerics;
 
 namespace Coocoo3D.Core
 {
@@ -21,11 +22,13 @@ namespace Coocoo3D.Core
 
         public Texture2D TextureLoading = new Texture2D();
         public Texture2D TextureError = new Texture2D();
+        public TextureCube EnvironmentCube = new TextureCube();
+        public RenderTextureCube IrradianceMap = new RenderTextureCube();
 
         public MMDMesh quadMesh = new MMDMesh();
         public DefaultResources()
         {
-            for(int i=0;i< ScreenSizeRenderTextures.Length;i++)
+            for (int i = 0; i < ScreenSizeRenderTextures.Length; i++)
             {
                 ScreenSizeRenderTextures[i] = new RenderTexture2D();
             }
@@ -33,21 +36,26 @@ namespace Coocoo3D.Core
 
         public bool Initilized = false;
         public Task LoadTask;
-        public async Task ReloadDefalutResources(DeviceResources deviceResources, MainCaches mainCaches)
+        public async Task ReloadDefalutResources(WICFactory wic, ProcessingList mainCaches, RenderPipeline.MiscProcessContext miscProcessContext)
         {
-            DepthStencil0.ReloadAsDepthStencil(deviceResources, 4096, 4096);
-            mainCaches.AddRenderTextureToUpdateList(DepthStencil0);
+            DepthStencil0.ReloadAsDepthStencil(4096, 4096);
+            mainCaches.AddObject(DepthStencil0);
 
-            TextureLoading.ReloadPure(1, 1, new System.Numerics.Vector4(0, 1, 1, 1));
-            TextureError.ReloadPure(1, 1, new System.Numerics.Vector4(1, 0, 1, 1));
-            mainCaches.AddTextureToLoadList(TextureLoading);
-            mainCaches.AddTextureToLoadList(TextureError);
+            TextureLoading.ReloadPure(1, 1, new Vector4(0, 1, 1, 1));
+            TextureError.ReloadPure(1, 1, new Vector4(1, 0, 1, 1));
+            EnvironmentCube.ReloadPure(64, 64, new Vector4[] { new Vector4(0.5f, 0.4f, 0.4f, 1), new Vector4(0.4f, 0.5f, 0.4f, 1), new Vector4(0.5f, 0.4f, 0.5f, 1), new Vector4(0.1f, 0.125f, 0.125f, 1) , new Vector4(0.5f, 0.5f, 0.4f, 1), new Vector4(0.5f, 0.4f, 0.5f, 1)});
+            IrradianceMap.ReloadRTVUAV(64, 64, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
+            miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(EnvironmentCube, IrradianceMap, RenderPipeline.MiscProcessType.GenerateIrradianceMap));
+            mainCaches.AddObject(TextureLoading);
+            mainCaches.AddObject(TextureError);
+            mainCaches.AddObject(EnvironmentCube);
+            mainCaches.AddObject(IrradianceMap);
 
             quadMesh.ReloadNDCQuad();
-            mainCaches.AddMeshToLoadList(quadMesh);
+            mainCaches.AddObject(quadMesh);
 
-            await ReloadTexture2D(ui0Texture, deviceResources, mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
-            
+            await ReloadTexture2D(ui0Texture, wic, mainCaches, "ms-appx:///Assets/Textures/UI_0.png");
+
             //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
@@ -65,10 +73,10 @@ namespace Coocoo3D.Core
         {
             geometryShader.Reload(deviceResources, await ReadAllBytes(uri));
         }
-        private async Task ReloadTexture2D(Texture2D texture2D, DeviceResources deviceResources, MainCaches mainCaches, string uri)
+        private async Task ReloadTexture2D(Texture2D texture2D, WICFactory wic, ProcessingList mainCaches, string uri)
         {
-            texture2D.ReloadFromImage1(deviceResources, await ReadAllBytes(uri));
-            mainCaches.AddTextureToLoadList(texture2D);
+            texture2D.ReloadFromImage1(wic, await ReadAllBytes(uri));
+            mainCaches.AddObject(texture2D);
         }
         private async Task<byte[]> ReadAllBytes(string uri)
         {

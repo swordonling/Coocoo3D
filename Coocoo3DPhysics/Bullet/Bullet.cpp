@@ -156,15 +156,25 @@ void Bullet::SceneAddJoint(void* _scene, void* _joint, float3 position, quaterni
 	}
 	else
 		bt_constraint->enableSpring(5, false);
-	//bt_constraint->setEquilibriumPoint();
-	//for (int i = 0; i < 6; ++i) {
-	//	//bt_constraint->setDamping(i, 1);
-	//	bt_constraint->enableSpring(i, true);
-	//	bt_constraint->setStiffness(i, 1000000.0f);
-	//}
 	scene->m_dynamicsWorld->addConstraint(bt_constraint, false);
 	auto joint = reinterpret_cast<BulletJoint*>(_joint);
 	joint->m_joint = bt_constraint;
+}
+
+void Bullet::SceneResetRigidBody(void* _scene, void* _rigidBody, float3 position, quaternion rotation)
+{
+	auto scene = reinterpret_cast<BulletScene*>(_scene);
+	auto rigidBody = reinterpret_cast<BulletRigidBody*>(_rigidBody);
+	auto body = rigidBody->m_rigidBody;
+	auto worldTransform = Util::GetbtTransform2(position, rotation, c_worldScale);
+	body->getMotionState()->setWorldTransform(worldTransform);
+	body->setCenterOfMassTransform(worldTransform);
+	body->setInterpolationWorldTransform(worldTransform);
+	body->setAngularVelocity(btVector3(0, 0, 0));
+	body->setLinearVelocity(btVector3(0, 0, 0));
+	body->setInterpolationAngularVelocity(btVector3(0, 0, 0));
+	body->setInterpolationLinearVelocity(btVector3(0, 0, 0));
+	body->clearForces();
 }
 
 void Bullet::SceneSimulate(void* _scene, double time)
@@ -235,6 +245,28 @@ quaternion Bullet::SceneGetRigidBodyRotation(void* _scene, void* _rigidBody)
 		//trans = obj->getWorldTransform();
 	}
 	return quaternion();
+}
+
+float4x4 Bullet::SceneGetRigidBodyTransform(void* _scene, void* _rigidBody)
+{
+	auto rigidBody = reinterpret_cast<BulletRigidBody*>(_rigidBody);
+	auto scene = reinterpret_cast<BulletScene*>(_scene);
+
+	auto body = rigidBody->m_rigidBody;
+
+	btTransform trans;
+	if (body && body->getMotionState())
+	{
+		body->getMotionState()->getWorldTransform(trans);
+		float4x4 transform;
+		trans.getOpenGLMatrix((btScalar*)&transform);
+		return transform;
+	}
+	else
+	{
+		//trans = obj->getWorldTransform();
+	}
+	return float4x4();
 }
 
 void Bullet::SceneSetGravitation(void* _scene, float3 gravitation)

@@ -40,7 +40,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="漫反射" Grid.ColumnSpan="4"/>
+                                        <TextBlock Text="漫反射比率" Grid.ColumnSpan="4"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.DiffuseColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.DiffuseColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.DiffuseColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
@@ -57,7 +57,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="高光" Grid.ColumnSpan="4"/>
+                                        <TextBlock Text="镜面" Grid.ColumnSpan="4"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.SpecularColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.SpecularColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.SpecularColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
@@ -74,7 +74,7 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="环境光" Grid.ColumnSpan="4"/>
+                                        <TextBlock Text="环境光(不使用)" Grid.ColumnSpan="4"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.AmbientColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.AmbientColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                                         <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.AmbientColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
@@ -83,8 +83,8 @@
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="金属度" Value="{x:Bind innerStruct.Metallic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="粗糙度" Value="{x:Bind innerStruct.Roughness,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="次表面" Value="{x:Bind innerStruct.Subsurface,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="高光" Value="{x:Bind innerStruct.Specular,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="高光染色" Value="{x:Bind innerStruct.SpecularTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面" Value="{x:Bind innerStruct.Specular,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面染色" Value="{x:Bind innerStruct.SpecularTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="各向异性" Value="{x:Bind innerStruct.Anisotropic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉" Value="{x:Bind innerStruct.Sheen,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉染色" Value="{x:Bind innerStruct.SheenTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>

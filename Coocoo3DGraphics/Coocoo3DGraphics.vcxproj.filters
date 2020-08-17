@@ -23,6 +23,9 @@
     <Filter Include="Shaders\FromDisney">
       <UniqueIdentifier>{ed325251-453d-4a48-81a6-e8dbd3ecb061}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\ImageProcess">
+      <UniqueIdentifier>{5e577815-f70c-4c5d-8d5b-9bf1dea3d92f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -46,6 +49,12 @@
     </ClCompile>
     <ClCompile Include="RayTracingScene.cpp" />
     <ClCompile Include="ConstantBufferStatic.cpp" />
+    <ClCompile Include="WICFactory.cpp">
+      <Filter>Device</Filter>
+    </ClCompile>
+    <ClCompile Include="TextureCube.cpp" />
+    <ClCompile Include="RenderTextureCube.cpp" />
+    <ClCompile Include="ComputePO.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -79,6 +88,13 @@
     </ClInclude>
     <ClInclude Include="RayTracingScene.h" />
     <ClInclude Include="ConstantBufferStatic.h" />
+    <ClInclude Include="WICFactory.h">
+      <Filter>Device</Filter>
+    </ClInclude>
+    <ClInclude Include="TextureCube.h" />
+    <ClInclude Include="RenderTextureCube.h" />
+    <ClInclude Include="ITexture.h" />
+    <ClInclude Include="ComputePO.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -133,6 +149,15 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\GSMMD.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ImageProcess\G_IrradianceMap0.hlsl">
+      <Filter>Shaders\ImageProcess</Filter>
+    </FxCompile>
+    <FxCompile Include="VSSkyBox.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSSkyBox.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -1,5 +1,6 @@
 ﻿using Coocoo3D.Components;
 using Coocoo3D.MMDSupport;
+using Coocoo3DNativeInteroperable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace Coocoo3D.Components
             for (int i = 0; i < morphs.Count; i++)
             {
                 Morph morph = morphs[i];
-                if (morph.Type == MorphType.Group)
+                if (morph.Type == NMMDE_MorphType.Group)
                     ComputeWeightGroup(morph, weightInput[i]);
                 else
                     computedWeights[i] += weightInput[i];
@@ -47,7 +48,7 @@ namespace Coocoo3D.Components
             {
                 MorphSubMorphStruct subMorphStruct = morph.SubMorphs[i];
                 Morph subMorph = morphs[subMorphStruct.GroupIndex];
-                if (subMorph.Type == MorphType.Group)
+                if (subMorph.Type == NMMDE_MorphType.Group)
                     ComputeWeightGroup(subMorph, rate * subMorphStruct.Rate);
                 else
                     computedWeights[subMorphStruct.GroupIndex] += rate * subMorphStruct.Rate;

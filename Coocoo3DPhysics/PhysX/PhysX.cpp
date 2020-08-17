@@ -28,7 +28,7 @@ void PhysX::Init()
 void PhysX::InitScene(void* _scene)
 {
 	auto scene = reinterpret_cast<PhysXScene*>(_scene);
-	new(scene) PhysXScene();	
+	new(scene) PhysXScene();
 
 	auto physics = m_physics;
 	PxSceneDesc sceneDesc(physics->getTolerancesScale());
@@ -87,7 +87,7 @@ void PhysX::SceneAddRigidBody(void* _scene, void* _rigidBody, float3 position, q
 	}
 	else if (shape == 2)
 	{
-		geometry = &PxCapsuleGeometry(hx, hy/2);
+		geometry = &PxCapsuleGeometry(hx, hy / 2);
 		ofs.q = PxQuat::PxQuat(-PxPi / 2, PxVec3(0, 0, 1));
 	}
 	PxShape* shape1 = shape1 = m_physics->createShape(*geometry, *rigidBody->m_material);
@@ -152,6 +152,10 @@ void PhysX::SceneAddJoint(void* _scene, void* _joint, float3 position, quaternio
 	joint->m_joint = j;
 }
 
+void PhysX::SceneResetRigidBody(void* _scene, void* _rigidBody, float3 position, quaternion rotation)
+{
+}
+
 void PhysX::SceneSimulate(void* _scene, double time)
 {
 	auto scene = reinterpret_cast<PhysXScene*>(_scene);
@@ -193,6 +197,16 @@ quaternion PhysX::SceneGetRigidBodyRotation(void* _scene, void* _rigidBody)
 	return rot1;
 }
 
+float4x4 PhysX::SceneGetRigidBodyTransform(void* _scene, void* _rigidBody)
+{
+	auto rigidBody = reinterpret_cast<PhysXRigidBody*>(_rigidBody);
+	PxTransform transformM = rigidBody->m_rigidBody->getGlobalPose();
+	PxMat44 matrix1(transformM);
+	float4x4 matrix2;
+	memcpy(&matrix2, &matrix1, sizeof(matrix2));
+	return matrix2;
+}
+
 void PhysX::SceneSetGravitation(void* _scene, float3 gravitation)
 {
 	auto scene = reinterpret_cast<PhysXScene*>(_scene);
@@ -207,7 +221,7 @@ void PhysX::SceneRemoveRigidBody(void* _scene, void* _rigidBody)
 
 void PhysX::SceneRemoveJoint(void* _scene, void* _joint)
 {
-	auto joint= reinterpret_cast<PhysXJoint*>(_joint);
+	auto joint = reinterpret_cast<PhysXJoint*>(_joint);
 	joint->m_joint->release();
 }
 

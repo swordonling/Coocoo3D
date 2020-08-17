@@ -149,6 +149,7 @@ namespace Coocoo3DGraphics
 		void Present(bool vsync);
 		void WaitForGpu();
 		bool IsRayTracingSupport();
+		DxgiFormat GetBackBufferFormat1();
 	internal:
 
 		float						GetDpi() const { return m_effectiveDpi; }
@@ -167,8 +168,6 @@ namespace Coocoo3DGraphics
 		D3D12_VIEWPORT				GetScreenViewport() const { return m_screenViewport; }
 		DirectX::XMFLOAT4X4			GetOrientationTransform3D() const { return m_orientationTransform3D; }
 		UINT						GetCurrentFrameIndex() const { return m_currentFrame; }
-
-		IWICImagingFactory2*		GetWicImagingFactory() const { return m_wicFactory.Get(); }
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE GetRenderTargetView() const
 		{
@@ -235,8 +234,6 @@ namespace Coocoo3DGraphics
 
 		// 这是将向应用传回的 DPI。它考虑了应用是否支持高分辨率屏幕。
 		float											m_effectiveDpi;
-
-		Microsoft::WRL::ComPtr<IWICImagingFactory2>	m_wicFactory;
 
 		// 用于显示方向的转换。
 		DirectX::XMFLOAT4X4								m_orientationTransform3D;

@@ -1,14 +1,14 @@
 #pragma once
+#include "ITexture.h"
 #include "DeviceResources.h"
 namespace Coocoo3DGraphics
 {
-	public ref class RenderTexture2D sealed
+	public ref class RenderTexture2D sealed :public IRenderTexture
 	{
 	public:
-		void ReloadAsDepthStencil(DeviceResources^ deviceResources, int width, int height);
-		void ReloadAsRenderTarget(DeviceResources^ deviceResources, int width, int height);
-		void ReloadAsRenderTarget(DeviceResources^ deviceResources, int width, int height, DxgiFormat format);
-		void ReloadAsRTVUAV(DeviceResources^ deviceResources, int width, int height, DxgiFormat format);
+		void ReloadAsDepthStencil(int width, int height);
+		void ReloadAsRenderTarget(int width, int height, DxgiFormat format);
+		void ReloadAsRTVUAV(int width, int height, DxgiFormat format);
 	internal:
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;

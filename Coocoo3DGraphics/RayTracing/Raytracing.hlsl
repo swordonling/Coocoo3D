@@ -1,6 +1,7 @@
 #ifndef RAYTRACING_HLSL
 #define RAYTRACING_HLSL
-
+#define UNITY_BRDF_GGX 1
+#include "../Shaders/FromUnity/UnityStandardBRDF.hlsli"
 #include "../Shaders/CameraDataDefine.hlsli"
 #include "../Shaders/RandomNumberGenerator.hlsli"
 
@@ -42,8 +43,9 @@ struct Ray
 	float3 direction;
 };
 
-RaytracingAccelerationStructure Scene : register(t0, space0);
-StructuredBuffer<PSSkinnedIn> Vertices : register(t1, space1);
+RaytracingAccelerationStructure Scene : register(t0);
+TextureCube EnvCube : register (t1);
+TextureCube IrradianceCube : register (t2);
 RWTexture2D<float4> g_renderTarget : register(u0);
 cbuffer cb0 : register(b0)
 {
@@ -52,10 +54,11 @@ cbuffer cb0 : register(b0)
 	uint g_enableShadow;
 	uint g_quality;
 };
-
+//local
+StructuredBuffer<PSSkinnedIn> Vertices : register(t1, space1);
 Texture2D diffuseMap :register(t2, space1);
 SamplerState s0 : register(s0);
-
+//
 cbuffer cb3 : register(b3)
 {
 	float4 _DiffuseColor;
@@ -69,7 +72,7 @@ cbuffer cb3 : register(b3)
 	float4 _ToonTexture;
 	uint notUse;
 	float _Metallic;
-	float _Smoothness;
+	float _Roughness;
 	float _Emission;
 	float4 preserved1[8];
 	LightInfo _LightInfo[8];
@@ -131,13 +134,16 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 
 	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
 	float3 diffMulA = diffuseColor.rgb * diffuseColor.a;
+	float3 viewDir = payload.direction;
+	float3 specCol = clamp(_SpecularColor.rgb, 0.005, 1);
 
 	normal = normalize(normal);
 	uint randomState = DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue;
 	float3 AOFactor = 1.0f;
-	static const float c_AOMaxDist = 16;
-	int aoSampleCount = pow(2, g_quality) * 8;
 	if (payload.depth == 1 && g_enableAO != 0)
+	{
+		static const float c_AOMaxDist = 32;
+		int aoSampleCount = pow(2, g_quality) * 8;
 		for (int i = 0; i < aoSampleCount; i++)
 		{
 			RayDesc ray2;
@@ -161,6 +167,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 				AOFactor -= (c_AOMaxDist - distance(payload2.hitPos, pos)) * (1 - payload2.color * 0.3) / c_AOMaxDist / aoSampleCount;
 			}
 		}
+	}
 	if (g_enableShadow != 0)
 	{
 		[loop]
@@ -170,37 +177,52 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 			{
 				if (_LightInfo[i].LightType == 0)
 				{
-					{
-						RayDesc ray2;
-						ray2.Origin = pos;
-						ray2.Direction = _LightInfo[i].dir;
-						ray2.TMin = 0.0001;
-						ray2.TMax = 10000.0;
-						TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-						if (payload.depth < 3)
-							TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-						if (payload2.miss)
-							payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)), 0);
-					}
-					payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * 0.03f * AOFactor, 0);
+
+					RayDesc ray2;
+					ray2.Origin = pos;
+					ray2.Direction = _LightInfo[i].dir;
+					ray2.TMin = 0.0001;
+					ray2.TMax = 10000.0;
+					TestRayPayload payload2 = { false, float3(0,0,0), float4(0,0,0,0) };
+					if (payload.depth < 3)
+						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+					float inShadow = 1.0f;
+					if (!payload2.miss)
+						inShadow = 0;
+
+					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
+					UnityLight unitylight;
+					unitylight.color = lightStrength * inShadow;
+					unitylight.dir = _LightInfo[i].dir;
+					UnityIndirect unityindirect;
+					unityindirect.diffuse = lightStrength * 0.001f * AOFactor;
+					unityindirect.specular = lightStrength * 0.001f * AOFactor;
+					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, unitylight, unityindirect).xyz, 0);
 				}
 				else if (_LightInfo[i].LightType == 1)
 				{
-					if (g_enableShadow != 0)
-					{
-						RayDesc ray2;
-						ray2.Origin = pos;
-						ray2.Direction = normalize(_LightInfo[i].dir - pos);
-						ray2.TMin = 0.0001;
-						ray2.TMax = distance(_LightInfo[i].dir, pos);
-						TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-						if (payload.depth < 3)
-							TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-						if (payload2.miss)
-							payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)) / (pow(distance(_LightInfo[i].dir, pos), 2)), 0);
-					}
-				}
+					RayDesc ray2;
+					ray2.Origin = pos;
+					ray2.Direction = normalize(_LightInfo[i].dir - pos);
+					ray2.TMin = 0.0001;
+					ray2.TMax = distance(_LightInfo[i].dir, pos);
+					TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
+					if (payload.depth < 3)
+						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+					float inShadow = 1.0f;
+					if (!payload2.miss)
+						inShadow = 0.0f;
 
+					float3 lightDir = normalize(_LightInfo[i].dir - pos);
+					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
+					UnityLight light;
+					light.color = lightStrength * inShadow;
+					light.dir = lightDir;
+					UnityIndirect indirect;
+					indirect.diffuse = 0;
+					indirect.specular = 0;
+					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, light, indirect).rgb, 0);
+				}
 			}
 		}
 	}
@@ -213,32 +235,76 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 			{
 				if (_LightInfo[i].LightType == 0)
 				{
-					payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)), 0);
+					float inShadow = 1.0f;
+
+					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
+					UnityLight unitylight;
+					unitylight.color = lightStrength * inShadow;
+					unitylight.dir = _LightInfo[i].dir;
+					UnityIndirect unityindirect;
+					unityindirect.diffuse = lightStrength * 0.001f * AOFactor;
+					unityindirect.specular = lightStrength * 0.001f * AOFactor;
+					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, unitylight, unityindirect).xyz, 0);
 				}
 				else if (_LightInfo[i].LightType == 1)
 				{
-					payload.color += float4(_LightInfo[i].LightColor.rgb * diffMulA * saturate(dot(_LightInfo[i].dir, normal)) / (pow(distance(_LightInfo[i].dir, pos), 2)), 0);
+					float inShadow = 1.0f;
+
+					float3 lightDir = normalize(_LightInfo[i].dir - pos);
+					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
+					UnityLight light;
+					light.color = lightStrength * inShadow;
+					light.dir = lightDir;
+					UnityIndirect indirect;
+					indirect.diffuse = 0;
+					indirect.specular = 0;
+					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, light, indirect).rgb, 0);
 				}
 			}
 		}
 	}
-	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * diffMulA * _AmbientColor * AOFactor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
+	UnityLight lightx;
+	lightx.color = float4(0, 0, 0, 1);
+	lightx.dir = float3(0, 1, 0);
+	UnityIndirect indirect1;
+	indirect1.diffuse = IrradianceCube.SampleLevel(s0, normal, 0).rgb * g_skyBoxMultiple * AOFactor;
 
 
+	if (payload.depth < 3)
+	{
+		RayPayload payloadX;
+		payloadX.direction = reflect(viewDir, normal);
+		payloadX.color = float4(0, 0, 0, 0);
+		payloadX.depth = payload.depth;
+		RayDesc rayX;
+		rayX.Origin = pos;
+		rayX.Direction = payloadX.direction;
+		rayX.TMin = 1e-6f;
+		rayX.TMax = 10000.0;
+		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayX, payloadX);
+		indirect1.specular = payloadX.color.rgb;
+	}
+	else
+	{
+		indirect1.specular = EnvCube.SampleLevel(s0, reflect(-viewDir, normal), 0).rgb * g_skyBoxMultiple;
+	}
+	float3 ambientColor = BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, lightx, indirect1).rgb;
 
-	RayDesc ray2;
-	ray2.Origin = pos;
-	ray2.Direction = payload.direction;
-	ray2.TMin = 1e-6f;
-	ray2.TMax = 10000.0;
+	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * ambientColor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
+
+	RayDesc rayNext;
+	rayNext.Origin = pos;
+	rayNext.Direction = payload.direction;
+	rayNext.TMin = 1e-6f;
+	rayNext.TMax = 10000.0;
 	if (payload.depth < 3 && payload.color.a < 1 - 1e-4f)
-		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, ray2, payload);
+		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayNext, payload);
 }
 
 [shader("miss")]
 void MissShaderColor(inout RayPayload payload)
 {
-	payload.color += float4(0, 0, 0, 1);
+	payload.color += EnvCube.SampleLevel(s0, payload.direction, 0) * g_skyBoxMultiple;
 }
 
 [shader("closesthit")]

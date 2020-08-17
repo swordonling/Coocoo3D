@@ -1,4 +1,5 @@
 ﻿using Coocoo3D.MMDSupport;
+using Coocoo3DNativeInteroperable;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -156,7 +157,7 @@ namespace Coocoo3D.FileFormat
                 material.DiffuseColor = ReadVector4(reader);
                 material.SpecularColor = ReadVector4(reader);
                 material.AmbientColor = ReadVector3(reader);
-                material.DrawFlags = (DrawFlags)reader.ReadByte();
+                material.DrawFlags = (NMMDE_DrawFlag)reader.ReadByte();
                 material.EdgeColor = ReadVector4(reader);
                 material.EdgeScale = reader.ReadSingle();
 
@@ -185,8 +186,8 @@ namespace Coocoo3D.FileFormat
                 bone.Position = ReadVector3(reader);
                 bone.ParentIndex = ReadIndex(reader, boneIndexSize);
                 bone.TransformLevel = reader.ReadInt32();
-                bone.Flags = (BoneFlags)reader.ReadUInt16();
-                if (bone.Flags.HasFlag(BoneFlags.ChildUseId))
+                bone.Flags = (NMMDE_BoneFlag)reader.ReadUInt16();
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.ChildUseId))
                 {
                     bone.ChildId = ReadIndex(reader, boneIndexSize);
                 }
@@ -194,11 +195,11 @@ namespace Coocoo3D.FileFormat
                 {
                     bone.ChildOffset = ReadVector3(reader);
                 }
-                if (bone.Flags.HasFlag(BoneFlags.RotAxisFixed))
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.RotAxisFixed))
                 {
                     bone.RotAxisFixed = ReadVector3(reader);
                 }
-                if (bone.Flags.HasFlag(BoneFlags.AcquireRotate) | bone.Flags.HasFlag(BoneFlags.AcquireTranslate))
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireRotate) | bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireTranslate))
                 {
                     bone.AppendBoneIndex = ReadIndex(reader, boneIndexSize);
                     bone.AppendBoneRatio = reader.ReadSingle();
@@ -207,7 +208,7 @@ namespace Coocoo3D.FileFormat
                 {
                     bone.AppendBoneIndex = -1;
                 }
-                if (bone.Flags.HasFlag(BoneFlags.UseLocalAxis))
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.UseLocalAxis))
                 {
                     bone.LocalAxisX = ReadVector3(reader);
                     bone.LocalAxisZ = ReadVector3(reader);
@@ -217,11 +218,11 @@ namespace Coocoo3D.FileFormat
                     bone.LocalAxisY = Vector3.Normalize(bone.LocalAxisY);
                     bone.LocalAxisZ = Vector3.Normalize(bone.LocalAxisZ);
                 }
-                if (bone.Flags.HasFlag(BoneFlags.ReceiveTransform))
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.ReceiveTransform))
                 {
                     bone.ExportKey = reader.ReadInt32();
                 }
-                if (bone.Flags.HasFlag(BoneFlags.HasIK))
+                if (bone.Flags.HasFlag(NMMDE_BoneFlag.HasIK))
                 {
                     BoneIK boneIK = new BoneIK();
                     boneIK.IKTargetIndex = ReadIndex(reader, boneIndexSize);
@@ -253,13 +254,13 @@ namespace Coocoo3D.FileFormat
                 Morph morph = new Morph();
                 morph.Name = ReadString(reader, encoding);
                 morph.NameEN = ReadString(reader, encoding);
-                morph.Category = (MorphCategory)reader.ReadByte();
-                morph.Type = (MorphType)reader.ReadByte();
+                morph.Category = (NMMDE_MorphCategory)reader.ReadByte();
+                morph.Type = (NMMDE_MorphType)reader.ReadByte();
 
                 int countOfMorphData = reader.ReadInt32();
                 switch (morph.Type)
                 {
-                    case MorphType.Group:
+                    case NMMDE_MorphType.Group:
                         morph.SubMorphs = new MorphSubMorphStruct[countOfMorphData];
                         for (int j = 0; j < countOfMorphData; j++)
                         {
@@ -269,32 +270,32 @@ namespace Coocoo3D.FileFormat
                             morph.SubMorphs[j] = subMorph;
                         }
                         break;
-                    case MorphType.Vertex:
-                        morph.MorphVertexs = new MorphVertexStruct[countOfMorphData];
+                    case NMMDE_MorphType.Vertex:
+                        morph.MorphVertexs = new NMMD_MorphVertexDesc[countOfMorphData];
                         for (int j = 0; j < countOfMorphData; j++)
                         {
-                            MorphVertexStruct vertexStruct = new MorphVertexStruct();
+                            NMMD_MorphVertexDesc vertexStruct = new NMMD_MorphVertexDesc();
                             vertexStruct.VertexIndex = ReadIndexUnsigned(reader, vertexIndexSize);
                             vertexStruct.Offset = ReadVector3(reader);
                             morph.MorphVertexs[j] = vertexStruct;
                         }
                         break;
-                    case MorphType.Bone:
-                        morph.MorphBones = new MorphBoneStruct[countOfMorphData];
+                    case NMMDE_MorphType.Bone:
+                        morph.MorphBones = new NMMD_MorphBoneDesc[countOfMorphData];
                         for (int j = 0; j < countOfMorphData; j++)
                         {
-                            MorphBoneStruct morphBoneStruct = new MorphBoneStruct();
+                            NMMD_MorphBoneDesc morphBoneStruct = new NMMD_MorphBoneDesc();
                             morphBoneStruct.BoneIndex = ReadIndex(reader, boneIndexSize);
                             morphBoneStruct.Translation = ReadVector3(reader);
                             morphBoneStruct.Rotation = ReadQuaternion(reader);
                             morph.MorphBones[j] = morphBoneStruct;
                         }
                         break;
-                    case MorphType.UV:
-                    case MorphType.ExtUV1:
-                    case MorphType.ExtUV2:
-                    case MorphType.ExtUV3:
-                    case MorphType.ExtUV4:
+                    case NMMDE_MorphType.UV:
+                    case NMMDE_MorphType.ExtUV1:
+                    case NMMDE_MorphType.ExtUV2:
+                    case NMMDE_MorphType.ExtUV3:
+                    case NMMDE_MorphType.ExtUV4:
                         morph.MorphUVs = new MorphUVStruct[countOfMorphData];
                         for (int j = 0; j < countOfMorphData; j++)
                         {
@@ -304,13 +305,13 @@ namespace Coocoo3D.FileFormat
                             morph.MorphUVs[j] = morphUVStruct;
                         }
                         break;
-                    case MorphType.Material:
+                    case NMMDE_MorphType.Material:
                         morph.MorphMaterials = new MorphMaterialStruct[countOfMaterial];
                         for (int j = 0; j < countOfMorphData; j++)
                         {
                             MorphMaterialStruct morphMaterial = new MorphMaterialStruct();
                             morphMaterial.MaterialIndex = ReadIndex(reader, materialIndexSize);
-                            morphMaterial.MorphMethon = (MorphMaterialMorphMethon)reader.ReadByte();
+                            morphMaterial.MorphMethon = (NMMDE_MorphMaterialMethon)reader.ReadByte();
                             morphMaterial.Diffuse = ReadVector4(reader);
                             morphMaterial.Specular = ReadVector4(reader);
                             morphMaterial.Ambient = ReadVector3(reader);
@@ -365,7 +366,7 @@ namespace Coocoo3D.FileFormat
                 rigidBody.AssociatedBoneIndex = ReadIndex(reader, boneIndexSize);
                 rigidBody.CollisionGroup = reader.ReadByte();
                 rigidBody.CollisionMask = reader.ReadUInt16();
-                rigidBody.Shape = (RigidBodyShape)reader.ReadByte();
+                rigidBody.Shape = (NMMDE_RigidBodyShape)reader.ReadByte();
                 rigidBody.Dimemsions = ReadVector3(reader);
                 rigidBody.Position = ReadVector3(reader);
                 rigidBody.Rotation = ReadVector3(reader);
@@ -374,7 +375,7 @@ namespace Coocoo3D.FileFormat
                 rigidBody.RotateDamp = reader.ReadSingle();
                 rigidBody.Restitution = reader.ReadSingle();
                 rigidBody.Friction = reader.ReadSingle();
-                rigidBody.Type = (RigidBodyType)reader.ReadByte();
+                rigidBody.Type = (NMMDE_RigidBodyType)reader.ReadByte();
 
                 RigidBodies.Add(rigidBody);
             }

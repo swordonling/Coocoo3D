@@ -52,6 +52,7 @@ namespace Coocoo3D.Controls
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
             AppBody.NewSize = new Size(ActualWidth, ActualHeight);
             AppBody.RequireResize = true;
+            AppBody.RequireInterruptRender = true;
             AppBody.swapChainReady = true;
             //AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
             AppBody.RequireRender();
@@ -64,6 +65,7 @@ namespace Coocoo3D.Controls
             AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.NewSize = e.NewSize;
             AppBody.RequireResize = true;
+            AppBody.RequireInterruptRender = true;
             //AppBody.deviceResources.SetLogicalSize(e.NewSize);
             AppBody.RequireRender();
         }
@@ -97,15 +99,7 @@ namespace Coocoo3D.Controls
 
         private void _Fun1()
         {
-            if (DateTime.Now - AppBody.LatestUserOperating < AppBody.FrameInterval)
-            {
-                AppBody.RequireRender();
-            }
-            else
-            {
-                AppBody.RequireRender();
-                AppBody.LatestUserOperating = DateTime.Now;
-            }
+            AppBody.RequireRender();
         }
 
         private void WorldViewer_MouseMoved_Rotate(MouseDevice sender, MouseEventArgs args)

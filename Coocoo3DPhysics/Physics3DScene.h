@@ -20,27 +20,18 @@ namespace Coocoo3DPhysics
 			float3 RotationMaximum,
 			float3 PositionSpring,
 			float3 RotationSpring);
+		void ResetRigidBody(Physics3DRigidBody^ rigidBody, float3 position, quaternion rotation);
 		void RemoveRigidBody(Physics3DRigidBody^ rigidBody);
 		void RemoveJoint(Physics3DJoint^ joint);
 		void SetGravitation(float3 gravitation);
-		void MoveRigidBody(Physics3DRigidBody^ rigidBody,float3 position, quaternion rotation);
+		void MoveRigidBody(Physics3DRigidBody^ rigidBody, float3 position, quaternion rotation);
 		float3 GetRigidBodyPosition(Physics3DRigidBody^ rigidBody);
 		quaternion GetRigidBodyRotation(Physics3DRigidBody^ rigidBody);
+		float4x4 GetRigidBodyTransform(Physics3DRigidBody^ rigidBody);
 		void Simulate(double time);
 		void FetchResults();
 	internal:
 		std::shared_ptr<IPhysicsAPI> m_sdkRef;
 		byte m_sceneData[MAX_UNION_SCENE_STRUCTURE_SIZE] = {};
-		//Physics3D^ m_physics3D;
-		//static physx::PxFilterFlags FilterShader1(
-		//	physx::PxFilterObjectAttributes attributes0,
-		//	physx::PxFilterData filterData0,
-		//	physx::PxFilterObjectAttributes attributes1,
-		//	physx::PxFilterData filterData1,
-		//	physx::PxPairFlags& pairFlags,
-		//	const void* constantBlock,
-		//	physx::PxU32 constantBlockSize);
-		//physx::PxScene* m_scene = nullptr;
-		//physx::PxMaterial* m_material = nullptr;
 	};
 }

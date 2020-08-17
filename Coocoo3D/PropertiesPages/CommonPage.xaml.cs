@@ -36,7 +36,7 @@ namespace Coocoo3D.PropertiesPages
         uint[] comboBox1Values = new uint[6];
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            base.OnNavigatedFrom(e);
+            base.OnNavigatedTo(e);
             if (e.Parameter is Coocoo3DMain _appBody)
             {
                 appBody = _appBody;
@@ -49,7 +49,7 @@ namespace Coocoo3D.PropertiesPages
                 {
                     VRayTracingSupport.Text = "使用的显卡支持光线追踪";
                 }
-                for(int i=0;i< comboBox1Values.Length;i++)
+                for (int i = 0; i < comboBox1Values.Length; i++)
                 {
                     comboBox1Values[i] = (uint)i;
                 }
@@ -70,6 +70,7 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVRZ = new PropertyChangedEventArgs("VRZ");
         PropertyChangedEventArgs eaVFOV = new PropertyChangedEventArgs("VFOV");
         PropertyChangedEventArgs eaVD = new PropertyChangedEventArgs("VD");
+        //long[] txs = new long[8];
         private void FrameUpdated(object sender, EventArgs e)
         {
             if (_cachePos != appBody.camera.LookAtPoint)
@@ -103,6 +104,12 @@ namespace Coocoo3D.PropertiesPages
                 PrevUpdateTime = Now;
                 prevRenderCount = appBody.RenderCount;
             }
+            //Array.Copy(appBody.StopwatchTimes, txs, appBody.StopwatchTimes.Length);
+            //showt1.Text = txs[0].ToString();
+            //showt2.Text = txs[1].ToString();
+            //showt3.Text = txs[2].ToString();
+            //showt4.Text = txs[3].ToString();
+            //showt5.Text = txs[4].ToString();
         }
         int prevRenderCount = 0;
         DateTime PrevUpdateTime = DateTime.Now;
@@ -207,7 +214,7 @@ namespace Coocoo3D.PropertiesPages
             get => appBody.Fps; set
             {
                 appBody.Fps = Math.Max(value, 1);
-                appBody.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
+                appBody.GameDriverContext.FrameInterval = TimeSpan.FromSeconds(1 / appBody.Fps);
             }
         }
 
@@ -228,22 +235,7 @@ namespace Coocoo3D.PropertiesPages
             set
             {
                 appBody.settings.HighResolutionShadow = value;
-                if (value == true)
-                {
-                    lock (appBody.deviceResources)
-                    {
-                        appBody.defaultResources.DepthStencil0.ReloadAsDepthStencil(appBody.deviceResources, 8192, 8192);
-                        appBody.mainCaches.AddRenderTextureToUpdateList(appBody.defaultResources.DepthStencil0);
-                    }
-                }
-                else
-                {
-                    lock (appBody.deviceResources)
-                    {
-                        appBody.defaultResources.DepthStencil0.ReloadAsDepthStencil(appBody.deviceResources, 4096, 4096);
-                        appBody.mainCaches.AddRenderTextureToUpdateList(appBody.defaultResources.DepthStencil0);
-                    }
-                }
+                appBody.RequireInterruptRender = true;
                 appBody.RequireRender();
             }
         }
@@ -284,6 +276,17 @@ namespace Coocoo3D.PropertiesPages
         {
             appBody.settings.Quality = (uint)(sender as ComboBox).SelectedValue;
             appBody.RequireRender();
+        }
+
+        private void PhysicsReset_Click(object sender, RoutedEventArgs e)
+        {
+            appBody.RequireResetPhysics = true;
+            appBody.RequireRender(true);
+        }
+
+        private void NewFun_Click(object sender, RoutedEventArgs e)
+        {
+            appBody.UseNewFun = !appBody.UseNewFun;
         }
     }
 }

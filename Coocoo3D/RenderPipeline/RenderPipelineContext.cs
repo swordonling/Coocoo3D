@@ -18,11 +18,14 @@ namespace Coocoo3D.RenderPipeline
 
         public Texture2D TextureLoading;
         public Texture2D TextureError;
+        public TextureCube EnvCubeMap;
+        public RenderTextureCube IrradianceMap;
 
         public MMDMesh ndcQuadMesh;
 
         public DeviceResources deviceResources;
         public GraphicsContext graphicsContext;
+        public GraphicsContext[] graphicsContexts;
 
         public Settings settings;
         //public Scene scene;

@@ -49,10 +49,15 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 
 		CD3DX12_DESCRIPTOR_RANGE UAVDescriptor;
 		UAVDescriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-		CD3DX12_ROOT_PARAMETER rootParameters[3];
+		CD3DX12_DESCRIPTOR_RANGE SRVDescriptors[2];
+		SRVDescriptors[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
+		SRVDescriptors[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+		CD3DX12_ROOT_PARAMETER rootParameters[5];
 		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
 		rootParameters[1].InitAsShaderResourceView(0);
 		rootParameters[2].InitAsConstantBufferView(0);
+		rootParameters[3].InitAsDescriptorTable(1, &SRVDescriptors[0]);
+		rootParameters[4].InitAsDescriptorTable(1, &SRVDescriptors[1]);
 		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, 1, &staticSamplerDesc);
 
 		auto device = deviceResources->GetD3DDevice();

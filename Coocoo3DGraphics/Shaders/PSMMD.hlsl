@@ -42,6 +42,8 @@ Texture2D texture1 :register(t1);
 SamplerState s1 : register(s1);
 Texture2D ShadowMap0:register(t2);
 SamplerState sampleShadowMap0 : register(s2);
+TextureCube EnvCube : register (t3);
+TextureCube IrradianceCube : register (t4);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -58,7 +60,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float4 texColor = texture0.Sample(s0, input.TexCoord) * _DiffuseColor;
 	clip(texColor.a - 0.01f);
 	float3 diff = texColor.rgb;
-
+	float3 specCol = clamp(_SpecularColor.rgb, 0.005, 1);
 	for (int i = 0; i < 1; i++)
 	{
 		if (Lightings[i].LightColor.a != 0)
@@ -78,9 +80,9 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			light.color = lightStrength * inShadow;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.01f * diff;
-			indirect.specular = lightStrength * 0.01f;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+			indirect.diffuse = lightStrength * 0.001f * diff;
+			indirect.specular = lightStrength * 0.001f;
+			strength += BRDF1_Unity_PBS(diff, specCol, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
 		}
 		else if (Lightings[i].LightType == 1)
 		{
@@ -93,7 +95,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			UnityIndirect indirect;
 			indirect.diffuse = 0;
 			indirect.specular = 0;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+			strength += BRDF1_Unity_PBS(diff, specCol, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
 		}
 	}
 	for (int i = 1; i < 4; i++)
@@ -108,9 +110,9 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			light.color = lightStrength;
 			light.dir = lightDir;
 			UnityIndirect indirect;
-			indirect.diffuse = lightStrength * 0.01f * diff;
-			indirect.specular = lightStrength * 0.01f;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
+			indirect.diffuse = lightStrength * 0.001f * diff;
+			indirect.specular = lightStrength * 0.001f;
+			strength += BRDF1_Unity_PBS(diff, specCol, _Metallic,1 - _Roughness, norm, viewDir, light, indirect);
 		}
 		else if (Lightings[i].LightType == 1)
 		{
@@ -123,10 +125,17 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			UnityIndirect indirect;
 			indirect.diffuse = 0;
 			indirect.specular = 0;
-			strength += BRDF1_Unity_PBS(diff, _SpecularColor.rgb, _Metallic, 1 - _Roughness, norm, viewDir, light, indirect);
+			strength += BRDF1_Unity_PBS(diff, specCol, _Metallic, 1 - _Roughness, norm, viewDir, light, indirect);
 		}
 	}
-	strength += _AmbientColor * diff;
+	UnityLight light1;
+	light1.color = float4(0,0,0,1);
+	light1.dir = float3(0,1,0);
+	UnityIndirect indirect1;
+	indirect1.diffuse = IrradianceCube.Sample(s1, norm) * g_skyBoxMultiple;
+	indirect1.specular = EnvCube.Sample(s1, reflect(-viewDir, norm)) * g_skyBoxMultiple;
+	strength += BRDF1_Unity_PBS(diff, specCol, _Metallic, 1 - _Roughness, norm, viewDir, light1, indirect1);
+
 	return float4(strength, texColor.a);
 	//return float4(input.Tangent*0.5+0.5, texColor.a);
 }

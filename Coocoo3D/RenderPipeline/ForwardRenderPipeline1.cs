@@ -2,6 +2,7 @@
 using Coocoo3D.Core;
 using Coocoo3D.Present;
 using Coocoo3DGraphics;
+using Coocoo3DNativeInteroperable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,11 +37,13 @@ namespace Coocoo3D.RenderPipeline
         {
             await ReloadVertexShader(VSMMDSkinning2, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning2.cso");
             await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
+            await ReloadVertexShader(VSSkyBox, deviceResources, "ms-appx:///Coocoo3DGraphics/VSSkyBox.cso");
             await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
             await ReloadPixelShader(PSMMD2, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD_DisneyBRDF.cso");
             await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
             await ReloadPixelShader(PSMMDAlphaClip, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDAlphaClip.cso");
+            await ReloadPixelShader(PSSkyBox, deviceResources, "ms-appx:///Coocoo3DGraphics/PSSkyBox.cso");
             await ReloadGeometryShader(GSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/GSMMD.cso");
         }
         public void Unload()
@@ -58,6 +61,7 @@ namespace Coocoo3D.RenderPipeline
             CurrentRenderTargetFormat = format;
             PObjectMMD.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD, VSMMDTransform, format);
             PObjectMMD2.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD2, VSMMDTransform, format);
+            PObjectSkyBox.Reload(deviceResources, rootSignature, PObjectType.postProcess, VSSkyBox, null, PSSkyBox, format);
             PObjectMMDLoading.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMDLoading, VSMMDTransform, format);
             PObjectMMDError.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMDError, VSMMDTransform, format);
             PObjectMMDDepth.ReloadDepthOnly(deviceResources, rootSignature, VSMMDTransform, PSMMDAlphaClip);
@@ -67,14 +71,17 @@ namespace Coocoo3D.RenderPipeline
         public GraphicsSignature rootSignature = new GraphicsSignature();
         public VertexShader VSMMDSkinning2 = new VertexShader();
         public VertexShader VSMMDTransform = new VertexShader();
+        public VertexShader VSSkyBox = new VertexShader();
         public GeometryShader GSMMD = new GeometryShader();
         public PixelShader PSMMD = new PixelShader();
         public PixelShader PSMMD2 = new PixelShader();
         public PixelShader PSMMDLoading = new PixelShader();
         public PixelShader PSMMDError = new PixelShader();
         public PixelShader PSMMDAlphaClip = new PixelShader();
+        public PixelShader PSSkyBox = new PixelShader();
         public PObject PObjectMMD = new PObject();
         public PObject PObjectMMD2 = new PObject();
+        public PObject PObjectSkyBox = new PObject();
         public PObject PObjectMMDDepth = new PObject();
         public PObject PObjectMMDLoading = new PObject();
         public PObject PObjectMMDError = new PObject();
@@ -87,7 +94,7 @@ namespace Coocoo3D.RenderPipeline
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
         public PresentData lightingCameraPresentData = new PresentData();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
-        public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
+        public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
         byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize + c_presentDataSize];
         public GCHandle gch_rcDataUploadBuffer;
 
@@ -120,12 +127,11 @@ namespace Coocoo3D.RenderPipeline
         {
             var deviceResources = context.deviceResources;
             var cameras = context.cameras;
-            //var scene = context.scene;
             var graphicsContext = context.graphicsContext;
             var settings = context.settings;
             var Entities = context.entities;
             int countMaterials = 0;
-            if(settings.Quality==0)
+            if (settings.Quality == 0)
             {
                 currentUsedPObject = PObjectMMD;
             }
@@ -142,12 +148,12 @@ namespace Coocoo3D.RenderPipeline
 
             var lightings = context.lightings;
             mainLightIndex = -1;
+            IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
             for (int i = 0; i < lightings.Count; i++)
             {
                 if (lightings[i].LightingType == LightingType.Directional)
                 {
-                    lightingCameraPresentData.UpdateCameraData(lightings[i]);
-                    IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
+                    lightingCameraPresentData.UpdateCameraData(lightings[i], ref context.settings); ;
                     Marshal.StructureToPtr(lightingCameraPresentData.innerStruct, pBufferData, true);
                     graphicsContext.UpdateResource(lightingCameraPresentData.DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
                     mainLightIndex = i;
@@ -155,13 +161,15 @@ namespace Coocoo3D.RenderPipeline
                 }
             }
             #region Update Entities Data
+            IntPtr p0 = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
+            pBufferData = p0;
             for (int i = 0; i < Entities.Count; i++)
             {
                 MMD3DEntity entity = Entities[i];
                 #region Lighting
                 Array.Clear(rcDataUploadBuffer, c_offsetLightingData, c_lightingDataSize);
                 int lightCount = 0;
-                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
+                pBufferData = p0;
                 if (mainLightIndex != -1)
                 {
                     Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[mainLightIndex].rotateMatrix), pBufferData, true);
@@ -190,20 +198,19 @@ namespace Coocoo3D.RenderPipeline
                 }
                 #endregion
                 pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetTransformMatrixData);
-                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
-                Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
+                Marshal.StructureToPtr(Matrix4x4.Transpose(entity.boneComponent.LocalToWorld), pBufferData, true);
 
                 graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
             }
             #endregion
             #region Update material data
             int matIndex = 0;
+            pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
             for (int i = 0; i < Entities.Count; i++)
             {
                 var Materials = Entities[i].rendererComponent.Materials;
                 for (int j = 0; j < Materials.Count; j++)
                 {
-                    IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
                     Marshal.StructureToPtr(Materials[j].innerStruct, pBufferData, true);
                     graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, MMDMatLit.c_materialDataSize, c_offsetMaterialData);
                     matIndex++;
@@ -211,12 +218,12 @@ namespace Coocoo3D.RenderPipeline
             }
             #endregion
 
+            pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
             for (int i = 0; i < cameras.Count; i++)
             {
-                cameraPresentDatas[i].UpdateCameraData(cameras[i]);
+                cameraPresentDatas[i].UpdateCameraData(cameras[i], ref context.settings);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
-                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
                 Marshal.WriteInt32(pBufferData + 256, settings.EnableAO ? 1 : 0);
                 Marshal.WriteInt32(pBufferData + 256 + 4, settings.EnableShadow ? 1 : 0);
@@ -231,7 +238,7 @@ namespace Coocoo3D.RenderPipeline
             var DSV0 = context.DSV0;
 
             graphicsContext.SetRootSignature(rootSignature);
-            graphicsContext.SetSRV(PObjectType.mmd, null, 2);
+            //graphicsContext.SetSRVT((RenderTexture2D)null, 6);//may used in d3d11
             graphicsContext.SetAndClearDSV(DSV0);
             IList<MMD3DEntity> Entities = context.entities;
             for (int i = 0; i < Entities.Count; i++)
@@ -250,13 +257,19 @@ namespace Coocoo3D.RenderPipeline
 
             graphicsContext.SetRootSignature(rootSignature);
             graphicsContext.SetAndClearRTVDSV(context.outputRTV, context.outputDSV, Vector4.Zero);
-            graphicsContext.SetSRV_RT(PObjectType.mmd, context.DSV0, 2);
+            graphicsContext.SetCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
+            graphicsContext.SetSRVT(context.DSV0, 6);
+            graphicsContext.SetSRVT(context.EnvCubeMap, 7);
+            graphicsContext.SetSRVT(context.IrradianceMap, 8);
             int matIndex = 0;
             for (int i = 0; i < context.entities.Count; i++)
             {
                 MMD3DEntity entity = context.entities[i];
                 RenderEntity(context, entity, cameraPresentDatas[cameraIndex], entityDataBuffers[i], ref matIndex);
             }
+            graphicsContext.SetPObject(PObjectSkyBox, CullMode.back, BlendState.none);
+            graphicsContext.SetMesh(context.ndcQuadMesh);
+            graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
         }
 
         private void DesireEntityBuffers(DeviceResources deviceResources, int count)
@@ -273,7 +286,7 @@ namespace Coocoo3D.RenderPipeline
         {
             while (materialBuffers.Count < count)
             {
-                ConstantBufferStatic constantBuffer = new ConstantBufferStatic();
+                ConstantBuffer constantBuffer = new ConstantBuffer();
                 constantBuffer.Reload(deviceResources, MMDMatLit.c_materialDataSize);
                 materialBuffers.Add(constantBuffer);
             }
@@ -322,7 +335,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetMeshSkinned(rendererComponent.mesh);
             for (int i = 0; i < Materials.Count; i++)
             {
-                if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.CastSelfShadow))
+                if (Materials[i].DrawFlags.HasFlag(NMMDE_DrawFlag.CastSelfShadow))
                 {
                     if (texs != null)
                     {
@@ -332,14 +345,14 @@ namespace Coocoo3D.RenderPipeline
                         if (tex1 != null)
                         {
                             if (tex1.Status == GraphicsObjectStatus.loaded)
-                                graphicsContext.SetSRV(PObjectType.mmd, tex1, 0);
+                                graphicsContext.SetSRVT(tex1, 4);
                             else if (tex1.Status == GraphicsObjectStatus.loading)
-                                graphicsContext.SetSRV(PObjectType.mmd, textureLoading, 0);
+                                graphicsContext.SetSRVT(textureLoading, 4);
                             else
-                                graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
+                                graphicsContext.SetSRVT(textureError, 4);
                         }
                         else
-                            graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
+                            graphicsContext.SetSRVT(textureError, 4);
                     }
                     graphicsContext.Draw(Materials[i].indexCount, indexStartLocation);
                 }
@@ -395,22 +408,21 @@ namespace Coocoo3D.RenderPipeline
                     }
                     else
                         tex2 = textureError;
-                    graphicsContext.SetSRV(PObjectType.mmd, tex1, 0);
-                    graphicsContext.SetSRV(PObjectType.mmd, tex2, 1);
+                    graphicsContext.SetSRVT(tex1, 4);
+                    graphicsContext.SetSRVT(tex2, 5);
                 }
                 else
                 {
-                    graphicsContext.SetSRV(PObjectType.mmd, textureError, 0);
-                    graphicsContext.SetSRV(PObjectType.mmd, textureError, 1);
+                    graphicsContext.SetSRVT(textureError, 4);
+                    graphicsContext.SetSRVT(textureError, 5);
                 }
                 graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
                 graphicsContext.SetCBVR(entityDataBuffer, 1);
-                graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
                 graphicsContext.SetCBVR(materialBuffers[matIndex], 3);
                 matIndex++;
                 CullMode cullMode = CullMode.back;
                 BlendState blendState = BlendState.alpha;
-                if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawDoubleFace))
+                if (Materials[i].DrawFlags.HasFlag(NMMDE_DrawFlag.DrawDoubleFace))
                     cullMode = CullMode.none;
                 //if (Materials[i].DrawFlags.HasFlag(MMDSupport.DrawFlags.DrawSelfShadow))
                 //    blendState = BlendState.none;

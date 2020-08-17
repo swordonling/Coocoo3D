@@ -38,42 +38,27 @@ namespace Coocoo3D
             worldViewer.AppBody = appBody;
         }
 
-        private void Page_Loaded(object sender, RoutedEventArgs e)
+        private void AddPage(TabView tabView, string header, Type pageType, object navParam)
         {
             Frame frame1 = new Frame();
-            frame1.Navigate(typeof(PropertiesPages.CommonPage), appBody);
-            tabViewL1.TabItems.Add(new TabViewItem()
+            frame1.Navigate(pageType, navParam);
+            tabView.TabItems.Add(new TabViewItem()
             {
-                Header = "通常",
+                Header = header,
                 Content = frame1,
             });
+        }
 
-            frame1 = new Frame();
-            frame1.Navigate(typeof(PropertiesPages.ScenePage), appBody);
-            tabViewR1.TabItems.Add(new TabViewItem()
-            {
-                Header = "场景",
-                Content = frame1,
-            });
+        private void Page_Loaded(object sender, RoutedEventArgs e)
+        {
 
-            frame1 = new Frame();
-            frame1.Navigate(typeof(PropertiesPages.PostProcessPage), appBody);
-            tabViewR1.TabItems.Add(new TabViewItem()
-            {
-                Header = "后处理",
-                Content = frame1,
-            });
+            AddPage(tabViewL1, "通常", typeof(PropertiesPages.CommonPage), appBody);
+            AddPage(tabViewL1, "天空盒", typeof(PropertiesPages.SkyBoxPage), appBody);
+            AddPage(tabViewR1, "场景", typeof(PropertiesPages.ScenePage), appBody);
+            AddPage(tabViewR1, "后处理", typeof(PropertiesPages.PostProcessPage), appBody);
+            AddPage(tabViewB1, "资源", typeof(PropertiesPages.ResourcesPage), appBody);
 
-            frame1 = new Frame();
-            frame1.Navigate(typeof(PropertiesPages.ResourcesPage), appBody);
-            tabViewB1.TabItems.Add(new TabViewItem()
-            {
-                Header = "资源",
-                Content = frame1,
-            });
-
-
-            frame1 = new Frame();
+            Frame frame1 = new Frame();
             frame1.Navigate(typeof(PropertiesPages.EmptyPropertiesPage));
             appBody.frameViewProperties = frame1;
             tabViewR2.TabItems.Add(new TabViewItem()
@@ -83,18 +68,6 @@ namespace Coocoo3D
             });
         }
 
-        //private async void Test_Click(object sender, RoutedEventArgs e)
-        //{
-        //    FileOpenPicker picker = new FileOpenPicker();
-        //    picker.FileTypeFilter.Add("*");
-        //    var file = await picker.PickSingleFileAsync();
-        //    if (file == null) return;
-
-        //    Stream texStream = (await file.OpenReadAsync()).AsStreamForRead();
-        //    byte[] texBytes = new byte[texStream.Length];
-        //    texStream.Read(texBytes, 0, (int)texStream.Length);
-        //    var tex = Texture2D.LoadFromImage(appBody.deviceResources, texBytes);
-        //}
         private async void OpenFolder_Click(object sender, RoutedEventArgs e)
         {
             await UI.UISharedCode.OpenResourceFolder(appBody);
@@ -132,24 +105,24 @@ namespace Coocoo3D
         }
         private void Rewind_Click(object sender, RoutedEventArgs e)
         {
-            appBody.Playing = true;
-            appBody.PlaySpeed = -2.0f;
+            appBody.GameDriverContext.Playing = true;
+            appBody.GameDriverContext.PlaySpeed = -2.0f;
             appBody.ForceAudioAsync();
         }
         private void FastForward_Click(object sender, RoutedEventArgs e)
         {
-            appBody.Playing = true;
-            appBody.PlaySpeed = 2.0f;
+            appBody.GameDriverContext.Playing = true;
+            appBody.GameDriverContext.PlaySpeed = 2.0f;
             appBody.ForceAudioAsync();
         }
         private void Front_Click(object sender, RoutedEventArgs e)
         {
-            appBody.PlayTime = 0;
+            appBody.GameDriverContext.PlayTime = 0;
             appBody.RequireRender(true);
         }
         private void Rear_Click(object sender, RoutedEventArgs e)
         {
-            appBody.PlayTime = 9999;
+            appBody.GameDriverContext.PlayTime = 9999;
             appBody.RequireRender(true);
         }
 

@@ -123,6 +123,9 @@
     <Compile Include="Components\MMDMotionComponent.cs" />
     <Compile Include="Components\MMDRendererComponent.cs" />
     <Compile Include="Core\DefaultResources.cs" />
+    <Compile Include="Core\GameDriver.cs" />
+    <Compile Include="Core\GeneralGameDriver.cs" />
+    <Compile Include="Core\ProcessingList.cs" />
     <Compile Include="Core\Scene.cs" />
     <Compile Include="FileFormat\CCSceneFormat.cs" />
     <Compile Include="FileFormat\CCShaderFormat.cs" />
@@ -169,11 +172,15 @@
     <Compile Include="PropertiesPages\ScenePage.xaml.cs">
       <DependentUpon>ScenePage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PropertiesPages\SkyBoxPage.xaml.cs">
+      <DependentUpon>SkyBoxPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PropertiesPages\SoftwareInfoPropertiesPage.xaml.cs">
       <DependentUpon>SoftwareInfoPropertiesPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RenderPipeline\ForwardRenderPipeline1.cs" />
+    <Compile Include="RenderPipeline\MiscProcess.cs" />
     <Compile Include="RenderPipeline\PostProcess.cs" />
     <Compile Include="RenderPipeline\RayTracingRenderPipeline1.cs" />
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
@@ -251,6 +258,10 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="PropertiesPages\SkyBoxPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="PropertiesPages\SoftwareInfoPropertiesPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -275,6 +286,10 @@
     <ProjectReference Include="..\Coocoo3DGraphics\Coocoo3DGraphics.vcxproj">
       <Project>{8f8bf5cc-3dee-4f9f-abd5-8fa89ba6109c}</Project>
       <Name>Coocoo3DGraphics</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Coocoo3DNativeInteroperable\Coocoo3DNativeInteroperable.vcxproj">
+      <Project>{2ec88ab7-c8cf-4c13-8490-977372fe474a}</Project>
+      <Name>Coocoo3DNativeInteroperable</Name>
     </ProjectReference>
     <ProjectReference Include="..\Coocoo3DPhysics\Coocoo3DPhysics.vcxproj">
       <Project>{3a646f41-2ae9-436f-8b6d-d399f6fb3f79}</Project>

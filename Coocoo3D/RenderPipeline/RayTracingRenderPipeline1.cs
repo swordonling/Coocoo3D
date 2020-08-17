@@ -98,7 +98,7 @@ namespace Coocoo3D.RenderPipeline
             ref var settings = ref context.settings;
             for (int i = 0; i < cameras.Count; i++)
             {
-                cameraPresentDatas[i].UpdateCameraData(cameras[i]);
+                cameraPresentDatas[i].UpdateCameraData(cameras[i], ref context.settings);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
@@ -163,10 +163,12 @@ namespace Coocoo3D.RenderPipeline
         public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
             context.graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
-            context.graphicsContext.SetUAVCT(context.outputRTV, 0);
+            context.graphicsContext.SetComputeUAVT(context.outputRTV, 0);
+            context.graphicsContext.SetComputeSRVT(context.EnvCubeMap, 3);
+            context.graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
             var entities = context.entities;
 
-            context.graphicsContext.SetCBVCR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
+            context.graphicsContext.SetComputeCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
 
             if (entities.Count > 0)
             {
