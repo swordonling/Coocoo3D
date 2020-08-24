@@ -93,6 +93,11 @@ namespace Coocoo3D.FileFormat
             {
                 keyframes.Sort();
             }
+            foreach (var keyframes in MorphKeyFrameSet.Values)
+            {
+                keyframes.Sort();
+            }
+            CameraKeyFrames.Sort();
         }
 
         public void SaveToFile(BinaryWriter writer)

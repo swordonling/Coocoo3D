@@ -19,3 +19,4 @@
 #include <concrt.h>
 #include <collection.h>
 #include <d3dcompiler.h>
+#include <robuffer.h>

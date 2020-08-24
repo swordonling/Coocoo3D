@@ -135,7 +135,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
 	float3 diffMulA = diffuseColor.rgb * diffuseColor.a;
 	float3 viewDir = payload.direction;
-	float3 specCol = clamp(_SpecularColor.rgb, 0.005, 1);
+	float3 specCol = clamp(_SpecularColor.rgb, 0.0001, 1);
 
 	normal = normalize(normal);
 	uint randomState = DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue;
@@ -184,13 +184,13 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 					ray2.TMin = 0.0001;
 					ray2.TMax = 10000.0;
 					TestRayPayload payload2 = { false, float3(0,0,0), float4(0,0,0,0) };
-					if (payload.depth < 3)
+					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
+					if (payload.depth < 3 && dot(lightStrength, lightStrength)>1e-6)
 						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
 					float inShadow = 1.0f;
 					if (!payload2.miss)
 						inShadow = 0;
 
-					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
 					UnityLight unitylight;
 					unitylight.color = lightStrength * inShadow;
 					unitylight.dir = _LightInfo[i].dir;
@@ -207,14 +207,14 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 					ray2.TMin = 0.0001;
 					ray2.TMax = distance(_LightInfo[i].dir, pos);
 					TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-					if (payload.depth < 3)
+					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
+					if (payload.depth < 3 && dot(lightStrength, lightStrength)>1e-6)
 						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
 					float inShadow = 1.0f;
 					if (!payload2.miss)
 						inShadow = 0.0f;
 
 					float3 lightDir = normalize(_LightInfo[i].dir - pos);
-					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
 					UnityLight light;
 					light.color = lightStrength * inShadow;
 					light.dir = lightDir;

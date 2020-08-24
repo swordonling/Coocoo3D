@@ -53,7 +53,7 @@ namespace Coocoo3D.PropertiesPages
         }
         private bool IsImageExtName(string extName)
         {
-            return StrEq(".jpg", extName) || StrEq(".png", extName) || StrEq(".bmp", extName);
+            return StrEq(".jpg", extName) || StrEq(".jpeg", extName) || StrEq(".png", extName) || StrEq(".bmp", extName) || StrEq(".tif", extName) || StrEq(".tiff", extName) || StrEq(".gif", extName);
         }
         private void _img0_DragOver(object sender, DragEventArgs e)
         {
@@ -77,8 +77,8 @@ namespace Coocoo3D.PropertiesPages
             public int x;
             public int y;
         }
-        int RenderCountInApply = 0;
-        private async void Apply_Click(object sender, RoutedEventArgs e)
+        int prevRenderFrame = 0;
+        private async Task Task1(RenderPipeline.MiscProcessType miscProcessType)
         {
             for (int i = 0; i < 6; i++)
             {
@@ -88,23 +88,34 @@ namespace Coocoo3D.PropertiesPages
                     return;
                 }
             }
-            byte[][] datas = new byte[6][];
             showInfo.Text = "正在处理";
-            for (int i = 0; i < 6; i++)
-            {
-                datas[i] = await ReadAllBytes(files[i]);
-            }
-            appBody.defaultResources.EnvironmentCube.ReloadFromImage1(appBody.wicFactory, imgSize[0].x, imgSize[0].y, datas[0], datas[1], datas[2], datas[3], datas[4], datas[5]);
+            appBody.defaultResources.EnvironmentCube.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
+                await FileIO.ReadBufferAsync(files[0]),
+                await FileIO.ReadBufferAsync(files[1]),
+                await FileIO.ReadBufferAsync(files[2]),
+                await FileIO.ReadBufferAsync(files[3]),
+                await FileIO.ReadBufferAsync(files[4]),
+                await FileIO.ReadBufferAsync(files[5]));
             int t1 = appBody.RenderCount;
-            if (RenderCountInApply == t1)
+            if (prevRenderFrame == t1)
             {
 
             }
-            RenderCountInApply = t1;
+            prevRenderFrame = t1;
             appBody.ProcessingList.AddObject(appBody.defaultResources.EnvironmentCube);
-            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.defaultResources.EnvironmentCube, appBody.defaultResources.IrradianceMap, RenderPipeline.MiscProcessType.GenerateIrradianceMap));
+            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.defaultResources.EnvironmentCube, appBody.defaultResources.IrradianceMap, miscProcessType));
             appBody.RequireRender();
             showInfo.Text = "操作完成";
+        }
+        private async void Apply_Click(object sender, RoutedEventArgs e)
+        {
+            await Task1(RenderPipeline.MiscProcessType.GenerateIrradianceMap);
+        }
+
+        private async void Apply1_Click(object sender, RoutedEventArgs e)
+        {
+            await Task1(RenderPipeline.MiscProcessType.GenerateIrradianceMapQ1);
+
         }
 
         private async void _img0_Drop(object sender, DragEventArgs e)
@@ -143,18 +154,6 @@ namespace Coocoo3D.PropertiesPages
                 appBody.settings.SkyBoxLightMultiple = value;
                 appBody.RequireRender();
             }
-        }
-
-        private async Task<byte[]> ReadAllBytes(StorageFile file)
-        {
-            var stream = await file.OpenReadAsync();
-            DataReader dataReader = new DataReader(stream);
-            await dataReader.LoadAsync((uint)stream.Size);
-            byte[] data = new byte[stream.Size];
-            dataReader.ReadBytes(data);
-            stream.Dispose();
-            dataReader.Dispose();
-            return data;
         }
     }
 }

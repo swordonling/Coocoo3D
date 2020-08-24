@@ -13,6 +13,7 @@
 #include "GraphicsSignature.h"
 #include "RayTracingScene.h"
 #include "ComputePO.h"
+#include "ReadBackTexture2D.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -62,8 +63,9 @@ namespace Coocoo3DGraphics
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
-		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
-		void UpdateVertices2(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
+		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
+		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
+		void UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(TextureCube^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
@@ -85,8 +87,10 @@ namespace Coocoo3DGraphics
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(ITexture^ texture);
 		void UpdateRenderTexture(IRenderTexture^ texture);
+		void UpdateReadBackTexture(ReadBackTexture2D^ texture);
 
 		void Copy(TextureCube^ source, RenderTextureCube^ dest);
+		void CopyBackBuffer(ReadBackTexture2D^ target, int index);
 		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
 		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);

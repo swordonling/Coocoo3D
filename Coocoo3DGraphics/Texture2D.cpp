@@ -114,6 +114,67 @@ void Texture2D::ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<b
 	GlobalUnlock(HGlobalImage);
 }
 
+void Texture2D::ReloadFromImage(WICFactory^ wicFactory, IBuffer^ file1)
+{
+	HGLOBAL HGlobalImage = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, file1->Length);
+
+	ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* pixels = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pixels));
+
+	ComPtr<IStream> memStream = nullptr;
+	DX::ThrowIfFailed(CreateStreamOnHGlobal(HGlobalImage, true, &memStream));
+	DX::ThrowIfFailed(memStream->Write(pixels, file1->Length, nullptr));
+	DX::ThrowIfFailed(memStream->Seek(LARGE_INTEGER{ 0,0 }, STREAM_SEEK_SET, nullptr));
+
+	auto factory = wicFactory->GetWicImagingFactory();
+	ComPtr<IWICBitmapDecoder> decoder = nullptr;
+	ComPtr<IWICBitmapFrameDecode> frameDecode = nullptr;
+	DX::ThrowIfFailed(factory->CreateDecoderFromStream(memStream.Get(), nullptr, WICDecodeMetadataCacheOnDemand, &decoder));
+	DX::ThrowIfFailed(decoder->GetFrame(0, &frameDecode));
+	WICPixelFormatGUID pixelFormatGuid;
+	frameDecode->GetPixelFormat(&pixelFormatGuid);
+
+	auto wicdata = wicFormatInfo.at(pixelFormatGuid);
+	DXGI_FORMAT dxgiFormat = wicdata.dxgiFormat;
+	DXGI_FORMAT fallbackDxgiFormat;
+	WICPixelFormatGUID fallbackWicFormat = wicdata.fallbackWicFormat;
+	UINT bytesPerPixel;
+	if (dxgiFormat != DXGI_FORMAT_UNKNOWN)
+		bytesPerPixel = dxgiFormatBytesPerPixel.at(dxgiFormat);
+	else {
+		wicdata = wicFormatInfo.at(fallbackWicFormat);
+		fallbackDxgiFormat = wicdata.dxgiFormat;
+		bytesPerPixel = dxgiFormatBytesPerPixel.at(fallbackDxgiFormat);
+	}
+	UINT width1;
+	UINT height1;
+
+	DX::ThrowIfFailed(frameDecode->GetSize(&width1, &height1));
+	m_width = width1;
+	m_height = height1;
+	m_textureData = ref new Platform::Array<byte, 1>(m_width * m_height * bytesPerPixel);
+	m_bindFlags = D3D11_BIND_SHADER_RESOURCE;
+	WICRect rect = {};
+	rect.Width = m_width;
+	rect.Height = m_height;
+
+
+	if (dxgiFormat != DXGI_FORMAT_UNKNOWN) {
+		DX::ThrowIfFailed(frameDecode->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
+		m_format = dxgiFormat;
+	}
+	else {
+		ComPtr<IWICBitmapSource> convertedBitmap = nullptr;
+		DX::ThrowIfFailed(WICConvertBitmapSource(fallbackWicFormat, frameDecode.Get(), &convertedBitmap));
+
+		DX::ThrowIfFailed(convertedBitmap->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
+		m_format = fallbackDxgiFormat;
+	}
+	GlobalUnlock(HGlobalImage);
+}
+
 void Texture2D::Reload(Texture2D^ texture)
 {
 	m_width = texture->m_width;

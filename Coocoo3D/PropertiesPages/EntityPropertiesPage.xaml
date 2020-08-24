@@ -85,7 +85,7 @@
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="次表面" Value="{x:Bind innerStruct.Subsurface,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面" Value="{x:Bind innerStruct.Specular,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面染色" Value="{x:Bind innerStruct.SpecularTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="各向异性" Value="{x:Bind innerStruct.Anisotropic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                                    <!--<Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="各向异性" Value="{x:Bind innerStruct.Anisotropic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>-->
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉" Value="{x:Bind innerStruct.Sheen,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉染色" Value="{x:Bind innerStruct.SheenTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
                                     <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="清漆" Value="{x:Bind innerStruct.Clearcoat,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>

@@ -43,8 +43,8 @@ namespace Coocoo3D.Core
 
             TextureLoading.ReloadPure(1, 1, new Vector4(0, 1, 1, 1));
             TextureError.ReloadPure(1, 1, new Vector4(1, 0, 1, 1));
-            EnvironmentCube.ReloadPure(64, 64, new Vector4[] { new Vector4(0.5f, 0.4f, 0.4f, 1), new Vector4(0.4f, 0.5f, 0.4f, 1), new Vector4(0.5f, 0.4f, 0.5f, 1), new Vector4(0.1f, 0.125f, 0.125f, 1) , new Vector4(0.5f, 0.5f, 0.4f, 1), new Vector4(0.5f, 0.4f, 0.5f, 1)});
-            IrradianceMap.ReloadRTVUAV(64, 64, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
+            EnvironmentCube.ReloadPure(64, 64, new Vector4[] { new Vector4(0.5f, 0.4f, 0.4f, 1), new Vector4(0.4f, 0.5f, 0.4f, 1), new Vector4(0.5f, 0.4f, 0.5f, 1), new Vector4(0.08f, 0.1f, 0.1f, 1) , new Vector4(0.5f, 0.5f, 0.4f, 1), new Vector4(0.4f, 0.4f, 0.5f, 1)});
+            IrradianceMap.ReloadRTVUAV(32, 32, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
             miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(EnvironmentCube, IrradianceMap, RenderPipeline.MiscProcessType.GenerateIrradianceMap));
             mainCaches.AddObject(TextureLoading);
             mainCaches.AddObject(TextureError);

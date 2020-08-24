@@ -12,6 +12,7 @@ struct LightInfo
 cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
+	float4x4 g_mWorld1;
 	LightInfo Lightings[4];
 };
 cbuffer cb3 : register(b3)
@@ -61,9 +62,77 @@ struct PSSkinnedIn
 	float2 TexCoord	: TEXCOORD;		//Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
 };
+float3 BRDF_1(float3 L, float3 V, float3 N, /*float3 X, float3 Y,*/
+	float3 baseColor,
+	float metallic = 0,
+	float roughness = 0.5,
+	float subsurface = 0,
+	float specular = 0,
+	float specularTint = 0,
+	float anisotropic = 0,
+	float sheen = 0,
+	float sheenTint = 0.0,
+	float clearcoat = 0,
+	float clearcoatGloss = 0
+)
+{
+	float NdotL = dot(N, L);
+	float NdotV = dot(N, V);
+	if (NdotL < 0 || NdotV < 0) return float3(0, 0, 0);
+
+	float3 H = normalize(L + V);
+	float NdotH = dot(N, H);
+	float LdotH = dot(L, H);
+
+	//float3 Cdlin = mon2lin(baseColor);
+	float3 Cdlin = baseColor;
+	float Cdlum = .3 * Cdlin[0] + .6 * Cdlin[1] + .1 * Cdlin[2]; // luminance approx.
+
+	float3 Ctint = Cdlum > 0 ? Cdlin / Cdlum : float3(1, 1, 1); // normalize lum. to isolate hue+sat
+	float3 Cspec0 = lerp(specular * .08 * lerp(float3(1, 1, 1), Ctint, specularTint), Cdlin, metallic);
+	float3 Csheen = lerp(float3(1, 1, 1), Ctint, sheenTint);
+
+	// Diffuse fresnel - go from 1 at normal incidence to .5 at grazing
+	// and mix in diffuse retro-reflection based on roughness
+	float FL = SchlickFresnel(NdotL), FV = SchlickFresnel(NdotV);
+	float Fd90 = 0.5 + 2 * LdotH * LdotH * roughness;
+	float Fd = lerp(1.0, Fd90, FL) * lerp(1.0, Fd90, FV);
+
+	// Based on Hanrahan-Krueger brdf approximation of isotropic bssrdf
+	// 1.25 scale is used to (roughly) preserve albedo
+	// Fss90 used to "flatten" retroreflection based on roughness
+	float Fss90 = LdotH * LdotH * roughness;
+	float Fss = lerp(1.0, Fss90, FL) * lerp(1.0, Fss90, FV);
+	float ss = 1.25 * (Fss * (1 / (NdotL + NdotV) - .5) + .5);
+
+	// specular
+	//float aspect = sqrt(1 - anisotropic * .9);
+	//float ax = max(.001, pow2(roughness) / aspect);
+	//float ay = max(.001, pow2(roughness) * aspect);
+	//float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
+	float Ds = GTR2(NdotH, max(.001, pow2(roughness)));
+	float FH = SchlickFresnel(LdotH);
+	float3 Fs = lerp(Cspec0, float3(1, 1, 1), FH);
+	//float Gs;
+	//Gs = smithG_GGX_aniso(NdotL, dot(L, X), dot(L, Y), ax, ay);
+	//Gs *= smithG_GGX_aniso(NdotV, dot(V, X), dot(V, Y), ax, ay);
+
+	// sheen
+	float3 Fsheen = FH * sheen * Csheen;
+
+	// clearcoat (ior = 1.5 -> F0 = 0.04)
+	float Dr = GTR1(NdotH, lerp(.1, .001, clearcoatGloss));
+	float Fr = lerp(.04, 1.0, FH);
+	float Gr = smithG_GGX(NdotL, .25) * smithG_GGX(NdotV, .25);
+
+	return ((1 / Disney_BRDF_PI) * lerp(Fd, ss, subsurface) * Cdlin + Fsheen)
+		* (1 - metallic)
+		+ /*Gs **/ Fs * Ds + .25 * clearcoat * Gr * Fr * Dr;
+}
 float3 brdf_s(float3 L, float3 V, float3 N, float3 X, float3 Y, float3 baseColor)
 {
-	return BRDF(L, V, N, X, Y, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
+	//return BRDF(L, V, N, X, Y, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
+	return BRDF_1(L, V, N, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
 }
 float4 main(PSSkinnedIn input) : SV_TARGET
 {
@@ -99,15 +168,15 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
 
-			strength += brdf_s(lightDir,viewDir,norm,X,Y,diff) * lightStrength * inShadow;
-			inDirect += lightStrength * 0.0628f;
+			strength += brdf_s(lightDir,viewDir,norm,X,Y,diff) * lightStrength * dot(lightDir, norm) * 3.141592653589f * inShadow;
+			inDirect += lightStrength * 0.003141592653589f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm) * 3.141592653589f;
 		}
 	}
 	for (int i = 1; i < 4; i++)
@@ -118,15 +187,15 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a;
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
-			inDirect += lightStrength * 0.0628f;
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm) * 3.141592653589f * inShadow;
+			inDirect += lightStrength * 0.003141592653589f;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength;
+			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm) * 3.141592653589f;
 		}
 	}
 	//strength += _AmbientColor * diff;
@@ -142,7 +211,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			randomDir = -randomDir;
 		}
-		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * (EnvCube.Sample(s1, randomDir)* g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, norm);
+		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * (EnvCube.Sample(s1, randomDir) * g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, norm);
 	}
 	return float4(strength, texColor.a);
 }

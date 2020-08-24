@@ -8,16 +8,18 @@ cbuffer cb0 : register(b0)
 	float4x4 zproj;
 	float4x4 nzproj;
 	uint2 imageSize;
+	int quality;
+	uint batch;
 }
 RWTexture2DArray<float4> IrradianceMap : register(u0);
 TextureCube Image : register(t0);
 SamplerState s0 : register(s0);
-[numthreads(32, 32, 1)]
+[numthreads(8, 8, 1)]
 void main(uint3 dtid : SV_DispatchThreadID)
 {
 	float3 TexDir = float3(0, 0, 0);
 	float4 dir1 = float4(0, 0, 0, 0);
-	uint randomState = dtid.x + dtid.y * 2048 + dtid.z * 4194304;
+	uint randomState = dtid.x + dtid.y * 2048 + dtid.z * 4194304 + batch * 67108864;
 	float2 screenPos = ((float2)dtid.xy + 0.5f) / (float2)imageSize * 2 - 1;
 	if (dtid.x > imageSize.x || dtid.y > imageSize.y)
 	{
@@ -49,7 +51,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 	}
 	TexDir = normalize(dir1.xyz / dir1.w);
 	float3 col1 = float3(0, 0, 0);
-	const int c_sampleCount = 512;
+	const int c_sampleCount = 1024;
 	for (int i = 0; i < c_sampleCount; i++)
 	{
 		float3 vec1 = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
@@ -61,7 +63,8 @@ void main(uint3 dtid : SV_DispatchThreadID)
 		}
 		col1 += Image.SampleLevel(s0, vec1, 0) * ndl / c_sampleCount / 3.14159265359f;
 	}
-	IrradianceMap[dtid] = float4(col1, 1);
+	float qsp = 1.0f / (quality+ 1.0f);
+	IrradianceMap[dtid] = float4(col1 * qsp + IrradianceMap[dtid].rgb, 1);
 	//IrradianceMap[dtid] = float4(TexDir, 1);
 	//IrradianceMap[dtid] = float4(0.5,1,1,1);
 }

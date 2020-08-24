@@ -14,7 +14,8 @@ namespace Coocoo3D.RenderPipeline
 {
     public enum MiscProcessType
     {
-        GenerateIrradianceMap,
+        GenerateIrradianceMap = 65536,
+        GenerateIrradianceMapQ1 = 65537,
     }
     public struct MiscProcessPair<T0, T1>
     {
@@ -53,10 +54,12 @@ namespace Coocoo3D.RenderPipeline
     }
     public class MiscProcess
     {
-        public ComputePO computePO = new ComputePO();
+        public ComputePO IrradianceMap0 = new ComputePO();
+        public ComputePO ClearIrradianceMap = new ComputePO();
         GraphicsSignature rootSignature = new GraphicsSignature();
         public bool Ready = false;
-        public ConstantBuffer constantBuffer1 = new ConstantBuffer();
+        public const int c_maxIteration = 16;
+        public ConstantBuffer[] constantBuffers = new ConstantBuffer[c_maxIteration];
         XYZData _XyzData;
         public byte[] cpuBuffer1 = new byte[512];
         public GCHandle handle1;
@@ -76,8 +79,13 @@ namespace Coocoo3D.RenderPipeline
                 GraphicSignatureDesc.SRVTable,
                 GraphicSignatureDesc.UAVTable,
             });
-            constantBuffer1.Reload(deviceResources, 512);
-            computePO.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
+            for (int i = 0; i < constantBuffers.Length; i++)
+            {
+                if (constantBuffers[i] == null) constantBuffers[i] = new ConstantBuffer();
+                constantBuffers[i].Reload(deviceResources, 512);
+            }
+            IrradianceMap0.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
+            ClearIrradianceMap.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_ClearIrradianceMap.cso"));
             float fovAngle = MathF.PI / 2;
             Matrix4x4 fov1 = Matrix4x4.CreatePerspectiveFieldOfView(fovAngle, 1, 0.01f, 1000);
             Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitX, -Vector3.UnitY) * fov1, out var PX);
@@ -100,22 +108,52 @@ namespace Coocoo3D.RenderPipeline
             if (!Ready) return;
             for (int i = 0; i < context.miscProcessPairs.Count; i++)
             {
-                if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMap)
+                if (context.miscProcessPairs[i].Type.HasFlag(MiscProcessType.GenerateIrradianceMap))
                 {
                     var texture0 = context.miscProcessPairs[i].t0;
                     var texture1 = context.miscProcessPairs[i].t1;
+                    IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(cpuBuffer1, 0);
+                    void UpdateGPUBuffer(int bufIndex)
+                    {
+                        Marshal.StructureToPtr(_XyzData, ptr1, true);
+                        context.graphicsContext.UpdateResource(constantBuffers[bufIndex], cpuBuffer1, 512);
+                    }
                     _XyzData.x1 = (int)texture1.m_width;
                     _XyzData.y1 = (int)texture1.m_height;
-                    IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(cpuBuffer1, 0);
-                    Marshal.StructureToPtr(_XyzData, ptr1, true);
-                    //context.graphicsContext.Copy(texture0, texture1);
-                    context.graphicsContext.UpdateResource(constantBuffer1, cpuBuffer1, 512);
+                    _XyzData.Quality = ((int)context.miscProcessPairs[i].Type - 65536) * (c_maxIteration - 1);
+                    _XyzData.Batch = 0;
+                    UpdateGPUBuffer(0);
+                    if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMapQ1)
+                    {
+                        for (int j = 1; j < c_maxIteration; j++)
+                        {
+                            _XyzData.Batch = j;
+                            UpdateGPUBuffer(j);
+                        }
+                    }
+
                     context.graphicsContext.SetRootSignatureCompute(rootSignature);
-                    context.graphicsContext.SetPObject(computePO);
-                    context.graphicsContext.SetComputeCBVR(constantBuffer1, 0);
+                    context.graphicsContext.SetComputeCBVR(constantBuffers[0], 0);
                     context.graphicsContext.SetComputeSRVT(texture0, 1);
                     context.graphicsContext.SetComputeUAVT(texture1, 2);
-                    context.graphicsContext.Dispatch((int)(texture1.m_width + 31) / 32, (int)(texture1.m_height + 31) / 32, 6);
+                    context.graphicsContext.SetPObject(ClearIrradianceMap);
+                    context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
+
+                    context.graphicsContext.SetPObject(IrradianceMap0);
+                    if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMapQ1)
+                    {
+                        for (int j = 0; j < c_maxIteration; j++)
+                        {
+                            context.graphicsContext.SetComputeUAVT(texture1, 2);
+                            context.graphicsContext.SetComputeCBVR(constantBuffers[j], 0);
+                            context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
+                        }
+                    }
+                    else
+                    {
+                        context.graphicsContext.SetComputeUAVT(texture1, 2);
+                        context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
+                    }
                     //context.graphicsContext.Dispatch((int)(texture1.m_width + 31) / 32, (int)(texture1.m_height + 31) / 32, 6);
                     //context.graphicsContext.Copy(texture0, texture1);
                 }
@@ -133,6 +171,8 @@ namespace Coocoo3D.RenderPipeline
             public Matrix4x4 NZ;
             public int x1;
             public int y1;
+            public int Quality;
+            public int Batch;
         }
 
         protected async Task<byte[]> ReadAllBytes(string uri)

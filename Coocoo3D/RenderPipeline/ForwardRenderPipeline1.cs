@@ -15,10 +15,10 @@ namespace Coocoo3D.RenderPipeline
 {
     public class ForwardRenderPipeline1 : RenderPipeline
     {
-        public const int c_transformMatrixDataSize = 64;
-        public const int c_offsetTransformMatrixData = 0;
+        public const int c_entityDataSize = 128;
+        public const int c_offsetEntityData = 0;
         public const int c_lightingDataSize = 384;
-        public const int c_offsetLightingData = c_offsetTransformMatrixData + c_transformMatrixDataSize;
+        public const int c_offsetLightingData = c_offsetEntityData + c_entityDataSize;
         public const int c_materialDataSize = 256;
         public const int c_offsetMaterialData = c_offsetLightingData + c_lightingDataSize;
         public const int c_presentDataSize = 512;
@@ -95,7 +95,7 @@ namespace Coocoo3D.RenderPipeline
         public PresentData lightingCameraPresentData = new PresentData();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
-        byte[] rcDataUploadBuffer = new byte[c_transformMatrixDataSize + c_lightingDataSize + c_materialDataSize + c_presentDataSize];
+        byte[] rcDataUploadBuffer = new byte[c_entityDataSize + c_lightingDataSize + c_materialDataSize + c_presentDataSize];
         public GCHandle gch_rcDataUploadBuffer;
 
         public ForwardRenderPipeline1()
@@ -197,10 +197,11 @@ namespace Coocoo3D.RenderPipeline
                     }
                 }
                 #endregion
-                pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetTransformMatrixData);
+                pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetEntityData);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(entity.boneComponent.LocalToWorld), pBufferData, true);
+                Marshal.StructureToPtr(entity.rendererComponent.amountAB, pBufferData + 64, true);
 
-                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_transformMatrixDataSize + c_lightingDataSize, c_offsetTransformMatrixData);
+                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_entityDataSize + c_lightingDataSize, c_offsetEntityData);
             }
             #endregion
             #region Update material data
@@ -277,7 +278,7 @@ namespace Coocoo3D.RenderPipeline
             while (entityDataBuffers.Count < count)
             {
                 ConstantBuffer constantBuffer = new ConstantBuffer();
-                constantBuffer.Reload(deviceResources, c_transformMatrixDataSize + c_lightingDataSize);
+                constantBuffer.Reload(deviceResources, c_entityDataSize + c_lightingDataSize);
                 entityDataBuffers.Add(constantBuffer);
             }
         }

@@ -48,11 +48,11 @@ namespace Coocoo3D.Controls
         {
             if (!swapChainPanel.IsLoaded) return;
             if (_appBody == null) return;
-            AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
+            AppBody.GameDriverContext.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
-            AppBody.NewSize = new Size(ActualWidth, ActualHeight);
-            AppBody.RequireResize = true;
-            AppBody.RequireInterruptRender = true;
+            AppBody.GameDriverContext.NewSize = new Size(ActualWidth, ActualHeight);
+            AppBody.GameDriverContext.RequireResize = true;
+            AppBody.GameDriverContext.RequireInterruptRender = true;
             AppBody.swapChainReady = true;
             //AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
             AppBody.RequireRender();
@@ -62,10 +62,11 @@ namespace Coocoo3D.Controls
 
         private void SwapChainPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            AppBody.AspectRatio = (float)(ActualWidth / ActualHeight);
-            AppBody.NewSize = e.NewSize;
-            AppBody.RequireResize = true;
-            AppBody.RequireInterruptRender = true;
+            if (AppBody.Recording) return;
+            AppBody.GameDriverContext.AspectRatio = (float)(ActualWidth / ActualHeight);
+            AppBody.GameDriverContext.NewSize = e.NewSize;
+            AppBody.GameDriverContext.RequireResize = true;
+            AppBody.GameDriverContext.RequireInterruptRender = true;
             //AppBody.deviceResources.SetLogicalSize(e.NewSize);
             AppBody.RequireRender();
         }

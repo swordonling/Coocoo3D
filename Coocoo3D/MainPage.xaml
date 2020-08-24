@@ -149,7 +149,7 @@
                               CanDragTabs="True" TabDragStarting="TabView_TabDragStarting" AllowDrop="True" DragOver="TabView_DragOver" Drop="TabView_Drop">
                     </muxc:TabView>
                     <MediaElement x:Name="mediaElement" Grid.Column="1" AutoPlay="False"/>
-                    <controls:WorldViewer x:Name="worldViewer" Grid.Column="1"/>
+                    <controls:WorldViewer x:Name="worldViewer" Grid.Column="1" Loaded="worldViewer_Loaded"/>
                 </Grid>
                 <muxc:TabView Grid.Row="1" x:Name="tabViewB1"
                               CanDragTabs="True" TabDragStarting="TabView_TabDragStarting" AllowDrop="True" DragOver="TabView_DragOver" Drop="TabView_Drop">
@@ -188,7 +188,10 @@
                         Click="Front_Click"/>
                             <Button ToolTipService.ToolTip="跳到最后"
                             Content="&#xE101;"
-                            Click="Rear_Click"
+                            Click="Rear_Click"/>
+                            <Button ToolTipService.ToolTip="录制图片序列"
+                            Content="&#xE1F5;"
+                            Click="Record_Click"
                             Margin="0 0 30 0"/>
                         </StackPanel>
                     </muxc:TabView.TabStripFooter>

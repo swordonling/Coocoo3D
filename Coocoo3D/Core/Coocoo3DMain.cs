@@ -9,7 +9,6 @@ using Coocoo3D.Present;
 using Coocoo3D.Controls;
 using Coocoo3D.Utility;
 using Windows.Storage;
-using Windows.UI.Xaml;
 using System.Collections.ObjectModel;
 using Windows.System.Threading;
 using Windows.UI.Core;
@@ -31,7 +30,6 @@ namespace Coocoo3D.Core
         public DefaultResources defaultResources = new DefaultResources();
         public MainCaches mainCaches = new MainCaches();
 
-        public MediaElement mediaElement;
         public Scene CurrentScene;
 
         private List<MMD3DEntity> Entities { get => CurrentScene.Entities; }
@@ -42,14 +40,9 @@ namespace Coocoo3D.Core
 
         public Camera camera = new Camera();
         //public WidgetRenderer widgetRenderer = new WidgetRenderer();
-        public StorageFolder openedStorageFolder;
-        public event EventHandler OpenedStorageFolderChanged;
-        public void OpenedStorageFolderChange(StorageFolder storageFolder)
-        {
-            openedStorageFolder = storageFolder;
-            OpenedStorageFolderChanged?.Invoke(this, null);
-        }
-        GameDriver GameDriver = new GeneralGameDriver();
+        public GameDriver GameDriver;
+        public GeneralGameDriver _GeneralGameDriver = new GeneralGameDriver();
+        public RecorderGameDriver _RecorderGameDriver = new RecorderGameDriver();
         public GameDriverContext GameDriverContext = new GameDriverContext() { FrameInterval = TimeSpan.FromSeconds(1 / 120.0) };
         #region Time
         ThreadPoolTimer threadPoolTimer;
@@ -67,7 +60,6 @@ namespace Coocoo3D.Core
             await Dispatcher.RunAsync(CoreDispatcherPriority.Low, () =>
             {
                 FrameUpdated?.Invoke(this, null);
-                ForceAudioAsync();
             });
         }
         #endregion
@@ -84,10 +76,13 @@ namespace Coocoo3D.Core
         public bool HighResolutionShadowNow = false;
         public Physics3D physics3D = new Physics3D();
         public Physics3DScene physics3DScene = new Physics3DScene();
-        public float AspectRatio;
         IAsyncAction RenderLoop;
         public Coocoo3DMain()
         {
+            GameDriver = _GeneralGameDriver;
+            GameDriverContext.DeviceResources = deviceResources;
+            GameDriverContext.ProcessingList = ProcessingList;
+            GameDriverContext.WICFactory = wicFactory;
             _currentRenderPipeline = forwardRenderPipeline1;
             graphicsContext.Reload(deviceResources);
             graphicsContext2.Reload(deviceResources);
@@ -146,7 +141,6 @@ namespace Coocoo3D.Core
         RenderPipeline.RenderPipeline _currentRenderPipeline;
         public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
         public bool UseNewFun;
-        //public long[] StopwatchTimes = new long[8];
         Task[] poolTasks1;
         private void UpdateEntities(float playTime)
         {
@@ -174,23 +168,23 @@ namespace Coocoo3D.Core
             }
             else for (int i = 0; i < Entities.Count; i++)
                 {
-                    //Entities[i].SetMotionTime(playTime);
-                    var entity = Entities[i];
-                    if (!entity.ComponentReady) continue;
+                    Entities[i].SetMotionTime(playTime);
+                    //var entity = Entities[i];
+                    //if (!entity.ComponentReady) continue;
 
-                    entity.morphStateComponent.SetPose(entity.motionComponent, playTime);
-                    entity.morphStateComponent.ComputeWeight();
+                    //entity.morphStateComponent.SetPose(entity.motionComponent, playTime);
+                    //entity.morphStateComponent.ComputeWeight();
 
 
                     //stopwatch1.Restart();
-                    entity.boneComponent.SetPose(entity.motionComponent, entity.morphStateComponent, playTime);
+                    //entity.boneComponent.SetPose(entity.motionComponent, entity.morphStateComponent, playTime);
 
                     //stopwatch1.Stop();
                     //StopwatchTimes[0] = stopwatch1.ElapsedTicks;
                     //stopwatch1.Restart();
-                    entity.boneComponent.ComputeMatricesData();
-                    entity.rendererComponent.SetPose(entity.morphStateComponent);
-                    entity.needUpdateMotion = true;
+                    //entity.boneComponent.ComputeMatricesData();
+                    //entity.rendererComponent.SetPose(entity.morphStateComponent);
+                    //entity.needUpdateMotion = true;
 
                     //stopwatch1.Stop();
                     //StopwatchTimes[1] = stopwatch1.ElapsedTicks;
@@ -207,28 +201,13 @@ namespace Coocoo3D.Core
         ProcessingList _processingList = new ProcessingList();
         RenderPipeline.RenderPipelineContext renderPipelineContext = new RenderPipeline.RenderPipelineContext();
 
-        public bool RequireResetPhysics;
-        public bool RequireResize;
-        public bool RequireInterruptRender;
-        public Size NewSize;
         public bool swapChainReady;
+        //public long[] StopwatchTimes = new long[8];
         //System.Diagnostics.Stopwatch stopwatch1 = new System.Diagnostics.Stopwatch();
         public GraphicsContext graphicsContext = new GraphicsContext();
         public GraphicsContext graphicsContext2 = new GraphicsContext();
         private bool RenderFrame2()
         {
-            //if (DateTime.Now - LatestRenderTime < FrameInterval || rendering)
-            //{
-            //    NeedRender = true;
-            //    return false;
-            //}
-
-            //rendering = true;
-            //NeedRender = false;
-            //DateTime now = DateTime.Now;
-            //double deltaTime = Math.Clamp((now - LatestRenderTime).TotalSeconds * PlaySpeed, -0.17f, 0.17f);
-            //LatestRenderTime = now;
-
             if (!GameDriver.Next(ref GameDriverContext) || rendering)
             {
                 return false;
@@ -271,15 +250,15 @@ namespace Coocoo3D.Core
                         entity.boneComponent.TransformToNew(physics3DScene, entity.Position, entity.Rotation);
                     }
                 }
-                camera.AspectRatio = AspectRatio;
+                camera.AspectRatio = GameDriverContext.AspectRatio;
                 camera.Update();
                 for (int i = 0; i < CurrentScene.Lightings.Count; i++)
                     CurrentScene.Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
                 bool needUpdateEntities = NeedUpdateEntities;
                 NeedUpdateEntities = false;
-                if (RequireResetPhysics)
+                if (GameDriverContext.RequireResetPhysics)
                 {
-                    RequireResetPhysics = false;
+                    GameDriverContext.RequireResetPhysics = false;
                     for (int i = 0; i < entities.Count; i++)
                     {
                         entities[i].boneComponent.ResetPhysics(physics3DScene);
@@ -353,18 +332,18 @@ namespace Coocoo3D.Core
                 ////endtest code-------------------
 
                 ProcessingList.MoveToAnother(_processingList);
-                if (!_processingList.IsEmpty() || RequireInterruptRender)
+                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender)
                 {
-                    RequireInterruptRender = false;
+                    GameDriverContext.RequireInterruptRender = false;
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
                     _processingList._DealStep1(graphicsContext);
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
-                    if (RequireResize)
+                    if (GameDriverContext.RequireResize)
                     {
-                        RequireResize = false;
-                        deviceResources.SetLogicalSize(NewSize);
+                        GameDriverContext.RequireResize = false;
+                        deviceResources.SetLogicalSize(GameDriverContext.NewSize);
                         int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
                         int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
                         defaultResources.ScreenSizeRenderTextureOutput.ReloadAsRTVUAV(x, y, RTFormat);
@@ -404,7 +383,7 @@ namespace Coocoo3D.Core
                     graphicsContext2.Execute();
                 }
 
-                if (swapChainReady && !RequireResize)
+                if (swapChainReady && !GameDriverContext.RequireResize)
                 {
                     #region context preparing
                     renderPipelineContext.cameras.Add(camera);
@@ -471,6 +450,7 @@ namespace Coocoo3D.Core
                     //            widgetRenderer.RenderBoneVisual(graphicsContext, camera, SelectedEntities[i]);
                     //    }
                     //}
+                    GameDriver.AfterRender(graphicsContext,ref GameDriverContext);
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                     graphicsContext.EndCommand();
                     //stopwatch1.Restart();
@@ -485,6 +465,7 @@ namespace Coocoo3D.Core
             return true;
         }
         #endregion
+        public bool Recording = false;
 
         int currentRenderPipelineIndex;
         public void SwitchToRenderPipeline(int index)
@@ -503,38 +484,12 @@ namespace Coocoo3D.Core
             }
         }
 
-        public void ForceAudioAsync() => AudioAsync(GameDriverContext.PlayTime, GameDriverContext.Playing);
-        TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);
-        private void AudioAsync(double time, bool playing)
+        public StorageFolder openedStorageFolder;
+        public event EventHandler OpenedStorageFolderChanged;
+        public void OpenedStorageFolderChange(StorageFolder storageFolder)
         {
-            if (playing && GameDriverContext.PlaySpeed == 1.0f)
-            {
-                if (mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Paused ||
-                    mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Stopped)
-                {
-                    mediaElement.Play();
-                }
-                if (mediaElement.IsAudioOnly)
-                {
-                    if (TimeSpan.FromSeconds(time) - mediaElement.Position > audioMaxInaccuracy ||
-                        mediaElement.Position - TimeSpan.FromSeconds(time) > audioMaxInaccuracy)
-                    {
-                        mediaElement.Position = TimeSpan.FromSeconds(time);
-                    }
-                }
-                else
-                {
-                    if (TimeSpan.FromSeconds(time) - mediaElement.Position > audioMaxInaccuracy ||
-                           mediaElement.Position - TimeSpan.FromSeconds(time) > audioMaxInaccuracy)
-                    {
-                        mediaElement.Position = TimeSpan.FromSeconds(time);
-                    }
-                }
-            }
-            else if (mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Playing)
-            {
-                mediaElement.Pause();
-            }
+            openedStorageFolder = storageFolder;
+            OpenedStorageFolderChanged?.Invoke(this, null);
         }
 
         public async Task WaitForResourcesLoadedAsync()

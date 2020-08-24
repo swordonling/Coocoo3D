@@ -74,7 +74,7 @@ namespace Coocoo3D.RenderPipeline
         {
             await ReloadVertexShader(VSPostProcess, deviceResources, "ms-appx:///Coocoo3DGraphics/VSPostProcess.cso");
             await ReloadPixelShader(PSPostProcess, deviceResources, "ms-appx:///Coocoo3DGraphics/PSPostProcess.cso");
-            PObjectPostProcess.Reload(deviceResources, rootSignature, PObjectType.postProcess, VSPostProcess, null, PSPostProcess);
+            PObjectPostProcess.Reload(deviceResources, rootSignature, PObjectType.postProcess, VSPostProcess, null, PSPostProcess,deviceResources.GetBackBufferFormat1());
             Ready = true;
         }
         public GraphicsSignature rootSignature = new GraphicsSignature();

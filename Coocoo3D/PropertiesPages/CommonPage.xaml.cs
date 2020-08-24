@@ -235,7 +235,7 @@ namespace Coocoo3D.PropertiesPages
             set
             {
                 appBody.settings.HighResolutionShadow = value;
-                appBody.RequireInterruptRender = true;
+                appBody.GameDriverContext.RequireInterruptRender = true;
                 appBody.RequireRender();
             }
         }
@@ -280,7 +280,7 @@ namespace Coocoo3D.PropertiesPages
 
         private void PhysicsReset_Click(object sender, RoutedEventArgs e)
         {
-            appBody.RequireResetPhysics = true;
+            appBody.GameDriverContext.RequireResetPhysics = true;
             appBody.RequireRender(true);
         }
 

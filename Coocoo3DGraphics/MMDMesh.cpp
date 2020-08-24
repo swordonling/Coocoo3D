@@ -20,7 +20,7 @@ void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::
 	m_indexCount = indexData->Length / indexStride;
 	m_primitiveTopology = (D3D_PRIMITIVE_TOPOLOGY)pt;
 	m_verticeData = verticeData;
-	m_verticeData2 = verticeData2;
+	m_verticeDataPos = verticeData2;
 	m_indexData = indexData;
 }
 
@@ -49,7 +49,7 @@ void MMDMesh::ReloadNDCQuad()
 	m_indexCount = _countof(indices);
 	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	m_verticeData = ref new Platform::Array<byte, 1>(sizeof(positions));
-	m_verticeData2 = nullptr;
+	m_verticeDataPos = nullptr;
 	m_indexData = ref new Platform::Array<byte, 1>(sizeof(indices));
 
 	memcpy(m_verticeData->begin(), positions, sizeof(positions));

@@ -7,6 +7,7 @@ cbuffer cbAnimMatrices : register(b0)
 cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
+	float g_posAmount1;
 };
 cbuffer cb2 : register(b2)
 {
@@ -16,6 +17,7 @@ cbuffer cb2 : register(b2)
 struct VSSkinnedIn
 {
 	float3 Pos	: POSITION;			//Position
+	float3 PosX	: POSITIONX;		//Position
 	float4 Weights : WEIGHTS;		//Bone weights
 	uint4  Bones : BONES;			//Bone indices
 	float3 Norm : NORMAL;			//Normal
@@ -52,7 +54,7 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 {
 	SkinnedInfo Output = (SkinnedInfo)0;
 
-	float4 Pos = float4(Input.Pos, 1);
+	float4 Pos = float4(Input.Pos * (1 - g_posAmount1) + Input.PosX * g_posAmount1, 1);
 	float3 Norm = Input.Norm;
 	float3 Tan = Input.Tan;
 
@@ -61,8 +63,8 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 	float fWeight = Input.Weights.x;
 	matrix m = FetchBoneTransform(iBone);
 	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm,0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan,0), m).xyz;
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
 
 	//Bone1
 	iBone = Input.Bones.y;
@@ -77,8 +79,8 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 	fWeight = Input.Weights.z;
 	m = FetchBoneTransform(iBone);
 	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm,0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan,0), m).xyz;
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
 
 	//Bone3
 	iBone = Input.Bones.w;

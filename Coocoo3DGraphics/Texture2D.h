@@ -4,6 +4,7 @@
 #include "GraphicsObjectStatus.h"
 namespace Coocoo3DGraphics
 {
+	using namespace Windows::Storage::Streams;
 	public ref class Texture2D sealed :public ITexture
 	{
 	public:
@@ -18,6 +19,7 @@ namespace Coocoo3DGraphics
 		void ReloadPure(int width, int height,Windows::Foundation::Numerics::float4 color);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
 		void ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<byte>^ data);
+		void ReloadFromImage(WICFactory^ wicFactory, IBuffer^ file1);
 		void Reload(Texture2D^ texture);
 		void Unload();
 

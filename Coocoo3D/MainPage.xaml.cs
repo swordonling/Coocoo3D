@@ -31,11 +31,48 @@ namespace Coocoo3D
         public MainPage()
         {
             this.InitializeComponent();
-            appBody = new Coocoo3DMain()
-            {
-                mediaElement = mediaElement,
-            };
+            appBody = new Coocoo3DMain();
             worldViewer.AppBody = appBody;
+            appBody.FrameUpdated += AppBody_FrameUpdated;
+        }
+
+        private void AppBody_FrameUpdated(object sender, EventArgs e)
+        {
+            ForceAudioAsync();
+        }
+
+        public void ForceAudioAsync() => AudioAsync(appBody.GameDriverContext.PlayTime, appBody.GameDriverContext.Playing);
+        TimeSpan audioMaxInaccuracy = TimeSpan.FromSeconds(1.0 / 30.0);
+        private void AudioAsync(double time, bool playing)
+        {
+            if (playing && appBody.GameDriverContext.PlaySpeed == 1.0f)
+            {
+                if (mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Paused ||
+                    mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Stopped)
+                {
+                    mediaElement.Play();
+                }
+                if (mediaElement.IsAudioOnly)
+                {
+                    if (TimeSpan.FromSeconds(time) - mediaElement.Position > audioMaxInaccuracy ||
+                        mediaElement.Position - TimeSpan.FromSeconds(time) > audioMaxInaccuracy)
+                    {
+                        mediaElement.Position = TimeSpan.FromSeconds(time);
+                    }
+                }
+                else
+                {
+                    if (TimeSpan.FromSeconds(time) - mediaElement.Position > audioMaxInaccuracy ||
+                           mediaElement.Position - TimeSpan.FromSeconds(time) > audioMaxInaccuracy)
+                    {
+                        mediaElement.Position = TimeSpan.FromSeconds(time);
+                    }
+                }
+            }
+            else if (mediaElement.CurrentState == Windows.UI.Xaml.Media.MediaElementState.Playing)
+            {
+                mediaElement.Pause();
+            }
         }
 
         private void AddPage(TabView tabView, string header, Type pageType, object navParam)
@@ -94,36 +131,77 @@ namespace Coocoo3D
         private void Play_Click(object sender, RoutedEventArgs e)
         {
             UI.UISharedCode.Play(appBody);
+            ForceAudioAsync();
+
         }
         private void Pause_Click(object sender, RoutedEventArgs e)
         {
             UI.UISharedCode.Pause(appBody);
+            ForceAudioAsync();
         }
         private void Stop_Click(object sender, RoutedEventArgs e)
         {
             UI.UISharedCode.Stop(appBody);
+            ForceAudioAsync();
         }
         private void Rewind_Click(object sender, RoutedEventArgs e)
         {
             appBody.GameDriverContext.Playing = true;
             appBody.GameDriverContext.PlaySpeed = -2.0f;
-            appBody.ForceAudioAsync();
+            ForceAudioAsync();
         }
         private void FastForward_Click(object sender, RoutedEventArgs e)
         {
             appBody.GameDriverContext.Playing = true;
             appBody.GameDriverContext.PlaySpeed = 2.0f;
-            appBody.ForceAudioAsync();
+            ForceAudioAsync();
         }
         private void Front_Click(object sender, RoutedEventArgs e)
         {
+            if (appBody.Recording)
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
             appBody.GameDriverContext.PlayTime = 0;
             appBody.RequireRender(true);
         }
         private void Rear_Click(object sender, RoutedEventArgs e)
         {
+            if (appBody.Recording)
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
             appBody.GameDriverContext.PlayTime = 9999;
             appBody.RequireRender(true);
+        }
+        private async void Record_Click(object sender, RoutedEventArgs e)
+        {
+            if (!appBody.Recording)
+            {
+                FolderPicker folderPicker = new FolderPicker()
+                {
+                    FileTypeFilter =
+                    {
+                        "*"
+                    },
+                    SuggestedStartLocation = PickerLocationId.VideosLibrary,
+                    ViewMode = PickerViewMode.Thumbnail,
+                    SettingsIdentifier = "RecordFolder",
+                };
+                Windows.Storage.StorageFolder folder = await folderPicker.PickSingleFolderAsync();
+                if (folder == null) return;
+                appBody._RecorderGameDriver.saveFolder = folder;
+                appBody._RecorderGameDriver.SwitchEffect();
+                appBody.GameDriver = appBody._RecorderGameDriver;
+                appBody.Recording = true;
+            }
+            else
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
         }
 
 
@@ -164,6 +242,11 @@ namespace Coocoo3D
         private void About_Click(object sender, RoutedEventArgs e)
         {
             appBody.ShowDetailPage(typeof(PropertiesPages.SoftwareInfoPropertiesPage), appBody);
+        }
+
+        private void worldViewer_Loaded(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

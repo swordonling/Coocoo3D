@@ -58,7 +58,7 @@ namespace Coocoo3DGraphics
 		virtual ~MMDMesh();
 
 		property Platform::Array<byte>^ m_verticeData;
-		property Platform::Array<byte>^ m_verticeData2;
+		property Platform::Array<byte>^ m_verticeDataPos;
 		property Platform::Array<byte>^ m_indexData;
 		property int m_indexCount;
 		property int m_vertexCount;
@@ -71,8 +71,10 @@ namespace Coocoo3DGraphics
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer2[c_frameCount];
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView2[c_frameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBufferPos0[c_frameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBufferPos1[c_frameCount];
+		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferPosView0[c_frameCount];
+		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferPosView1[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
@@ -82,9 +84,11 @@ namespace Coocoo3DGraphics
 		D3D12_RESOURCE_STATES prevStateSkinnedVertice;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload;
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload2[c_frameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload0[c_frameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload1[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUpload;
-		int lastUpdateIndex = 0;
+		int lastUpdateIndex0 = 0;
+		int lastUpdateIndex1 = 0;
 
 		static const UINT c_skinnedVerticeStride = 64u;
 	};

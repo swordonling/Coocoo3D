@@ -19,5 +19,5 @@ float4 main(PSIn input) : SV_TARGET
 {
 	float4 vx = mul(float4(input.uv,0,1),g_mProjToWorld);
 	float3 viewDir = vx.xyz / vx.w - g_vCamPos;
-	return EnvCube.Sample(s0, viewDir) * g_skyBoxMultiple;
+	return float4(EnvCube.Sample(s0, viewDir).rgb * g_skyBoxMultiple,1);
 }

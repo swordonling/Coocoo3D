@@ -55,6 +55,7 @@
     <ClCompile Include="TextureCube.cpp" />
     <ClCompile Include="RenderTextureCube.cpp" />
     <ClCompile Include="ComputePO.cpp" />
+    <ClCompile Include="ReadBackTexture2D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -95,6 +96,7 @@
     <ClInclude Include="RenderTextureCube.h" />
     <ClInclude Include="ITexture.h" />
     <ClInclude Include="ComputePO.h" />
+    <ClInclude Include="ReadBackTexture2D.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -159,6 +161,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\PSSkyBox.hlsl">
       <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\ImageProcess\G_ClearIrradianceMap.hlsl">
+      <Filter>Shaders\ImageProcess</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

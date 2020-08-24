@@ -14,7 +14,7 @@ namespace Coocoo3D.RenderPipeline
     public class RayTracingRenderPipeline1 : RenderPipeline
     {
         public const int c_tempDataSize = 512;
-        public const int c_transformMatrixDataSize = 64;
+        public const int c_entityDataDataSize = 128;
         const int c_materialDataSize = 512;
         const int c_argumentsSizeInBytes = 64;
         const int c_presentDataSize = 512;
@@ -110,9 +110,12 @@ namespace Coocoo3D.RenderPipeline
             }
             for (int i = 0; i < Entities.Count; i++)
             {
+                IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
                 Matrix4x4 world = Matrix4x4.CreateFromQuaternion(Entities[i].Rotation) * Matrix4x4.CreateTranslation(Entities[i].Position);
-                Marshal.StructureToPtr(Matrix4x4.Transpose(world), Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
-                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_transformMatrixDataSize);
+                Marshal.StructureToPtr(Matrix4x4.Transpose(world), pBufferData, true);
+                Marshal.StructureToPtr(Entities[i].rendererComponent.amountAB, pBufferData + 64, true);
+
+                graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_entityDataDataSize);
             }
 
 
@@ -265,7 +268,7 @@ namespace Coocoo3D.RenderPipeline
             while (entityDataBuffers.Count < count)
             {
                 ConstantBuffer constantBuffer = new ConstantBuffer();
-                constantBuffer.Reload(deviceResources, c_transformMatrixDataSize);
+                constantBuffer.Reload(deviceResources, c_entityDataDataSize);
                 entityDataBuffers.Add(constantBuffer);
             }
         }

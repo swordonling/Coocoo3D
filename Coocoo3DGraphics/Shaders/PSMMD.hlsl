@@ -11,6 +11,7 @@ struct LightInfo
 cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
+	float4x4 g_mWorld1;
 	LightInfo Lightings[4];
 };
 cbuffer cb3 : register(b3)
@@ -60,7 +61,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	float4 texColor = texture0.Sample(s0, input.TexCoord) * _DiffuseColor;
 	clip(texColor.a - 0.01f);
 	float3 diff = texColor.rgb;
-	float3 specCol = clamp(_SpecularColor.rgb, 0.005, 1);
+	float3 specCol = clamp(_SpecularColor.rgb, 0.0001, 1);
 	for (int i = 0; i < 1; i++)
 	{
 		if (Lightings[i].LightColor.a != 0)

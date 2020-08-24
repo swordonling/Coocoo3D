@@ -61,12 +61,15 @@ namespace Coocoo3D.UI
         public static void Pause(Coocoo3DMain appBody)
         {
             appBody.GameDriverContext.Playing = false;
-            appBody.ForceAudioAsync();
         }
         public static void Stop(Coocoo3DMain appBody)
         {
+            if (appBody.Recording)
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
             appBody.GameDriverContext.Playing = false;
-            appBody.ForceAudioAsync();
             appBody.GameDriverContext.PlayTime = 0;
             appBody.RequireRender(true);
         }
@@ -174,7 +177,7 @@ namespace Coocoo3D.UI
 
                             if (vertexShader != null && pixelShader != null)
                             {
-                                pObject.Reload(deviceResources, appBody.CurrentRenderPipeline.GraphicsSignature, PObjectType.mmd, vertexShader, geometryShader, pixelShader);
+                                pObject.Reload(deviceResources, appBody.CurrentRenderPipeline.GraphicsSignature, PObjectType.mmd, vertexShader, geometryShader, pixelShader, appBody.RTFormat);
                                 pObject.Status = GraphicsObjectStatus.loaded;
                             }
                             else
@@ -239,11 +242,7 @@ namespace Coocoo3D.UI
                         {
                             async Task _LoadImage(StorageFile f1)
                             {
-                                Stream texStream = (await f1.OpenReadAsync()).AsStreamForRead();
-                                byte[] texBytes = new byte[texStream.Length];
-                                texStream.Read(texBytes, 0, (int)texStream.Length);
-                                texStream.Dispose();
-                                tex.ReloadFromImage1(appBody.wicFactory, texBytes);
+                                tex.ReloadFromImage(appBody.wicFactory, await FileIO.ReadBufferAsync(f1));
                                 appBody.ProcessingList.AddObject(tex);
                                 tex.Status = GraphicsObjectStatus.loaded;
                                 appBody.RequireRender();
