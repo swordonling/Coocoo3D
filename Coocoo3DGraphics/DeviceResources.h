@@ -144,6 +144,7 @@ namespace Coocoo3DGraphics
 		Windows::Foundation::Size	GetLogicalSize() { return m_logicalSize; }
 		void SetCurrentOrientation(Windows::Graphics::Display::DisplayOrientations currentOrientation);
 		void SetDpi(float dpi);
+		float GetDpi() { return m_effectiveDpi; }
 		void ValidateDevice();
 		void Present();
 		void Present(bool vsync);
@@ -151,8 +152,6 @@ namespace Coocoo3DGraphics
 		bool IsRayTracingSupport();
 		DxgiFormat GetBackBufferFormat1();
 	internal:
-
-		float						GetDpi() const { return m_effectiveDpi; }
 		bool						IsDeviceRemoved() const { return m_deviceRemoved; }
 
 		// D3D 访问器。

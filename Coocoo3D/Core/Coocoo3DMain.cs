@@ -43,7 +43,18 @@ namespace Coocoo3D.Core
         public GameDriver GameDriver;
         public GeneralGameDriver _GeneralGameDriver = new GeneralGameDriver();
         public RecorderGameDriver _RecorderGameDriver = new RecorderGameDriver();
-        public GameDriverContext GameDriverContext = new GameDriverContext() { FrameInterval = TimeSpan.FromSeconds(1 / 120.0) };
+        public GameDriverContext GameDriverContext = new GameDriverContext()
+        {
+            FrameInterval = TimeSpan.FromSeconds(1 / 120.0),
+            recordSettings = new RecordSettings()
+            {
+                FPS = 60,
+                Width = 1920,
+                Height = 1080,
+                StartTime = 0,
+                StopTime = 9999,
+            },
+        };
         #region Time
         ThreadPoolTimer threadPoolTimer;
         volatile bool NeedUpdateEntities = false;
@@ -450,7 +461,7 @@ namespace Coocoo3D.Core
                     //            widgetRenderer.RenderBoneVisual(graphicsContext, camera, SelectedEntities[i]);
                     //    }
                     //}
-                    GameDriver.AfterRender(graphicsContext,ref GameDriverContext);
+                    GameDriver.AfterRender(graphicsContext, ref GameDriverContext);
                     graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                     graphicsContext.EndCommand();
                     //stopwatch1.Restart();
@@ -517,5 +528,6 @@ namespace Coocoo3D.Core
         public bool EnableAO;
         public bool EnableShadow;
         public uint Quality;
+        public uint RenderStyle;
     }
 }

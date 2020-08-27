@@ -91,6 +91,7 @@ namespace Coocoo3D
 
             AddPage(tabViewL1, "通常", typeof(PropertiesPages.CommonPage), appBody);
             AddPage(tabViewL1, "天空盒", typeof(PropertiesPages.SkyBoxPage), appBody);
+            AddPage(tabViewL1, "录制", typeof(PropertiesPages.RecordPage), appBody);
             AddPage(tabViewR1, "场景", typeof(PropertiesPages.ScenePage), appBody);
             AddPage(tabViewR1, "后处理", typeof(PropertiesPages.PostProcessPage), appBody);
             AddPage(tabViewB1, "资源", typeof(PropertiesPages.ResourcesPage), appBody);

@@ -7,6 +7,15 @@ using Coocoo3DGraphics;
 
 namespace Coocoo3D.Core
 {
+
+    public struct RecordSettings
+    {
+        public float FPS;
+        public float StartTime;
+        public float StopTime;
+        public int Width;
+        public int Height;
+    }
     public struct GameDriverContext
     {
         public volatile bool NeedRender;
@@ -23,6 +32,7 @@ namespace Coocoo3D.Core
         public float AspectRatio;
         public bool RequireInterruptRender;
         public WICFactory WICFactory;
+        public RecordSettings recordSettings;
     }
     public abstract class GameDriver
     {

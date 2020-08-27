@@ -257,7 +257,7 @@ namespace Coocoo3D.PropertiesPages
         }
         #endregion
 
-        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void VRenderPipeline_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (appBody == null) return;
             int selectedIndex = (sender as ComboBox).SelectedIndex;
@@ -272,9 +272,16 @@ namespace Coocoo3D.PropertiesPages
             appBody.RequireRender();
         }
 
-        private void ComboBox_SelectionChanged_1(object sender, SelectionChangedEventArgs e)
+        private void VQuality_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             appBody.settings.Quality = (uint)(sender as ComboBox).SelectedValue;
+            appBody.RequireRender();
+        }
+
+        private void VRenderStyle_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (appBody == null) return;
+            appBody.settings.RenderStyle = (uint)(sender as ComboBox).SelectedIndex;
             appBody.RequireRender();
         }
 

@@ -167,6 +167,9 @@
     <Compile Include="PropertiesPages\PostProcessPage.xaml.cs">
       <DependentUpon>PostProcessPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="PropertiesPages\RecordPage.xaml.cs">
+      <DependentUpon>RecordPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="PropertiesPages\ResourcesPage.xaml.cs">
       <DependentUpon>ResourcesPage.xaml</DependentUpon>
     </Compile>
@@ -248,6 +251,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="PropertiesPages\PostProcessPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PropertiesPages\RecordPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

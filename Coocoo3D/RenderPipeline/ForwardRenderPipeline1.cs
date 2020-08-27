@@ -33,13 +33,35 @@ namespace Coocoo3D.RenderPipeline
             rootSignature.ReloadMMD(deviceResources);
         }
         #region graphics assets
+        public GraphicsSignature rootSignature = new GraphicsSignature();
+        public VertexShader VSMMDSkinning2 = new VertexShader();
+        public VertexShader VSMMDTransform = new VertexShader();
+        public VertexShader VSSkyBox = new VertexShader();
+        public GeometryShader GSMMD = new GeometryShader();
+        public PixelShader PSMMD = new PixelShader();
+        public PixelShader PSMMD_DisneyBrdf = new PixelShader();
+        public PixelShader PSMMD_Toon1 = new PixelShader();
+        public PixelShader PSMMDLoading = new PixelShader();
+        public PixelShader PSMMDError = new PixelShader();
+        public PixelShader PSMMDAlphaClip = new PixelShader();
+        public PixelShader PSSkyBox = new PixelShader();
+        public PObject PObjectMMD = new PObject();
+        public PObject PObjectMMD_DisneyBrdf = new PObject();
+        public PObject PObjectMMD_Toon1 = new PObject();
+        public PObject PObjectMMDDepth = new PObject();
+        public PObject PObjectMMDLoading = new PObject();
+        public PObject PObjectMMDError = new PObject();
+        public PObject PObjectSkyBox = new PObject();
+        public PObject currentUsedPObject;
+        public DxgiFormat CurrentRenderTargetFormat;
         public override async Task ReloadAssets(DeviceResources deviceResources)
         {
             await ReloadVertexShader(VSMMDSkinning2, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDSkinning2.cso");
             await ReloadVertexShader(VSMMDTransform, deviceResources, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
             await ReloadVertexShader(VSSkyBox, deviceResources, "ms-appx:///Coocoo3DGraphics/VSSkyBox.cso");
             await ReloadPixelShader(PSMMD, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
-            await ReloadPixelShader(PSMMD2, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD_DisneyBRDF.cso");
+            await ReloadPixelShader(PSMMD_DisneyBrdf, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD_DisneyBRDF.cso");
+            await ReloadPixelShader(PSMMD_Toon1, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMD_Toon1.cso");
             await ReloadPixelShader(PSMMDLoading, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
             await ReloadPixelShader(PSMMDError, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDError.cso");
             await ReloadPixelShader(PSMMDAlphaClip, deviceResources, "ms-appx:///Coocoo3DGraphics/PSMMDAlphaClip.cso");
@@ -60,32 +82,14 @@ namespace Coocoo3D.RenderPipeline
         {
             CurrentRenderTargetFormat = format;
             PObjectMMD.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD, VSMMDTransform, format);
-            PObjectMMD2.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD2, VSMMDTransform, format);
+            PObjectMMD_DisneyBrdf.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD_DisneyBrdf, VSMMDTransform, format);
+            PObjectMMD_Toon1.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMD_Toon1, VSMMDTransform, format);
             PObjectSkyBox.Reload(deviceResources, rootSignature, PObjectType.postProcess, VSSkyBox, null, PSSkyBox, format);
             PObjectMMDLoading.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMDLoading, VSMMDTransform, format);
             PObjectMMDError.Reload2(deviceResources, rootSignature, VSMMDSkinning2, GSMMD, PSMMDError, VSMMDTransform, format);
             PObjectMMDDepth.ReloadDepthOnly(deviceResources, rootSignature, VSMMDTransform, PSMMDAlphaClip);
             Ready = true;
         }
-        public DxgiFormat CurrentRenderTargetFormat;
-        public GraphicsSignature rootSignature = new GraphicsSignature();
-        public VertexShader VSMMDSkinning2 = new VertexShader();
-        public VertexShader VSMMDTransform = new VertexShader();
-        public VertexShader VSSkyBox = new VertexShader();
-        public GeometryShader GSMMD = new GeometryShader();
-        public PixelShader PSMMD = new PixelShader();
-        public PixelShader PSMMD2 = new PixelShader();
-        public PixelShader PSMMDLoading = new PixelShader();
-        public PixelShader PSMMDError = new PixelShader();
-        public PixelShader PSMMDAlphaClip = new PixelShader();
-        public PixelShader PSSkyBox = new PixelShader();
-        public PObject PObjectMMD = new PObject();
-        public PObject PObjectMMD2 = new PObject();
-        public PObject PObjectSkyBox = new PObject();
-        public PObject PObjectMMDDepth = new PObject();
-        public PObject PObjectMMDLoading = new PObject();
-        public PObject PObjectMMDError = new PObject();
-        public PObject currentUsedPObject;
         #endregion
 
         public override GraphicsSignature GraphicsSignature => rootSignature;
@@ -131,14 +135,13 @@ namespace Coocoo3D.RenderPipeline
             var settings = context.settings;
             var Entities = context.entities;
             int countMaterials = 0;
-            if (settings.Quality == 0)
-            {
+            if (settings.RenderStyle == 1)
+                currentUsedPObject = PObjectMMD_Toon1;
+            else if (settings.Quality == 0)
                 currentUsedPObject = PObjectMMD;
-            }
             else
-            {
-                currentUsedPObject = PObjectMMD2;
-            }
+                currentUsedPObject = PObjectMMD_DisneyBrdf;
+
             for (int i = 0; i < Entities.Count; i++)
             {
                 countMaterials += Entities[i].rendererComponent.Materials.Count;

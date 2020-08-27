@@ -165,6 +165,9 @@
     <FxCompile Include="Shaders\ImageProcess\G_ClearIrradianceMap.hlsl">
       <Filter>Shaders\ImageProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PSMMD_Toon1.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli">
