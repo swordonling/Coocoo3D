@@ -14,6 +14,7 @@
 #include "RayTracingScene.h"
 #include "ComputePO.h"
 #include "ReadBackTexture2D.h"
+#include "StaticBuffer.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -53,6 +54,7 @@ namespace Coocoo3DGraphics
 		void Reload(DeviceResources^ deviceResources);
 		void SetMaterial(Material^ material);
 		void SetPObject(PObject^ pObject, CullMode cullMode, BlendState blendState);
+		void SetPObject(PObject^ pObject, int index);
 		void SetPObjectDepthOnly(PObject^ pObject);
 		void SetPObjectStreamOut(PObject^ pObject);
 		void SetPObject(ComputePO^ pObject);
@@ -66,6 +68,8 @@ namespace Coocoo3DGraphics
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
 		void UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
+		void SetSRVRSkinnedMesh(MMDMesh^ mesh, int index);
+		void SetSRVR(StaticBuffer^ buffer, int index);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(TextureCube^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
@@ -82,10 +86,11 @@ namespace Coocoo3DGraphics
 		void SetSOMesh(MMDMesh^ mesh);
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
-		void Dispatch(int x,int y,int z);
+		void Dispatch(int x, int y, int z);
 		void DoRayTracing(RayTracingScene^ rayTracingScene, int asIndex);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(ITexture^ texture);
+		void UploadBuffer(StaticBuffer^ buffer);
 		void UpdateRenderTexture(IRenderTexture^ texture);
 		void UpdateReadBackTexture(ReadBackTexture2D^ texture);
 
@@ -99,6 +104,7 @@ namespace Coocoo3DGraphics
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
 		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);
+		void SetAndClearRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color);
 		void SetRootSignature(GraphicsSignature^ rootSignature);
 		void SetRootSignatureCompute(GraphicsSignature^ rootSignature);
 		void SetRootSignatureRayTracing(RayTracingScene^ rootSignature);

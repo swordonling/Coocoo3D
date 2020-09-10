@@ -226,9 +226,9 @@ namespace Coocoo3D.PropertiesPages
                     {
                         await UI.UISharedCode.LoadVMD(appBody, storageFile, mmd3dEntity);
                     }
-                    if (".ccshader".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
+                    if (".hlsl".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        await UI.UISharedCode.LoadShaderForEntities(appBody, storageFile, storageFolder, new MMD3DEntity[] { mmd3dEntity });
+                        UI.UISharedCode.LoadShaderForEntities1(appBody, storageFile, storageFolder, new MMD3DEntity[] { mmd3dEntity });
                     }
                 }
             }
@@ -267,6 +267,19 @@ namespace Coocoo3D.PropertiesPages
         private void Slider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             appBody.RequireRender();
+        }
+
+        PropertyChangedEventArgs eaCurrentMat = new PropertyChangedEventArgs("CurrentMat");
+        MMDMatLit CurrentMat;
+        private void ViewMaterials_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            ListView view1 = sender as ListView;
+            if (e.AddedItems.Count == 1)
+            {
+                CurrentMat = ((MMDMatLit)e.AddedItems[0]);
+                PropertyChanged?.Invoke(this, eaCurrentMat);
+                flyout1.ShowAt(view1);
+            }
         }
     }
     public struct Bundle_Main_Entity_Mat

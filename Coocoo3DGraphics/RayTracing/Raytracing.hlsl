@@ -109,7 +109,7 @@ void MyRaygenShader()
 	ray2.TMin = 0.001;
 	ray2.TMax = 10000.0;
 	RayPayload payload = { float4(0, 0, 0, 0),ray.direction,0 };
-	TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, ray2, payload);
+	TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, ray2, payload);
 	g_renderTarget[DispatchRaysIndex().xy] = payload.color;
 }
 

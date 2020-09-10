@@ -34,7 +34,7 @@ namespace Coocoo3D.UI
                         pmx.Reload(reader);
                         pmx.Reload2();
                         reader.Dispose();
-
+                        //appBody.ProcessingList.AddObject(pmx.NearTriangleBuffer);
                         pmx.Ready = true;
                         pmx.LoadTask = null;
                     });
@@ -129,77 +129,77 @@ namespace Coocoo3D.UI
             appBody.RequireRender(true);
         }
 
-        public static async Task LoadShaderForEntities(Coocoo3DMain appBody, StorageFile storageFile, StorageFolder storageFolder, IList<MMD3DEntity> entities)
+        public static void LoadShaderForEntities1(Coocoo3DMain appBody, StorageFile storageFile, StorageFolder storageFolder, IList<MMD3DEntity> entities)
         {
-            PObject pObject = null;
-            lock (appBody.mainCaches.pObjectCaches)
+            RPShaderPack shaderPack = new RPShaderPack();
+            lock (appBody.mainCaches.RPShaderPackCaches)
             {
-                pObject = appBody.mainCaches.pObjectCaches.GetOrCreate(storageFile.Path);
-                if (pObject.LoadTask == null && pObject.Status != GraphicsObjectStatus.loaded)
+                shaderPack = appBody.mainCaches.RPShaderPackCaches.GetOrCreate(storageFile.Path);
+                if (shaderPack.LoadTask == null && shaderPack.Status != GraphicsObjectStatus.loaded)
                 {
-                    pObject.Status = GraphicsObjectStatus.loading;
-                    pObject.LoadTask = Task.Run(async () =>
+                    shaderPack.Status = GraphicsObjectStatus.loading;
+                    shaderPack.POSkinning.Status = GraphicsObjectStatus.loading;
+                    shaderPack.PODraw.Status = GraphicsObjectStatus.loading;
+                    shaderPack.LoadTask = Task.Run(async () =>
                     {
+                        byte[] datas = null;
                         try
                         {
-                            CCShaderFormat ccShader = CCShaderFormat.Load((await storageFile.OpenReadAsync()).AsStreamForRead());
-
-                            IStorageItem storageItem1 = null;
-                            IStorageItem storageItem2 = null;
-                            IStorageItem storageItem3 = null;
-                            IStorageItem storageItem4 = null;
-                            if (ccShader.CSPath != null)
-                                storageItem1 = await storageFolder.TryGetItemAsync(ccShader.CSPath);
-                            if (ccShader.VSPath != null)
-                                storageItem2 = await storageFolder.TryGetItemAsync(ccShader.VSPath);
-                            if (ccShader.GSPath != null)
-                                storageItem3 = await storageFolder.TryGetItemAsync(ccShader.GSPath);
-                            if (ccShader.PSPath != null)
-                                storageItem4 = await storageFolder.TryGetItemAsync(ccShader.PSPath);
-
-
-                            VertexShader vertexShader = null;
-                            GeometryShader geometryShader = null;
-                            PixelShader pixelShader = null;
-                            DeviceResources deviceResources = appBody.deviceResources;
-                            if (storageItem2 is StorageFile storageFile2)
-                            {
-                                vertexShader = VertexShader.CompileLoad(deviceResources, await ReadAllBytes(storageFile2));
-                            }
-                            if (storageItem3 is StorageFile storageFile3)
-                            {
-                                geometryShader = GeometryShader.CompileLoad(deviceResources, await ReadAllBytes(storageFile3));
-                            }
-                            if (storageItem4 is StorageFile storageFile4)
-                            {
-                                pixelShader = PixelShader.CompileLoad(deviceResources, await ReadAllBytes(storageFile4));
-                            }
-
-                            if (vertexShader != null && pixelShader != null)
-                            {
-                                pObject.Reload(deviceResources, appBody.CurrentRenderPipeline.GraphicsSignature, PObjectType.mmd, vertexShader, geometryShader, pixelShader, appBody.RTFormat);
-                                pObject.Status = GraphicsObjectStatus.loaded;
-                            }
-                            else
-                            {
-                                pObject.Status = GraphicsObjectStatus.error;
-                            }
-                            pObject.LoadTask = null;
+                            datas = await ReadAllBytes(storageFile);
                         }
                         catch
                         {
-                            pObject.Status = GraphicsObjectStatus.error;
-                            pObject.LoadTask = null;
+                            shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
+                            shaderPack.PODraw.Status = GraphicsObjectStatus.error;
+                            shaderPack.Status = GraphicsObjectStatus.error;
+                            shaderPack.LoadTask = null;
+                            appBody.RequireRender();
+                            return;
                         }
+                        VertexShader vs0 = shaderPack.VS;
+                        GeometryShader gs0 = shaderPack.GS;
+                        PixelShader ps0 = shaderPack.PS;
+                        VertexShader vs1 = shaderPack.VS1;
+
+                        bool haveVs = vs0.CompileReload1(datas, "VS");
+                        bool haveGs = gs0.CompileReload1(datas, "GS");
+                        bool havePs = ps0.CompileReload1(datas, "PS");
+                        bool haveVS1 = vs1.CompileReload1(datas, "VS1");
+                        var RPAssetsManager = appBody.RPAssetsManager;
+                        if (haveVs || haveGs)
+                        {
+                            if (shaderPack.POSkinning.ReloadSkinning(appBody.deviceResources, RPAssetsManager.rootSignature, haveVs ? vs0 : RPAssetsManager.VSMMDSkinning2, haveGs ? gs0 : null))
+                                shaderPack.POSkinning.Status = GraphicsObjectStatus.loaded;
+                            else
+                                shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
+
+                        }
+                        else
+                        {
+                            shaderPack.POSkinning.Status = GraphicsObjectStatus.unload;
+                        }
+                        if (havePs || haveVS1)
+                        {
+                            if (shaderPack.PODraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform, havePs ? ps0 : RPAssetsManager.PSMMD, appBody.RTFormat))
+                                shaderPack.PODraw.Status = GraphicsObjectStatus.loaded;
+                            else
+                                shaderPack.PODraw.Status = GraphicsObjectStatus.error;
+                        }
+                        else
+                        {
+                            shaderPack.PODraw.Status = GraphicsObjectStatus.unload;
+                        }
+                        shaderPack.Status = GraphicsObjectStatus.loaded;
+                        shaderPack.LoadTask = null;
+                        appBody.RequireRender();
                     });
                 }
             }
             foreach (var entity in entities)
             {
-                entity.rendererComponent.pObject = pObject;
+                entity.rendererComponent.PODraw = shaderPack.PODraw;
+                entity.rendererComponent.POSkinning = shaderPack.POSkinning;
             }
-            appBody.RequireRender();
-            if (pObject.Status != GraphicsObjectStatus.loaded && pObject.LoadTask != null) await (pObject.LoadTask as Task);
             appBody.RequireRender();
         }
 

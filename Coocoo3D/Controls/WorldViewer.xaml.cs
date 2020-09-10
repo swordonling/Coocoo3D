@@ -54,7 +54,6 @@ namespace Coocoo3D.Controls
             AppBody.GameDriverContext.RequireResize = true;
             AppBody.GameDriverContext.RequireInterruptRender = true;
             AppBody.swapChainReady = true;
-            //AppBody.deviceResources.SetLogicalSize(new Size(ActualWidth, ActualHeight));
             AppBody.RequireRender();
             swapChainPanel.SizeChanged -= SwapChainPanel_SizeChanged;
             swapChainPanel.SizeChanged += SwapChainPanel_SizeChanged;
@@ -67,7 +66,6 @@ namespace Coocoo3D.Controls
             AppBody.GameDriverContext.NewSize = e.NewSize;
             AppBody.GameDriverContext.RequireResize = true;
             AppBody.GameDriverContext.RequireInterruptRender = true;
-            //AppBody.deviceResources.SetLogicalSize(e.NewSize);
             AppBody.RequireRender();
         }
 
@@ -98,18 +96,13 @@ namespace Coocoo3D.Controls
             }
         }
 
-        private void _Fun1()
-        {
-            AppBody.RequireRender();
-        }
-
         private void WorldViewer_MouseMoved_Rotate(MouseDevice sender, MouseEventArgs args)
         {
             Vector3 delta = new Vector3();
-            delta.X = args.MouseDelta.Y;
+            delta.X = -args.MouseDelta.Y;
             delta.Y = -args.MouseDelta.X;
             AppBody.camera.RotateDelta(delta / 200);
-            _Fun1();
+            AppBody.RequireRender();
         }
 
         private void WorldViewer_MouseMoved_Drag(MouseDevice sender, MouseEventArgs args)
@@ -118,7 +111,7 @@ namespace Coocoo3D.Controls
             delta.X = -args.MouseDelta.X;
             delta.Y = args.MouseDelta.Y;
             AppBody.camera.MoveDelta(delta / 50);
-            _Fun1();
+            AppBody.RequireRender();
         }
 
         private void Canvas_PointerMoved(InkUnprocessedInput sender, PointerEventArgs args)

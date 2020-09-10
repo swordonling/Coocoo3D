@@ -16,7 +16,7 @@ void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 	range[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
 	range[4].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
 	range[5].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5);
-	parameter[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX);
+	parameter[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 	parameter[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 	parameter[2].InitAsConstantBufferView(2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 	parameter[3].InitAsConstantBufferView(3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
@@ -46,9 +46,6 @@ void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 	staticSamplerDescs[2] = staticSamplerDesc;
 	staticSamplerDescs[0].ShaderRegister = 0;
 	staticSamplerDescs[1].ShaderRegister = 1;
-	staticSamplerDescs[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDescs[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDescs[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 	staticSamplerDescs[2].ShaderRegister = 2;
 	//staticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
 
@@ -59,7 +56,7 @@ void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
 	DX::ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
+	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 }
 
 void Sign1(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs, Microsoft::WRL::ComPtr<ID3D12RootSignature>& m_sign, D3D12_ROOT_SIGNATURE_FLAGS flags)
@@ -144,18 +141,15 @@ void Sign1(DeviceResources^ deviceResources, const Platform::Array<GraphicSignat
 
 void GraphicsSignature::Reload(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs)
 {
-	Sign1(deviceResources, Descs, m_rootSignatures[0], D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT);
+	Sign1(deviceResources, Descs, m_rootSignature, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT);
 }
 
 void GraphicsSignature::ReloadCompute(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs)
 {
-	Sign1(deviceResources, Descs, m_rootSignatures[0], D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	Sign1(deviceResources, Descs, m_rootSignature, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 }
 
 void GraphicsSignature::Unload()
 {
-	for (int i = 0; i < _countof(m_rootSignatures); i++)
-	{
-		m_rootSignatures[i].Reset();
-	}
+	m_rootSignature.Reset();
 }

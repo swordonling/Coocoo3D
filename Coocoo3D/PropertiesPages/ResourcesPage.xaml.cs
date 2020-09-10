@@ -93,9 +93,9 @@ namespace Coocoo3D.PropertiesPages
                     appBody.RequireRender(true);
                     HaveLoadTask = false;
                 }
-                else if (file.FileType.Equals(".ccshader", StringComparison.CurrentCultureIgnoreCase))
+                else if (file.FileType.Equals(".hlsl", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    await UI.UISharedCode.LoadShaderForEntities(appBody, file, viewFolderStack.Last(),new List<Present.MMD3DEntity>( appBody.SelectedEntities));
+                    UI.UISharedCode.LoadShaderForEntities1(appBody, file, viewFolderStack.Last(),new List<Present.MMD3DEntity>( appBody.SelectedEntities));
                 }
             }
         }

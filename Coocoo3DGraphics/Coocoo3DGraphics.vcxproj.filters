@@ -26,6 +26,9 @@
     <Filter Include="Shaders\ImageProcess">
       <UniqueIdentifier>{5e577815-f70c-4c5d-8d5b-9bf1dea3d92f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\AO">
+      <UniqueIdentifier>{2038a6fd-c361-4221-b9c0-79f9088d5ab0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -56,6 +59,7 @@
     <ClCompile Include="RenderTextureCube.cpp" />
     <ClCompile Include="ComputePO.cpp" />
     <ClCompile Include="ReadBackTexture2D.cpp" />
+    <ClCompile Include="StaticBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -97,6 +101,7 @@
     <ClInclude Include="ITexture.h" />
     <ClInclude Include="ComputePO.h" />
     <ClInclude Include="ReadBackTexture2D.h" />
+    <ClInclude Include="StaticBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -167,6 +172,18 @@
     </FxCompile>
     <FxCompile Include="Shaders\PSMMD_Toon1.hlsl">
       <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSMMDAlphaClip1.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\AO\PS_NTAO_Normal.hlsl">
+      <Filter>Shaders\AO</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\AO\VS_NTAO.hlsl">
+      <Filter>Shaders\AO</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\AO\PS_NTAO_1.hlsl">
+      <Filter>Shaders\AO</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

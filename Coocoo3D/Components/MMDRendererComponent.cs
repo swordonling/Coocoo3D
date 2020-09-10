@@ -15,6 +15,9 @@ using System.Threading.Tasks;
 
 namespace Coocoo3D.Components
 {
+    public struct RPGPUAssets
+    {
+    }
     public class MMDRendererComponent
     {
         public MMDMesh mesh;
@@ -22,7 +25,10 @@ namespace Coocoo3D.Components
         public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
         public List<Texture2D> texs;
-        public PObject pObject = new PObject();
+
+        public PObject POSkinning;
+        public PObject PODraw;
+        //public StaticBuffer NearTriangleBuffer;
 
         public Vector3[] meshPosData1;
         public Vector3[] meshPosData2;
@@ -305,6 +311,7 @@ namespace Coocoo3D.FileFormat
                     rendererComponent.vertexMorph2.Add(null);
                 }
             }
+            //rendererComponent.NearTriangleBuffer = modelResource.NearTriangleBuffer;
         }
     }
 }

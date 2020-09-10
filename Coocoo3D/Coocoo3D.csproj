@@ -122,7 +122,7 @@
     <Compile Include="Components\MMDMorphStateComponent.cs" />
     <Compile Include="Components\MMDMotionComponent.cs" />
     <Compile Include="Components\MMDRendererComponent.cs" />
-    <Compile Include="Core\DefaultResources.cs" />
+    <Compile Include="Present\CameraMotion.cs" />
     <Compile Include="Core\GameDriver.cs" />
     <Compile Include="Core\GeneralGameDriver.cs" />
     <Compile Include="Core\ProcessingList.cs" />
@@ -189,6 +189,7 @@
     <Compile Include="RenderPipeline\RayTracingRenderPipeline1.cs" />
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
+    <Compile Include="RenderPipeline\RPAssetsManager.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />
     <Compile Include="Utility\IDictionaryExt.cs" />
@@ -216,6 +217,7 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+    <Content Include="Samples\SampleShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">

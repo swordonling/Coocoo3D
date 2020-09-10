@@ -13,7 +13,8 @@ namespace Coocoo3D.Core
         public List<ITexture> TextureLoadList = new List<ITexture>();
         public List<IRenderTexture> RenderTextureUpdateList = new List<IRenderTexture>();
         public List<MMDMesh> MMDMeshLoadList = new List<MMDMesh>();
-        public List<ReadBackTexture2D> readBackTextureList=new List<ReadBackTexture2D>();
+        public List<StaticBuffer> staticBufferList = new List<StaticBuffer>();
+        public List<ReadBackTexture2D> readBackTextureList = new List<ReadBackTexture2D>();
 
         public void AddObject(MMDMesh mesh)
         {
@@ -43,6 +44,13 @@ namespace Coocoo3D.Core
                 readBackTextureList.Add(texture);
             }
         }
+        public void AddObject(StaticBuffer buffer)
+        {
+            lock (staticBufferList)
+            {
+                staticBufferList.Add(buffer);
+            }
+        }
 
         public void MoveToAnother(ProcessingList another)
         {
@@ -50,6 +58,7 @@ namespace Coocoo3D.Core
             RenderTextureUpdateList.MoveTo_CC(another.RenderTextureUpdateList);
             MMDMeshLoadList.MoveTo_CC(another.MMDMeshLoadList);
             readBackTextureList.MoveTo_CC(another.readBackTextureList);
+            staticBufferList.MoveTo_CC(another.staticBufferList);
         }
 
         public void Clear()
@@ -58,13 +67,16 @@ namespace Coocoo3D.Core
             RenderTextureUpdateList.Clear();
             MMDMeshLoadList.Clear();
             readBackTextureList.Clear();
+            staticBufferList.Clear();
         }
 
         public bool IsEmpty()
         {
             return TextureLoadList.Count == 0 &&
                 RenderTextureUpdateList.Count == 0 &&
-                MMDMeshLoadList.Count == 0;
+                MMDMeshLoadList.Count == 0 &&
+                staticBufferList.Count == 0 &&
+                readBackTextureList.Count == 0;
         }
 
         public void UnsafeAdd(ITexture texture)
@@ -95,6 +107,8 @@ namespace Coocoo3D.Core
                 graphicsContext.UploadMesh(MMDMeshLoadList[i]);
             for (int i = 0; i < readBackTextureList.Count; i++)
                 graphicsContext.UpdateReadBackTexture(readBackTextureList[i]);
+            for (int i = 0; i < staticBufferList.Count; i++)
+                graphicsContext.UploadBuffer(staticBufferList[i]);
         }
         public void _DealStep2(GraphicsContext graphicsContext)
         {
@@ -106,6 +120,8 @@ namespace Coocoo3D.Core
                 TextureLoadList[i].ReleaseUploadHeapResource();
             for (int i = 0; i < MMDMeshLoadList.Count; i++)
                 MMDMeshLoadList[i].ReleaseUploadHeapResource();
+            for (int i = 0; i < staticBufferList.Count; i++)
+                staticBufferList[i].ReleaseUploadHeapResource();
         }
     }
 }

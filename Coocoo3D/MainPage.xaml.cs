@@ -244,10 +244,46 @@ namespace Coocoo3D
         {
             appBody.ShowDetailPage(typeof(PropertiesPages.SoftwareInfoPropertiesPage), appBody);
         }
+        private async void SampleShader_Click(object sender, RoutedEventArgs e)
+        {
+            FileSavePicker fileSavePicker = new FileSavePicker()
+            {
+                FileTypeChoices =
+                    {
+                        { ".hlsl",new string[]{".hlsl"} }
+                    },
+                SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+                SuggestedFileName = "Sample.hlsl",
+                SettingsIdentifier = "SampleShader",
+            };
+            var sf = await fileSavePicker.PickSaveFileAsync();
+            if (sf == null) return;
+            var f = await Windows.Storage.StorageFile.GetFileFromApplicationUriAsync(new Uri("ms-appx:///Samples/SampleShader.hlsl"));
+            await f.CopyAndReplaceAsync(sf);
+        }
 
         private void worldViewer_Loaded(object sender, RoutedEventArgs e)
         {
 
+        }
+
+        private void RadioMenuFlyoutItem1_Click(object sender, RoutedEventArgs e)
+        {
+            x1.Width = new GridLength(240);
+            x2.Height = new GridLength(180);
+            x3.Width = new GridLength(240);
+        }
+        private void RadioMenuFlyoutItem2_Click(object sender, RoutedEventArgs e)
+        {
+            x1.Width = new GridLength(360);
+            x2.Height = new GridLength(270);
+            x3.Width = new GridLength(360);
+        }
+        private void RadioMenuFlyoutItem3_Click(object sender, RoutedEventArgs e)
+        {
+            x1.Width = new GridLength(360);
+            x2.Height = new GridLength(360);
+            x3.Width = new GridLength(360);
         }
     }
 }

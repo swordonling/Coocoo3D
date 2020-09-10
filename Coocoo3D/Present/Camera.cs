@@ -22,6 +22,17 @@ namespace Coocoo3D.Present
         public float AspectRatio = 1;
         public Vector3 Pos { get => _pos; }
         Vector3 _pos;
+        public CameraMotion cameraMotion = new CameraMotion();
+        public bool CameraMotionOn = false;
+
+        public void SetCameraMotion(float time)
+        {
+            var keyFrame = cameraMotion.GetCameraMotion(time);
+            Distance = -keyFrame.distance;
+            Angle = keyFrame.rotation;
+            Fov = Math.Clamp(keyFrame.FOV, 0.1f, 179.9f) / 180 * MathF.PI;
+            LookAtPoint = keyFrame.position;
+        }
 
         public void RotateDelta(Vector3 delta)
         {
@@ -30,17 +41,17 @@ namespace Coocoo3D.Present
 
         public void MoveDelta(Vector3 delta)
         {
-            Matrix4x4 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Angle.Y, Angle.X, -Angle.Z);
+            Matrix4x4 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Angle.Y, -Angle.X, -Angle.Z);
             LookAtPoint += Vector3.Transform(delta, rotateMatrix);
         }
         /// <summary>获取摄像机矩阵前调用它。</summary>
         public void Update()
         {
-            Matrix4x4 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Angle.Y, Angle.X, -Angle.Z);
+            Matrix4x4 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Angle.Y, -Angle.X, -Angle.Z);
             var pos = Vector3.Transform(-Vector3.UnitZ * Distance, rotateMatrix * Matrix4x4.CreateTranslation(LookAtPoint));
             var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
-            vMatrix = Matrix4x4.CreateLookAt(pos, LookAtPoint, up) ;
-            pMatrix = Matrix4x4.CreatePerspectiveFieldOfView(Fov, AspectRatio, 0.1f, 1000f)* Matrix4x4.CreateScale(-1, 1, 1);
+            vMatrix = Matrix4x4.CreateLookAt(pos, LookAtPoint, up);
+            pMatrix = Matrix4x4.CreatePerspectiveFieldOfView(Fov, AspectRatio, 0.1f, 1000f) * Matrix4x4.CreateScale(-1, 1, 1);
             vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
             _pos = pos;
         }

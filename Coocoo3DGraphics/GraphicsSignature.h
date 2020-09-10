@@ -23,6 +23,6 @@ namespace Coocoo3DGraphics {
 		void ReloadCompute(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs);
 		void Unload();
 	internal:
-		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignatures[10];
+		Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature;
 	};
 }

@@ -14,91 +14,85 @@
     DragOver="Page_DragOver"
     Drop="Page_Drop">
     <Page.Resources>
-        <DataTemplate x:Key="dtMaterial" x:DataType="ccc:MMDMatLit">
-            <Button Content="{x:Bind}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Stretch">
-                <Button.Flyout>
-                    <Flyout>
+        <Flyout x:Name="flyout1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="材质信息"/>
+                    <TextBlock Text="{x:Bind Name}" Margin="20 0 20 0"/>
+                </StackPanel>
+                <ScrollViewer Grid.Row="1">
+                    <StackPanel>
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="材质信息"/>
-                                <TextBlock Text="{x:Bind Name}" Margin="20 0 20 0"/>
-                            </StackPanel>
-                            <ScrollViewer Grid.Row="1">
-                                <StackPanel>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="漫反射比率" Grid.ColumnSpan="4"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.DiffuseColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.DiffuseColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.DiffuseColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="3" Header="A" Value="{x:Bind innerStruct.DiffuseColor.W,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                    </Grid>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="镜面" Grid.ColumnSpan="4"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.SpecularColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.SpecularColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.SpecularColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="3" Header="A" Value="{x:Bind innerStruct.SpecularColor.W,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                    </Grid>
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="环境光(不使用)" Grid.ColumnSpan="4"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind innerStruct.AmbientColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind innerStruct.AmbientColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                        <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind innerStruct.AmbientColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
-                                    </Grid>
-                                    <TextBlock Text="其他选项"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="金属度" Value="{x:Bind innerStruct.Metallic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="粗糙度" Value="{x:Bind innerStruct.Roughness,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="次表面" Value="{x:Bind innerStruct.Subsurface,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面" Value="{x:Bind innerStruct.Specular,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面染色" Value="{x:Bind innerStruct.SpecularTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <!--<Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="各向异性" Value="{x:Bind innerStruct.Anisotropic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>-->
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉" Value="{x:Bind innerStruct.Sheen,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉染色" Value="{x:Bind innerStruct.SheenTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="清漆" Value="{x:Bind innerStruct.Clearcoat,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                    <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="清漆光泽" Value="{x:Bind innerStruct.ClearcoatGloss,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
-                                </StackPanel>
-                            </ScrollViewer>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="漫反射比率" Grid.ColumnSpan="4"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind CurrentMat.innerStruct.DiffuseColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind CurrentMat.innerStruct.DiffuseColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind CurrentMat.innerStruct.DiffuseColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="3" Header="A" Value="{x:Bind CurrentMat.innerStruct.DiffuseColor.W,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
                         </Grid>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-        </DataTemplate>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="镜面" Grid.ColumnSpan="4"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind CurrentMat.innerStruct.SpecularColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind CurrentMat.innerStruct.SpecularColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind CurrentMat.innerStruct.SpecularColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="3" Header="A" Value="{x:Bind CurrentMat.innerStruct.SpecularColor.W,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="环境光(不使用)" Grid.ColumnSpan="4"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="R" Value="{x:Bind CurrentMat.innerStruct.AmbientColor.X,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="G" Value="{x:Bind CurrentMat.innerStruct.AmbientColor.Y,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                            <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="B" Value="{x:Bind CurrentMat.innerStruct.AmbientColor.Z,Mode=TwoWay}" ValueChanged="NumberBox_ValueChanged"/>
+                        </Grid>
+                        <TextBlock Text="其他选项"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="金属度" Value="{x:Bind CurrentMat.innerStruct.Metallic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="粗糙度" Value="{x:Bind CurrentMat.innerStruct.Roughness,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="次表面" Value="{x:Bind CurrentMat.innerStruct.Subsurface,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面" Value="{x:Bind CurrentMat.innerStruct.Specular,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="镜面染色" Value="{x:Bind CurrentMat.innerStruct.SpecularTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <!--<Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="各向异性" Value="{x:Bind innerStruct.Anisotropic,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>-->
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉" Value="{x:Bind CurrentMat.innerStruct.Sheen,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="光辉染色" Value="{x:Bind CurrentMat.innerStruct.SheenTint,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="清漆" Value="{x:Bind CurrentMat.innerStruct.Clearcoat,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                        <Slider Margin="5" StepFrequency="1e-4" Minimum="0" Maximum="1" Header="清漆光泽" Value="{x:Bind CurrentMat.innerStruct.ClearcoatGloss,Mode=TwoWay}" ValueChanged="Slider_ValueChanged"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Flyout>
     </Page.Resources>
-    <ScrollViewer Padding="0,0,20,20">
+    <ScrollViewer Padding="0,0,20,30">
         <StackPanel Grid.Row="0">
             <TextBox Height="100" x:Name="pageHeader" FontSize="18" Text="{x:Bind vName,Mode=TwoWay}" PlaceholderText="名称" TextWrapping="Wrap" AcceptsReturn="True"/>
             <Grid>
@@ -122,7 +116,7 @@
                 <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
             </ScrollViewer>
             <TextBlock Text="材质列表"/>
-            <ListView Height="300" x:Name="ViewMaterials" ItemTemplate="{StaticResource dtMaterial}">
+            <ListView Height="300" x:Name="ViewMaterials" SelectionMode="Single" SelectionChanged="ViewMaterials_SelectionChanged"> <!--ItemTemplate="{StaticResource dtMaterial}"-->
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

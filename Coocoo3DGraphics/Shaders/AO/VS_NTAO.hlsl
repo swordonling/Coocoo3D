@@ -1,5 +1,5 @@
-#include "CameraDataDefine.hlsli"
-cbuffer cb2 : register(b2)
+#include "../CameraDataDefine.hlsli"
+cbuffer cb0 : register(b0)
 {
 	CAMERA_DATA_DEFINE//is a macro
 };
@@ -27,8 +27,8 @@ PSSkinnedIn main(VSSkinnedIn input)
 {
 	PSSkinnedIn output;
 
-	output.Pos = mul(input.Pos, g_mWorldToProj);
-	output.wPos = input.Pos;
+	output.Pos = mul(float4(input.Pos + normalize(input.Norm), 1), g_mWorldToProj);
+	output.wPos = float4(input.Pos + normalize(input.Norm), 1);
 	output.Norm = input.Norm;
 	output.Tangent = input.Tan;
 	output.Tex = input.Tex;

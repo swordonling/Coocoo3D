@@ -61,12 +61,9 @@ namespace Coocoo3D.PropertiesPages
             if (e.DataView.Properties.TryGetValue("ExtName", out object object1))
             {
                 string extName = object1 as string;
-                if (extName != null)
+                if (extName != null && IsImageExtName(extName))
                 {
-                    if (IsImageExtName(extName))
-                    {
-                        e.AcceptedOperation = DataPackageOperation.Copy;
-                    }
+                    e.AcceptedOperation = DataPackageOperation.Copy;
                 }
             }
         }
@@ -89,7 +86,7 @@ namespace Coocoo3D.PropertiesPages
                 }
             }
             showInfo.Text = "正在处理";
-            appBody.defaultResources.EnvironmentCube.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
+            appBody.renderPipelineContext.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
                 await FileIO.ReadBufferAsync(files[0]),
                 await FileIO.ReadBufferAsync(files[1]),
                 await FileIO.ReadBufferAsync(files[2]),
@@ -102,8 +99,8 @@ namespace Coocoo3D.PropertiesPages
 
             }
             prevRenderFrame = t1;
-            appBody.ProcessingList.AddObject(appBody.defaultResources.EnvironmentCube);
-            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.defaultResources.EnvironmentCube, appBody.defaultResources.IrradianceMap, miscProcessType));
+            appBody.ProcessingList.AddObject(appBody.renderPipelineContext.EnvCubeMap);
+            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.renderPipelineContext.EnvCubeMap, appBody.renderPipelineContext.IrradianceMap, miscProcessType));
             appBody.RequireRender();
             showInfo.Text = "操作完成";
         }
@@ -115,7 +112,6 @@ namespace Coocoo3D.PropertiesPages
         private async void Apply1_Click(object sender, RoutedEventArgs e)
         {
             await Task1(RenderPipeline.MiscProcessType.GenerateIrradianceMapQ1);
-
         }
 
         private async void _img0_Drop(object sender, DragEventArgs e)

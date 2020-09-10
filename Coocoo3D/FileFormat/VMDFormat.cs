@@ -79,10 +79,15 @@ namespace Coocoo3D.FileFormat
             {
                 CameraKeyFrame keyFrame = new CameraKeyFrame();
                 keyFrame.Frame = reader.ReadInt32();
-                keyFrame.focalLength = reader.ReadSingle();
+                keyFrame.distance = reader.ReadSingle();
                 keyFrame.position = ReadVector3(reader);
                 keyFrame.rotation = ReadVector3(reader);
-                keyFrame.Interpolator = reader.ReadBytes(24);
+                keyFrame.mxInterpolator = ReadCameraInterpolator(reader);
+                keyFrame.myInterpolator = ReadCameraInterpolator(reader);
+                keyFrame.mzInterpolator = ReadCameraInterpolator(reader);
+                keyFrame.rInterpolator = ReadCameraInterpolator(reader);
+                keyFrame.dInterpolator = ReadCameraInterpolator(reader);
+                keyFrame.fInterpolator = ReadCameraInterpolator(reader);
                 keyFrame.FOV = reader.ReadInt32();
                 keyFrame.orthographic = reader.ReadByte() != 0;
 
@@ -159,10 +164,15 @@ namespace Coocoo3D.FileFormat
             foreach (var keyframe in CameraKeyFrames)
             {
                 writer.Write(keyframe.Frame);
-                writer.Write(keyframe.focalLength);
+                writer.Write(keyframe.distance);
                 WriteVector3(writer, keyframe.position);
                 WriteVector3(writer, keyframe.rotation);
-                writer.Write(keyframe.Interpolator);
+                WriteCameraInterpolator(writer, keyframe.mxInterpolator);
+                WriteCameraInterpolator(writer, keyframe.myInterpolator);
+                WriteCameraInterpolator(writer, keyframe.mzInterpolator);
+                WriteCameraInterpolator(writer, keyframe.rInterpolator);
+                WriteCameraInterpolator(writer, keyframe.dInterpolator);
+                WriteCameraInterpolator(writer, keyframe.fInterpolator);
                 writer.Write(keyframe.FOV);
                 writer.Write(Convert.ToByte(keyframe.orthographic));
             }
@@ -191,6 +201,17 @@ namespace Coocoo3D.FileFormat
             x.by = (((reader.ReadInt32() & 0xFF) ^ 0x80) - 0x80) * c_is;
             return x;
         }
+        private Interpolator ReadCameraInterpolator(BinaryReader reader)
+        {
+            const float c_is = 1.0f / 127.0f;
+            var x = new Interpolator();
+            uint a = reader.ReadUInt32();
+            x.ax = (((a & 0xFF) ^ 0x80) - 0x80) * c_is;
+            x.bx = ((((a & 0xFF00) >> 8) ^ 0x80) - 0x80) * c_is;
+            x.ay = ((((a & 0xFF0000) >> 16) ^ 0x80) - 0x80) * c_is;
+            x.by = ((((a & 0xFF000000) >> 24) ^ 0x80) - 0x80) * c_is;
+            return x;
+        }
         private Vector3 ReadVector3(BinaryReader reader)
         {
             Vector3 vector3 = new Vector3();
@@ -214,6 +235,13 @@ namespace Coocoo3D.FileFormat
             writer.Write((((int)Math.Round(interpolator.ay * 127) + 0x80) ^ 0x80) & 0xFF);
             writer.Write((((int)Math.Round(interpolator.bx * 127) + 0x80) ^ 0x80) & 0xFF);
             writer.Write((((int)Math.Round(interpolator.by * 127) + 0x80) ^ 0x80) & 0xFF);
+        }
+        private void WriteCameraInterpolator(BinaryWriter writer, Interpolator interpolator)
+        {
+            writer.Write((((byte)Math.Round(interpolator.ax * 127) + 0x80) ^ 0x80) & 0xFF);
+            writer.Write((((byte)Math.Round(interpolator.bx * 127) + 0x80) ^ 0x80) & 0xFF);
+            writer.Write((((byte)Math.Round(interpolator.ay * 127) + 0x80) ^ 0x80) & 0xFF);
+            writer.Write((((byte)Math.Round(interpolator.by * 127) + 0x80) ^ 0x80) & 0xFF);
         }
         private void WriteVector3(BinaryWriter writer, Vector3 vector3)
         {

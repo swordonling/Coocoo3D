@@ -31,14 +31,14 @@ namespace Coocoo3DGraphics
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
-		void Reload2(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, VertexShader^ vsTransform, DxgiFormat rtvFormat);
-		void ReloadDepthOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip);
-		void ReloadSkinningOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs);
+		void ReloadDepthOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip, int depthOffset);
+		bool ReloadSkinning(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs);
+		bool ReloadDrawing(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, PixelShader^ ps, DxgiFormat rtvFormat);
+		//bool ReloadNTAO(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, PixelShader^ ps, DxgiFormat rtvFormat);
 		void Reload(PObject^ pObject);
 		void Unload();
 	internal:
 		VertexShader^ m_vertexShader;
-		VertexShader^ m_vsTransform;
 		PixelShader^ m_pixelShader;
 		GeometryShader^ m_geometryShader;
 		static const UINT c_indexPipelineStateDepth = 6;

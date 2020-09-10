@@ -8,10 +8,11 @@ namespace Coocoo3DGraphics
 		property bool Ready;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		static VertexShader^ CompileLoad(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
-		void CompileReload(DeviceResources^ deviceResources, const Platform::Array<byte>^ sourceCode);
-		static VertexShader^ Load(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
-		void Reload(DeviceResources^ deviceResources, const Platform::Array<byte>^ data);
+		static VertexShader^ CompileLoad(const Platform::Array<byte>^ sourceCode);
+		void CompileReload(const Platform::Array<byte>^ sourceCode);
+		bool CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint);
+		static VertexShader^ Load(const Platform::Array<byte>^ data);
+		void Reload(const Platform::Array<byte>^ data);
 		virtual ~VertexShader();
 	internal:
 		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;

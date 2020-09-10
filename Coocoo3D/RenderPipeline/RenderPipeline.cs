@@ -13,15 +13,9 @@ namespace Coocoo3D.RenderPipeline
     {
         public const int c_maxCameraPerRender = 2;
 
-        public abstract GraphicsSignature GraphicsSignature { get; }
-
         public abstract void PrepareRenderData(RenderPipelineContext context);
 
-        public abstract void BeforeRenderCameras(RenderPipelineContext context);
-
         public abstract void RenderCamera(RenderPipelineContext context, int cameraIndex);
-
-        public abstract Task ReloadAssets(DeviceResources deviceResources);
 
 
         public volatile bool Ready;
@@ -31,17 +25,43 @@ namespace Coocoo3D.RenderPipeline
 
         }
 
-        protected async Task ReloadPixelShader(PixelShader pixelShader, DeviceResources deviceResources, string uri)
+        protected Texture2D TextureStatusSelect(Texture2D texture, Texture2D loading, Texture2D unload, Texture2D error)
         {
-            pixelShader.Reload(deviceResources, await ReadAllBytes(uri));
+            if (texture == null) return error;
+            if (texture.Status == GraphicsObjectStatus.loaded)
+                return texture;
+            else if (texture.Status == GraphicsObjectStatus.loading)
+                return loading;
+            else if (texture.Status == GraphicsObjectStatus.unload)
+                return unload;
+            else
+                return error;
         }
-        protected async Task ReloadVertexShader(VertexShader vertexShader, DeviceResources deviceResources, string uri)
+
+        protected PObject PObjectStatusSelect(PObject pObject, PObject loading, PObject unload, PObject error)
         {
-            vertexShader.Reload(deviceResources, await ReadAllBytes(uri));
+            if (pObject == null) return unload;
+            if (pObject.Status == GraphicsObjectStatus.unload)
+                return unload;
+            else if (pObject.Status == GraphicsObjectStatus.loaded)
+                return pObject;
+            else if (pObject.Status == GraphicsObjectStatus.loading)
+                return loading;
+            else
+                return error;
         }
-        protected async Task ReloadGeometryShader(GeometryShader geometryShader, DeviceResources deviceResources, string uri)
+
+        protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)
         {
-            geometryShader.Reload(deviceResources, await ReadAllBytes(uri));
+            pixelShader.Reload(await ReadAllBytes(uri));
+        }
+        protected async Task ReloadVertexShader(VertexShader vertexShader, string uri)
+        {
+            vertexShader.Reload(await ReadAllBytes(uri));
+        }
+        protected async Task ReloadGeometryShader(GeometryShader geometryShader, string uri)
+        {
+            geometryShader.Reload(await ReadAllBytes(uri));
         }
         protected async Task<byte[]> ReadAllBytes(string uri)
         {

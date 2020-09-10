@@ -15,6 +15,9 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using Coocoo3D.Core;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
+using Coocoo3D.FileFormat;
 
 // https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
 
@@ -70,6 +73,7 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVRZ = new PropertyChangedEventArgs("VRZ");
         PropertyChangedEventArgs eaVFOV = new PropertyChangedEventArgs("VFOV");
         PropertyChangedEventArgs eaVD = new PropertyChangedEventArgs("VD");
+        PropertyChangedEventArgs eaVCameraMotionOn = new PropertyChangedEventArgs("VCameraMotionOn");
         //long[] txs = new long[8];
         private void FrameUpdated(object sender, EventArgs e)
         {
@@ -96,6 +100,11 @@ namespace Coocoo3D.PropertiesPages
             {
                 _cacheDistance = appBody.camera.Distance;
                 PropertyChanged?.Invoke(this, eaVD);
+            }
+            if (_cacheCameraMotionOn != appBody.camera.CameraMotionOn)
+            {
+                _cacheCameraMotionOn = appBody.camera.CameraMotionOn;
+                PropertyChanged?.Invoke(this, eaVCameraMotionOn);
             }
             DateTime Now = DateTime.Now;
             if (Now - PrevUpdateTime > TimeSpan.FromSeconds(1))
@@ -239,6 +248,14 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
+        public bool VZPrepass
+        {
+            get => appBody.settings.ZPrepass; set
+            {
+                appBody.settings.ZPrepass = value;
+                appBody.RequireRender();
+            }
+        }
         public bool VEnableAO
         {
             get => appBody.settings.EnableAO; set
@@ -255,6 +272,15 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
+        public bool VCameraMotionOn
+        {
+            get => appBody.camera.CameraMotionOn; set
+            {
+                appBody.camera.CameraMotionOn = value;
+                appBody.RequireRender();
+            }
+        }
+        bool _cacheCameraMotionOn;
         #endregion
 
         private void VRenderPipeline_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -294,6 +320,48 @@ namespace Coocoo3D.PropertiesPages
         private void NewFun_Click(object sender, RoutedEventArgs e)
         {
             appBody.UseNewFun = !appBody.UseNewFun;
+        }
+
+        private bool StrEq(string a, string b)
+        {
+            return a.Equals(b, StringComparison.CurrentCultureIgnoreCase);
+        }
+        private bool IsImageExtName(string extName)
+        {
+            return StrEq(".vmd", extName);
+        }
+        private void Page_DragOver(object sender, DragEventArgs e)
+        {
+            Image image = sender as Image;
+            if (e.DataView.Properties.TryGetValue("ExtName", out object object1))
+            {
+                string extName = object1 as string;
+                if (extName != null && IsImageExtName(extName))
+                {
+                    e.AcceptedOperation = DataPackageOperation.Copy;
+                }
+            }
+        }
+
+        private async void Page_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.DataView.Properties.TryGetValue("ExtName", out object object1)) return;
+            string extName = object1 as string;
+            if (extName != null)
+            {
+                e.DataView.Properties.TryGetValue("File", out object object2);
+                StorageFile storageFile = object2 as StorageFile;
+                e.DataView.Properties.TryGetValue("Folder", out object object3);
+                StorageFolder storageFolder = object3 as StorageFolder;
+                if (StrEq(".vmd", extName))
+                {
+                    VMDFormat motionFile = new VMDFormat();
+                    motionFile.Reload(new BinaryReader(await storageFile.OpenStreamForReadAsync()));
+                    appBody.camera.cameraMotion.cameraKeyFrames = motionFile.CameraKeyFrames;
+                    vCameraMotionOn.IsEnabled = true;
+                    appBody.camera.CameraMotionOn = true;
+                }
+            }
         }
     }
 }

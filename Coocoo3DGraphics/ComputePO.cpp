@@ -33,6 +33,6 @@ void ComputePO::Reload(DeviceResources^ deviceResources, GraphicsSignature^ root
 	D3D12_COMPUTE_PIPELINE_STATE_DESC desc = {};
 	desc.CS.pShaderBytecode = byteCode->GetBufferPointer();
 	desc.CS.BytecodeLength = byteCode->GetBufferSize();
-	desc.pRootSignature = rootSignature->m_rootSignatures->Get();
+	desc.pRootSignature = rootSignature->m_rootSignature.Get();
 	DX::ThrowIfFailed(deviceResources->GetD3DDevice()->CreateComputePipelineState(&desc, IID_PPV_ARGS(&m_pipelineState)));
 }

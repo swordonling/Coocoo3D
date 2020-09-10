@@ -7,7 +7,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    AllowDrop="True"
+    DragOver="Page_DragOver"
+    Drop="Page_Drop">
 
     <Grid>
         <ScrollViewer Padding="0,0,20,0">
@@ -42,6 +45,7 @@
                                     <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
                                     <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="Z-Prepass" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
                                     <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="VQuality_SelectionChanged" SelectedIndex="0"/>
@@ -68,7 +72,9 @@
                     <ComboBoxItem Content="卡通1"/>
                 </ComboBox>-->
                 <TextBlock x:Name="VRayTracingSupport" Text="使用的显卡不支持光线追踪"/>
-                <TextBlock Text="在设置-系统-显示-图形设置 里更改使用的显卡"/>
+                <TextBlock Text="在设置-系统-显示-图形设置 里更改使用的显卡" TextWrapping="Wrap"/>
+                <ToggleSwitch x:Name="vCameraMotionOn" Header="镜头动作" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
+                <TextBlock Text="将VMD文件拖到至此应用镜头" TextWrapping="Wrap"/>
                 <!--<ToggleSwitch Header="测试新代码" Toggled="NewFun_Click"/>
                 <TextBlock Text="time1" Name="showt1"/>
                 <TextBlock Text="time2" Name="showt2"/>

@@ -57,7 +57,7 @@ TextureCube IrradianceCube : register (t4);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
-	float4 wPos	: POSWORLD;			//world space Pos
+	float4 wPos	: POSITION;			//world space Pos
 	float3 Norm : NORMAL;			//Normal
 	float2 TexCoord	: TEXCOORD;		//Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector

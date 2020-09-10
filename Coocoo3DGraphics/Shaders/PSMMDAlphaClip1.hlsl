@@ -27,5 +27,5 @@ struct PSSkinnedIn
 
 void main(PSSkinnedIn input)
 {
-	clip(texture0.Sample(s0, input.TexCoord).a * _DiffuseColor.a - 0.01f);
+	clip(texture0.Sample(s0, input.TexCoord).a * _DiffuseColor.a - 0.99f);
 }

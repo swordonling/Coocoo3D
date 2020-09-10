@@ -40,11 +40,16 @@ namespace Coocoo3D.MMDSupport
     public struct CameraKeyFrame : IComparable<CameraKeyFrame>
     {
         public int Frame;
-        public float focalLength;
+        public float distance;
         public Vector3 position;
         public Vector3 rotation;
-        public byte[] Interpolator;
-        public int FOV;
+        public Interpolator mxInterpolator;
+        public Interpolator myInterpolator;
+        public Interpolator mzInterpolator;
+        public Interpolator rInterpolator;
+        public Interpolator dInterpolator;
+        public Interpolator fInterpolator;
+        public float FOV;
         public bool orthographic;
 
         public int CompareTo(CameraKeyFrame other)
