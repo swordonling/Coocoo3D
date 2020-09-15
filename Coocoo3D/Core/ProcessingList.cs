@@ -1,5 +1,4 @@
-﻿using Coocoo3D.Utility;
-using Coocoo3DGraphics;
+﻿using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +9,24 @@ namespace Coocoo3D.Core
 {
     public class ProcessingList
     {
+        static void Move1<T>(IList<T> source, IList<T> target)
+        {
+            lock (source)
+            {
+                for (int i = 0; i < source.Count; i++)
+                {
+                    target.Add(source[i]);
+                }
+                source.Clear();
+            }
+        }
         public List<ITexture> TextureLoadList = new List<ITexture>();
         public List<IRenderTexture> RenderTextureUpdateList = new List<IRenderTexture>();
         public List<MMDMesh> MMDMeshLoadList = new List<MMDMesh>();
         public List<StaticBuffer> staticBufferList = new List<StaticBuffer>();
         public List<ReadBackTexture2D> readBackTextureList = new List<ReadBackTexture2D>();
+        public List<TwinBuffer> twinBufferList = new List<TwinBuffer>();
+        public List<DynamicMesh> dynamicMeshList = new List<DynamicMesh>();
 
         public void AddObject(MMDMesh mesh)
         {
@@ -51,14 +63,30 @@ namespace Coocoo3D.Core
                 staticBufferList.Add(buffer);
             }
         }
+        public void AddObject(TwinBuffer buffer)
+        {
+            lock (twinBufferList)
+            {
+                twinBufferList.Add(buffer);
+            }
+        }
+        public void AddObject(DynamicMesh buffer)
+        {
+            lock (dynamicMeshList)
+            {
+                dynamicMeshList.Add(buffer);
+            }
+        }
 
         public void MoveToAnother(ProcessingList another)
         {
-            TextureLoadList.MoveTo_CC(another.TextureLoadList);
-            RenderTextureUpdateList.MoveTo_CC(another.RenderTextureUpdateList);
-            MMDMeshLoadList.MoveTo_CC(another.MMDMeshLoadList);
-            readBackTextureList.MoveTo_CC(another.readBackTextureList);
-            staticBufferList.MoveTo_CC(another.staticBufferList);
+            Move1(TextureLoadList, another.TextureLoadList);
+            Move1(RenderTextureUpdateList, another.RenderTextureUpdateList);
+            Move1(MMDMeshLoadList, another.MMDMeshLoadList);
+            Move1(readBackTextureList, another.readBackTextureList);
+            Move1(staticBufferList, another.staticBufferList);
+            Move1(twinBufferList, another.twinBufferList);
+            Move1(dynamicMeshList, another.dynamicMeshList);
         }
 
         public void Clear()
@@ -68,6 +96,8 @@ namespace Coocoo3D.Core
             MMDMeshLoadList.Clear();
             readBackTextureList.Clear();
             staticBufferList.Clear();
+            twinBufferList.Clear();
+            dynamicMeshList.Clear();
         }
 
         public bool IsEmpty()
@@ -105,23 +135,26 @@ namespace Coocoo3D.Core
                 graphicsContext.UploadTexture(TextureLoadList[i]);
             for (int i = 0; i < MMDMeshLoadList.Count; i++)
                 graphicsContext.UploadMesh(MMDMeshLoadList[i]);
-            for (int i = 0; i < readBackTextureList.Count; i++)
-                graphicsContext.UpdateReadBackTexture(readBackTextureList[i]);
             for (int i = 0; i < staticBufferList.Count; i++)
                 graphicsContext.UploadBuffer(staticBufferList[i]);
         }
-        public void _DealStep2(GraphicsContext graphicsContext)
+        public void _DealStep2(GraphicsContext graphicsContext,DeviceResources deviceResources)
         {
-            for (int i = 0; i < RenderTextureUpdateList.Count; i++)
-            {
-                graphicsContext.UpdateRenderTexture(RenderTextureUpdateList[i]);
-            }
             for (int i = 0; i < TextureLoadList.Count; i++)
                 TextureLoadList[i].ReleaseUploadHeapResource();
             for (int i = 0; i < MMDMeshLoadList.Count; i++)
                 MMDMeshLoadList[i].ReleaseUploadHeapResource();
             for (int i = 0; i < staticBufferList.Count; i++)
                 staticBufferList[i].ReleaseUploadHeapResource();
+
+            for (int i = 0; i < RenderTextureUpdateList.Count; i++)
+                graphicsContext.UpdateRenderTexture(RenderTextureUpdateList[i]);
+            for (int i = 0; i < readBackTextureList.Count; i++)
+                graphicsContext.UpdateReadBackTexture(readBackTextureList[i]);
+            for (int i = 0; i < twinBufferList.Count; i++)
+                twinBufferList[i].Initilize(deviceResources);
+            for (int i = 0; i < dynamicMeshList.Count; i++)
+                dynamicMeshList[i].Initilize(deviceResources);
         }
     }
 }

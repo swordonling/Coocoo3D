@@ -37,6 +37,15 @@ const std::map<DXGI_FORMAT, UINT>dxgiFormatBytesPerPixel =
 	{DXGI_FORMAT_B5G6R5_UNORM,2},
 };
 
+inline void DX12UAVResourceBarrier(ID3D12GraphicsCommandList* commandList,ID3D12Resource* resource,D3D12_RESOURCE_STATES& stateRef)
+{
+	if (stateRef != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, stateRef, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
+	else
+		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(resource));
+	stateRef = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+}
+
 GraphicsContext^ GraphicsContext::Load(DeviceResources^ deviceResources)
 {
 	GraphicsContext^ graphicsContext = ref new GraphicsContext();
@@ -92,13 +101,11 @@ void GraphicsContext::SetMaterial(Material^ material)
 	//}
 }
 
-void GraphicsContext::SetPObject(PObject^ pObject, CullMode cullMode, BlendState blendState)
+void GraphicsContext::SetPObject(PObject^ pObject, CullMode cullMode)
 {
 	int a = (int)cullMode;
-	a += (int)blendState * 3;
 
 	m_commandList->SetPipelineState(pObject->m_pipelineState[a].Get());
-
 }
 
 void GraphicsContext::SetPObject(PObject^ pObject, int index)
@@ -350,6 +357,14 @@ void GraphicsContext::SetComputeSRVT(RenderTextureCube^ texture, int index)
 	}
 }
 
+void GraphicsContext::SetComputeSRVRSkinnedMesh(MMDMesh^ mesh, int index)
+{
+	if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_GENERIC_READ)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_skinnedVertice.Get(), mesh->prevStateSkinnedVertice, D3D12_RESOURCE_STATE_GENERIC_READ));
+	mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_GENERIC_READ;
+	m_commandList->SetComputeRootShaderResourceView(index, mesh->m_skinnedVertice->GetGPUVirtualAddress());
+}
+
 void GraphicsContext::SetComputeCBVR(ConstantBuffer^ buffer, int index)
 {
 	m_commandList->SetComputeRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
@@ -360,17 +375,25 @@ void GraphicsContext::SetComputeCBVR(ConstantBufferStatic^ buffer, int index)
 	m_commandList->SetComputeRootConstantBufferView(index, buffer->GetCurrentVirtualAddress());
 }
 
+void GraphicsContext::SetComputeUAVR(DynamicMesh^ mesh, int index)
+{
+	DX12UAVResourceBarrier(m_commandList.Get(), mesh->m_vertice.Get(), mesh->m_prevState);
+	m_commandList->SetComputeRootUnorderedAccessView(index, mesh->m_vertice->GetGPUVirtualAddress());
+}
+
+void GraphicsContext::SetComputeUAVR(TwinBuffer^ buffer,int bufIndex, int index)
+{
+	DX12UAVResourceBarrier(m_commandList.Get(), buffer->m_buffer[bufIndex].Get(), buffer->m_prevResourceState[bufIndex]);
+	m_commandList->SetComputeRootUnorderedAccessView(index, buffer->m_buffer[bufIndex]->GetGPUVirtualAddress());
+}
+
 void GraphicsContext::SetComputeUAVT(RenderTexture2D^ texture, int index)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		if (texture->prevResourceState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-		else
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(texture->m_texture.Get()));
-		texture->prevResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		DX12UAVResourceBarrier(m_commandList.Get(), texture->m_texture.Get(), texture->prevResourceState);
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
@@ -387,11 +410,7 @@ void GraphicsContext::SetComputeUAVT(RenderTextureCube^ texture, int index)
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		if (texture->prevResourceState != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
-		else
-			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(texture->m_texture.Get()));
-		texture->prevResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		DX12UAVResourceBarrier(m_commandList.Get(), texture->m_texture.Get(), texture->prevResourceState);
 
 		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
@@ -1175,6 +1194,15 @@ void GraphicsContext::SetMesh(MMDMesh^ mesh)
 	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
 }
 
+void GraphicsContext::SetMesh(DynamicMesh^ mesh)
+{
+	if (mesh->m_prevState != D3D12_RESOURCE_STATE_GENERIC_READ)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertice.Get(), mesh->m_prevState, D3D12_RESOURCE_STATE_GENERIC_READ));
+	mesh->m_prevState = D3D12_RESOURCE_STATE_GENERIC_READ;
+	m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
+}
+
 void GraphicsContext::SetMeshSkinned(MMDMesh^ mesh)
 {
 	if (mesh->prevStateSkinnedVertice != D3D12_RESOURCE_STATE_GENERIC_READ)
@@ -1182,7 +1210,6 @@ void GraphicsContext::SetMeshSkinned(MMDMesh^ mesh)
 	mesh->prevStateSkinnedVertice = D3D12_RESOURCE_STATE_GENERIC_READ;
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_skinnedVerticeVertexBufferView);
-	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
 }
 
 void GraphicsContext::SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color)

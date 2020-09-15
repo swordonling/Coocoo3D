@@ -1,14 +1,16 @@
 #include "pch.h"
-#include "PixelShader.h"
+#include "GeometryShader.h"
 #include "DirectXHelper.h"
 using namespace Coocoo3DGraphics;
-PixelShader^ PixelShader::CompileLoad(const Platform::Array<byte>^ sourceCode)
+
+GeometryShader ^ GeometryShader::CompileLoad(const Platform::Array<byte>^ sourceCode)
 {
-	PixelShader^ pixelShader = ref new PixelShader();
-	pixelShader->CompileReload(sourceCode);
-	return pixelShader;
+	GeometryShader^ geometryShader = ref new GeometryShader();
+	geometryShader->CompileReload(sourceCode);
+	return geometryShader;
 }
-void PixelShader::CompileReload(const Platform::Array<byte>^ sourceCode)
+
+void GeometryShader::CompileReload(const Platform::Array<byte>^ sourceCode)
 {
 	DX::ThrowIfFailed(
 		D3DCompile(
@@ -18,7 +20,7 @@ void PixelShader::CompileReload(const Platform::Array<byte>^ sourceCode)
 			nullptr,
 			D3D_COMPILE_STANDARD_FILE_INCLUDE,
 			"main",
-			"ps_5_0",
+			"gs_5_0",
 			0,
 			0,
 			&byteCode,
@@ -27,8 +29,13 @@ void PixelShader::CompileReload(const Platform::Array<byte>^ sourceCode)
 	);
 }
 
-bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint)
+bool GeometryShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro)
 {
+
+	const D3D_SHADER_MACRO* macros = nullptr;
+	if (macro == ShaderMacro::DEFINE_COO_SURFACE)macros = MACROS_DEFINE_COO_SURFACE;
+	else if (macro == ShaderMacro::DEFINE_COO_PARTICLE)macros = MACROS_DEFINE_COO_PARTICLE;
+
 	const wchar_t* wstr1 = entryPoint->Begin();
 	UINT length1 = wcslen(wstr1);
 	UINT strlen1 = WideCharToMultiByte(CP_ACP, 0, wstr1, length1, NULL, 0, NULL, NULL);
@@ -39,10 +46,10 @@ bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platfo
 		sourceCode->begin(),
 		sourceCode->Length,
 		nullptr,
-		nullptr,
+		macros,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
 		entryPointStr,
-		"ps_5_0",
+		"gs_5_0",
 		0,
 		0,
 		&byteCode,
@@ -55,19 +62,15 @@ bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platfo
 		return true;
 }
 
-PixelShader^ PixelShader::Load(const Platform::Array<byte>^ data)
+GeometryShader ^ GeometryShader::Load(const Platform::Array<byte>^ data)
 {
-	PixelShader^ pixelShader = ref new PixelShader();
-	pixelShader->Reload(data);
-	return pixelShader;
+	GeometryShader^ geometryShader = ref new GeometryShader();
+	geometryShader->Reload(data);
+	return geometryShader;
 }
 
-void PixelShader::Reload(const Platform::Array<byte>^ data)
+void GeometryShader::Reload(const Platform::Array<byte>^ data)
 {
 	DX::ThrowIfFailed(D3DCreateBlob(data->Length, &byteCode));
 	memcpy(byteCode->GetBufferPointer(), data->begin(), data->Length);
-}
-
-PixelShader::~PixelShader()
-{
 }

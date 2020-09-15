@@ -30,11 +30,10 @@ namespace Coocoo3DGraphics
 		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
 		void ReloadDepthOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip, int depthOffset);
 		bool ReloadSkinning(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs);
-		bool ReloadDrawing(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, PixelShader^ ps, DxgiFormat rtvFormat);
-		//bool ReloadNTAO(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, PixelShader^ ps, DxgiFormat rtvFormat);
+		bool ReloadDrawing(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat);
 		void Reload(PObject^ pObject);
 		void Unload();
 	internal:

@@ -57,16 +57,21 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
+        public override void BeforeRenderCamera(RenderPipelineContext context)
+        {
+
+        }
+
         public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignaturePostProcess);
-            graphicsContext.SetRenderTargetScreenAndClear(context.settings.backgroundColor);
+            graphicsContext.SetRenderTargetScreenAndClear(context.renderPipelineDynamicContext.settings.backgroundColor);
             graphicsContext.SetCBVR(postProcessDataBuffer, 0);
             graphicsContext.SetSRVT(context.outputRTV, 1);
             graphicsContext.SetSRVT(context.postProcessBackground, 2);
             graphicsContext.SetMesh(context.ndcQuadMesh);
-            graphicsContext.SetPObject(context.RPAssetsManager.PObjectPostProcess, CullMode.back, BlendState.alpha);
+            graphicsContext.SetPObject(context.RPAssetsManager.PObjectPostProcess, CullMode.back);
             graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
         }
 

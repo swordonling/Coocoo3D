@@ -62,6 +62,11 @@ void MMDMesh::ReleaseUploadHeapResource()
 	m_indexBufferUpload.Reset();
 }
 
+void MMDMesh::CopyPosData(Platform::WriteOnlyArray<Windows::Foundation::Numerics::float3>^ Target)
+{
+	memcpy(Target->begin(), m_verticeDataPos->begin(), m_verticeDataPos->Length);
+}
+
 MMDMesh::~MMDMesh()
 {
 }

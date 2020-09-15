@@ -21,7 +21,7 @@ namespace Coocoo3D.Present
         public ConstantBuffer DataBuffer = new ConstantBuffer();
 
 
-        public void UpdateCameraData(Camera camera, ref Core.Settings settings)
+        public void UpdateCameraData(CameraData camera, ref Core.Settings settings)
         {
             wpMatrix = Matrix4x4.Transpose(camera.vpMatrix);
             Matrix4x4.Invert(camera.vpMatrix, out innerStruct.pwMatrix);
@@ -30,7 +30,7 @@ namespace Coocoo3D.Present
             AspectRatio = camera.AspectRatio;
             innerStruct.SkyBoxMultiple = settings.SkyBoxLightMultiple;
         }
-        public void UpdateCameraData(Lighting lighting, ref Core.Settings settings)
+        public void UpdateCameraData(LightingData lighting, ref Core.Settings settings)
         {
             wpMatrix = Matrix4x4.Transpose(lighting.vpMatrix);
             Matrix4x4.Invert(lighting.vpMatrix, out innerStruct.pwMatrix);

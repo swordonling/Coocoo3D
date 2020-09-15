@@ -29,6 +29,14 @@ cbuffer cb3 : register(b3)
 	float _Metallic;
 	float _Roughness;
 	float _Emission;
+	float _Subsurface;
+	float _Specular;
+	float _SpecularTint;
+	float _Anisotropic;
+	float _Sheen;
+	float _SheenTint;
+	float _Clearcoat;
+	float _ClearcoatGloss;
 };
 cbuffer cb2 : register(b2)
 {
@@ -168,7 +176,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 				float2 shadowTexCoords;
 				shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
 				shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-				if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
+				if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0 && g_enableShadow != 0)
 				inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w) > 0 ? 1 : 0;
 
 				float3 lightDir = normalize(Lightings[i].LightDir);

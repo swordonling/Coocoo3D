@@ -55,6 +55,7 @@ namespace Coocoo3DGraphics
 		void Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt);
 		void ReloadNDCQuad();
 		void ReleaseUploadHeapResource();
+		void CopyPosData(Platform::WriteOnlyArray<Windows::Foundation::Numerics::float3>^ Target);
 		virtual ~MMDMesh();
 
 		property Platform::Array<byte>^ m_verticeData;

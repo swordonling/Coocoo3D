@@ -29,12 +29,12 @@ struct LightInfo
 
 struct PSSkinnedIn
 {
-	float4 Pos;
+	float3 Pos;
 	float3 Norm;
 	float2 Tex;
 	float3 Tangent;
 	float EdgeScale;
-	float3 preserved1;
+	float4 preserved1;
 };
 
 struct Ray
@@ -281,7 +281,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 		rayX.Direction = payloadX.direction;
 		rayX.TMin = 1e-6f;
 		rayX.TMax = 10000.0;
-		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayX, payloadX);
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadX);
 		indirect1.specular = payloadX.color.rgb;
 	}
 	else
@@ -298,7 +298,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 	rayNext.TMin = 1e-6f;
 	rayNext.TMax = 10000.0;
 	if (payload.depth < 3 && payload.color.a < 1 - 1e-4f)
-		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayNext, payload);
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayNext, payload);
 }
 
 [shader("miss")]

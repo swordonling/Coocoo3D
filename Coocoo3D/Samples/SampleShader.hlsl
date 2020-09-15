@@ -21,7 +21,9 @@ cbuffer cb1 : register(b1)
 {
 	float4x4 g_mWorld;
 	float g_posAmount1;
-	float3 cb1_preserved1;
+	uint g_vertexCount;
+	uint g_indexCount;
+	float cb1_preserved1;
 	float4 cb1_preserved2[3];
 	LightInfo Lightings[4];
 };
@@ -37,12 +39,15 @@ cbuffer cb2 : register(b2)
 	float g_skyBoxMultiple;
 	float3 g_camera_preserved;
 	float4 g_camera_preserved2[5];
+	uint g_enableAO;
+	uint g_enableShadow;
+	uint g_quality;
 };
 
 struct VSSkinnedIn
 {
-	float3 Pos	: POSITION;			//Position
-	float3 PosX	: POSITIONX;		//Position
+	float3 Pos	: POSITION0;		//Position
+	float3 Pos1	: POSITION1;		//Position
 	float4 Weights : WEIGHTS;		//Bone weights
 	uint4  Bones : BONES;			//Bone indices
 	float3 Norm : NORMAL;			//Normal
@@ -53,7 +58,7 @@ struct VSSkinnedIn
 
 struct VSSkinnedOut
 {
-	float4 Pos	: SV_POSITION;		//Position
+	float3 Pos	: POSITION;			//Position
 	float3 Norm : NORMAL;			//Normal
 	float2 Tex	: TEXCOORD;		    //Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
@@ -61,92 +66,31 @@ struct VSSkinnedOut
 };
 
 
-struct SkinnedInfo
+// Create an initial random number for this thread
+uint SeedThread(uint seed)
 {
-	float4 Pos;
-	float3 Norm;
-	float3 Tan;
-};
-
-matrix FetchBoneTransform(uint iBone)
-{
-	return g_mConstBoneWorld[iBone];
+	// Thomas Wang hash 
+	// Ref: http://www.burtleburtle.net/bob/hash/integer.html
+	seed = (seed ^ 61) ^ (seed >> 16);
+	seed *= 9;
+	seed = seed ^ (seed >> 4);
+	seed *= 0x27d4eb2d;
+	seed = seed ^ (seed >> 15);
+	return seed;
 }
-
-SkinnedInfo SkinVert(VSSkinnedIn Input)
+// Generate a random 32-bit integer
+uint Random(inout uint state)
 {
-	SkinnedInfo Output = (SkinnedInfo)0;
-
-	float4 Pos = float4(Input.Pos * (1 - g_posAmount1) + Input.PosX * g_posAmount1, 1);
-	float3 Norm = Input.Norm;
-	float3 Tan = Input.Tan;
-
-	//Bone0
-	uint iBone = Input.Bones.x;
-	float fWeight = Input.Weights.x;
-	matrix m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
-	//Bone1
-	iBone = Input.Bones.y;
-	fWeight = Input.Weights.y;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
-	//Bone2
-	iBone = Input.Bones.z;
-	fWeight = Input.Weights.z;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
-	//Bone3
-	iBone = Input.Bones.w;
-	fWeight = Input.Weights.w;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
-	return Output;
+	// Xorshift algorithm from George Marsaglia's paper.
+	state ^= (state << 13);
+	state ^= (state >> 17);
+	state ^= (state << 5);
+	return state;
 }
-
-
-VSSkinnedOut VS(VSSkinnedIn input)
+// Generate a random float in the range [0.0f, 1.0f)
+float Random01(inout uint state)
 {
-	VSSkinnedOut output;
-
-	SkinnedInfo vSkinned = SkinVert(input);
-	output.Pos = mul(vSkinned.Pos, g_mWorld);
-	output.Norm = normalize(mul(vSkinned.Norm, (float3x3)g_mWorld));
-	output.Tangent = normalize(mul(vSkinned.Tan, (float3x3)g_mWorld));
-	output.Tex = input.Tex;
-	output.EdgeScale = input.EdgeScale;
-
-	return output;
-}
-
-[maxvertexcount(3)]
-void GS(
-	triangle VSSkinnedOut input[3],
-	inout TriangleStream< VSSkinnedOut > triStream
-)
-{
-	VSSkinnedOut output;
-	float3 norm = normalize(cross(input[0].Pos.xyz - input[1].Pos.xyz, input[1].Pos.xyz - input[2].Pos.xyz));
-	for (int i = 0; i < 3; i++)
-	{
-		output = input[i];
-		output.Pos = input[i].Pos + float4((abs(g_time % 4 - 2) / 4) * norm, 0);
-
-		triStream.Append(output);
-	}
-	triStream.RestartStrip();
+	return asfloat(0x3f800000 | Random(state) >> 9) - 1.0;
 }
 
 //Copyright(c) 2016 Unity Technologies
@@ -494,6 +438,93 @@ half4 BRDF1_Unity_PBS(half3 diffColor, half3 specColor, half oneMinusReflectivit
 }
 
 
+#if COO_SURFACE
+struct SkinnedInfo
+{
+	float4 Pos;
+	float3 Norm;
+	float3 Tan;
+};
+
+matrix FetchBoneTransform(uint iBone)
+{
+	return g_mConstBoneWorld[iBone];
+}
+
+SkinnedInfo SkinVert(VSSkinnedIn Input)
+{
+	SkinnedInfo Output = (SkinnedInfo)0;
+
+	float4 Pos = float4(Input.Pos * (1 - g_posAmount1) + Input.Pos1 * g_posAmount1, 1);
+	float3 Norm = Input.Norm;
+	float3 Tan = Input.Tan;
+
+	//Bone0
+	uint iBone = Input.Bones.x;
+	float fWeight = Input.Weights.x;
+	matrix m = FetchBoneTransform(iBone);
+	Output.Pos += fWeight * mul(Pos, m);
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+
+	//Bone1
+	iBone = Input.Bones.y;
+	fWeight = Input.Weights.y;
+	m = FetchBoneTransform(iBone);
+	Output.Pos += fWeight * mul(Pos, m);
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+
+	//Bone2
+	iBone = Input.Bones.z;
+	fWeight = Input.Weights.z;
+	m = FetchBoneTransform(iBone);
+	Output.Pos += fWeight * mul(Pos, m);
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+
+	//Bone3
+	iBone = Input.Bones.w;
+	fWeight = Input.Weights.w;
+	m = FetchBoneTransform(iBone);
+	Output.Pos += fWeight * mul(Pos, m);
+	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+
+	return Output;
+}
+
+VSSkinnedOut VS(VSSkinnedIn input)
+{
+	VSSkinnedOut output;
+
+	SkinnedInfo vSkinned = SkinVert(input);
+	output.Pos = mul(vSkinned.Pos, g_mWorld);
+	output.Norm = normalize(mul(vSkinned.Norm, (float3x3)g_mWorld));
+	output.Tangent = normalize(mul(vSkinned.Tan, (float3x3)g_mWorld));
+	output.Tex = input.Tex;
+	output.EdgeScale = input.EdgeScale;
+
+	return output;
+}
+
+//[maxvertexcount(3)]
+//void GS(
+//	triangle VSSkinnedOut input[3],
+//	inout TriangleStream< VSSkinnedOut > triStream
+//)
+//{
+//	VSSkinnedOut output;
+//	float3 norm = normalize(cross(input[0].Pos.xyz - input[1].Pos.xyz, input[1].Pos.xyz - input[2].Pos.xyz));
+//	for (int i = 0; i < 3; i++)
+//	{
+//		output = input[i];
+//		output.Pos = input[i].Pos + (abs(g_time % 4 - 2) / 4) * norm;
+//
+//		triStream.Append(output);
+//	}
+//	triStream.RestartStrip();
+//}
 cbuffer cb3 : register(b3)
 {
 	float4 _DiffuseColor;
@@ -509,6 +540,14 @@ cbuffer cb3 : register(b3)
 	float _Metallic;
 	float _Roughness;
 	float _Emission;
+	float _Subsurface;
+	float _Specular;
+	float _SpecularTint;
+	float _Anisotropic;
+	float _Sheen;
+	float _SheenTint;
+	float _Clearcoat;
+	float _ClearcoatGloss;
 };
 Texture2D texture0 :register(t0);
 SamplerState s0 : register(s0);
@@ -545,7 +584,7 @@ float4 PS(PSIn input) : SV_TARGET
 			float2 shadowTexCoords;
 			shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
 			shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-			if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0)
+			if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0 && g_enableShadow != 0)
 				inShadow = (ShadowMap0.Sample(sampleShadowMap0, shadowTexCoords).r - sPos.z / sPos.w) > 0 ? 1 : 0;
 
 			float3 lightDir = normalize(Lightings[i].LightDir);
@@ -613,3 +652,69 @@ float4 PS(PSIn input) : SV_TARGET
 	return float4(strength * float3(0.5f,1,1), texColor.a);
 	//return float4(input.Tangent*0.5+0.5, texColor.a);
 }
+float4 PSParticle(PSIn input) : SV_TARGET
+{
+	return float4(1,1,1,0.1f);
+}
+#endif //COO_SURFACE
+#ifdef COO_PARTICLE
+
+struct Vertex1
+{
+	float3 Pos;
+	float3 Norm;
+	float2 Tex;
+	float3 Tangent;
+	float EdgeScale;
+	float4 preserved;
+};
+struct Triangle1
+{
+	Vertex1 verts[3];
+};
+struct ParticleDynamicData
+{
+	float3 position;
+	float3 verts[3];
+	float3 speed;
+	float life;
+};
+
+StructuredBuffer<Triangle1> sourcePrimitives : register(t0);
+RWStructuredBuffer<Triangle1> targetPrimitives : register(u0);
+RWStructuredBuffer<ParticleDynamicData> particleDynamicData : register(u1);
+
+[numthreads(64, 1, 1)]
+void CSParticle(uint3 dtid : SV_DispatchThreadID)
+{
+	uint index = dtid.x;
+	if (index >= g_indexCount / 3)return;//防止内存访问溢出，溢出会造成严重后果。
+	Triangle1 tri1 = sourcePrimitives[index];
+	if (particleDynamicData[index].life <= 0)
+	{
+		uint seed = SeedThread(index + g_camera_randomValue);
+
+		particleDynamicData[index].life = 5 * Random01(seed);
+		particleDynamicData[index].position = tri1.verts[0].Pos + tri1.verts[1].Pos + tri1.verts[2].Pos;
+		particleDynamicData[index].speed = float3(Random01(seed) - 0.5f, -3 * Random01(seed), Random01(seed) - 0.5f);
+		for (int i = 0; i < 3; i++)
+		{
+			particleDynamicData[index].verts[i] = tri1.verts[i].Pos;
+		}
+	}
+	else
+	{
+		particleDynamicData[index].life -= g_deltaTime;
+
+		for (int i = 0; i < 3; i++)
+		{
+			particleDynamicData[index].verts[i] += particleDynamicData[index].speed * g_deltaTime;
+		}
+	}
+	for (int i = 0; i < 3; i++)
+	{
+		tri1.verts[i].Pos = particleDynamicData[index].verts[i];
+	}
+	targetPrimitives[index] = tri1;
+}
+#endif

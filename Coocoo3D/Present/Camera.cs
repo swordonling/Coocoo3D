@@ -9,6 +9,18 @@ using System.Threading.Tasks;
 
 namespace Coocoo3D.Present
 {
+    public struct CameraData
+    {
+        public Matrix4x4 vMatrix;
+        public Matrix4x4 pMatrix;
+        public Matrix4x4 vpMatrix;
+        public Vector3 LookAtPoint;
+        public float Distance;
+        public Vector3 Angle;
+        public float Fov;
+        public float AspectRatio;
+        public Vector3 Pos;
+    }
     public class Camera
     {
         public Matrix4x4 vMatrix;
@@ -54,6 +66,21 @@ namespace Coocoo3D.Present
             pMatrix = Matrix4x4.CreatePerspectiveFieldOfView(Fov, AspectRatio, 0.1f, 1000f) * Matrix4x4.CreateScale(-1, 1, 1);
             vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
             _pos = pos;
+        }
+        public CameraData GetCameraData()
+        {
+            return new CameraData()
+            {
+                Angle = Angle,
+                AspectRatio = AspectRatio,
+                Distance = Distance,
+                Fov = Fov,
+                LookAtPoint = LookAtPoint,
+                pMatrix = pMatrix,
+                Pos = Pos,
+                vMatrix = vMatrix,
+                vpMatrix = vpMatrix,
+            };
         }
     }
 }

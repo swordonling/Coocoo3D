@@ -1,6 +1,6 @@
 struct PSSkinnedIn
 {
-	float4 Pos	: SV_POSITION;		//Position
+	float4 Pos	: POSITION;		//Position
 	float3 Norm : NORMAL;			//Normal
 	float2 Tex	: TEXCOORD;		    //Texture coordinate
 	float3 Tan : TANGENT;		//Normalized Tangent vector

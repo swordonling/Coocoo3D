@@ -12,6 +12,21 @@ using Windows.Storage.Streams;
 
 namespace Coocoo3D.RenderPipeline
 {
+    public class RenderPipelineDynamicContext
+    {
+        public Settings settings;
+        public InShaderSettings inShaderSettings;
+        public List<MMD3DEntity> entities = new List<MMD3DEntity>();
+        public List<LightingData> lightings = new List<LightingData>();
+        public List<CameraData> cameras = new List<CameraData>();
+
+        public void ClearCollections()
+        {
+            entities.Clear();
+            lightings.Clear();
+            cameras.Clear();
+        }
+    }
     public class RenderPipelineContext
     {
         public RenderTexture2D outputRTV = new RenderTexture2D();
@@ -35,13 +50,16 @@ namespace Coocoo3D.RenderPipeline
         public Texture2D ui0Texture = new Texture2D();
         public Texture2D postProcessBackground = new Texture2D();
 
-        public Settings settings;
-        //public Scene scene;
+        public RenderPipelineDynamicContext renderPipelineDynamicContext = new RenderPipelineDynamicContext();
+        public RenderPipelineDynamicContext renderPipelineDynamicContext1 = new RenderPipelineDynamicContext();
 
-        public List<MMD3DEntity> entities = new List<MMD3DEntity>();
-        public List<Lighting> lightings = new List<Lighting>();
-        public List<Camera> cameras = new List<Camera>();
+        //public Settings settings;
 
+        //public List<MMD3DEntity> entities = new List<MMD3DEntity>();
+        //public List<Lighting> lightings = new List<Lighting>();
+        //public List<Camera> cameras = new List<Camera>();
+
+        public List<ConstantBuffer> CBs_Bone = new List<ConstantBuffer>();
 
         public RenderPipelineContext()
         {
@@ -54,6 +72,24 @@ namespace Coocoo3D.RenderPipeline
                 ScreenSizeDSVs[i] = new RenderTexture2D();
             }
         }
+
+        public void UpdateGPUResource()
+        {
+            #region Update bone data
+            int count = renderPipelineDynamicContext.entities.Count;
+            while (CBs_Bone.Count < count)
+            {
+                ConstantBuffer constantBuffer = new ConstantBuffer();
+                constantBuffer.Reload(deviceResources, Components.MMDBoneComponent.c_boneMatrixDataSize);
+                CBs_Bone.Add(constantBuffer);
+            }
+            for (int i = 0; i < renderPipelineDynamicContext.entities.Count; i++)
+            {
+                graphicsContext.UpdateResource(CBs_Bone[i], renderPipelineDynamicContext.entities[i].boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize, 0);
+            }
+            #endregion
+        }
+
         public bool Initilized = false;
         public Task LoadTask;
         public async Task ReloadDefalutResources(WICFactory wic, ProcessingList processingList, MiscProcessContext miscProcessContext)
@@ -97,13 +133,6 @@ namespace Coocoo3D.RenderPipeline
             stream.Dispose();
             dataReader.Dispose();
             return data;
-        }
-
-        public void ClearCollections()
-        {
-            entities.Clear();
-            lightings.Clear();
-            cameras.Clear();
         }
     }
 }

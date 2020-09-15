@@ -62,17 +62,6 @@ namespace Coocoo3D.Present
         public void UpdateGpuResources(GraphicsContext graphicsContext)
         {
             rendererComponent.UpdateGPUResources(graphicsContext);
-            if (!boneComponent.GpuUsable)
-            {
-                boneComponent.WriteMatriticesData();
-                boneComponent.GpuUsable = true;
-                needUpdateMotion = true;
-            }
-            if (needUpdateMotion)
-            {
-                graphicsContext.UpdateResource(boneComponent.boneMatricesBuffer, boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize, 0);
-                needUpdateMotion = false;
-            }
         }
 
         public override string ToString()
@@ -115,20 +104,17 @@ namespace Coocoo3D.FileFormat
                 Marshal.Copy(Vertices[i].weight, 0, ptr + 24 + 16, 4);
                 ptr += c_vertexStride;
             }
-            ptr = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData2, 0);
+            IntPtr ptr2 = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData2, 0);
             for (int i = 0; i < Vertices.Count; i++)
             {
-                Marshal.StructureToPtr(Vertices[i].Coordinate, ptr, true);
-                ptr += c_vertexStride2;
+                Marshal.StructureToPtr(Vertices[i].Coordinate, ptr2 + i * c_vertexStride2, true);
             }
 
-            ptr = Marshal.UnsafeAddrOfPinnedArrayElement(indexsData, 0);
+            IntPtr ptr3 = Marshal.UnsafeAddrOfPinnedArrayElement(indexsData, 0);
             for (int i = 0; i < TriangleIndexs.Count; i++)
             {
-                Marshal.WriteInt32(ptr + i * c_indexStride, TriangleIndexs[i]);
+                Marshal.WriteInt32(ptr3 + i * c_indexStride, TriangleIndexs[i]);
             }
-
-            //NearTrianglesGenerate();
         }
         ///<summary>Reoad2()后可用</summary>
         public MMDMesh GetMesh()
@@ -143,131 +129,10 @@ namespace Coocoo3D.FileFormat
             if (gch_verticesData2.IsAllocated) gch_verticesData2.Free();
             if (gch_indexsData.IsAllocated) gch_indexsData.Free();
         }
-        //const int c_nearTrianglesMaxCount = 16;
-        //public struct NearTriangleIndex
-        //{
-        //    [MarshalAs(UnmanagedType.ByValArray, SizeConst = c_nearTrianglesMaxCount, ArraySubType = UnmanagedType.I4)]
-        //    public int[] data;
-        //    public int this[int i]
-        //    {
-        //        get
-        //        {
-        //            return data[i];
-        //        }
-        //        set
-        //        {
-        //            data[i] = value;
-        //        }
-        //    }
-        //    public void Add(int x)
-        //    {
-        //        for (int i = 0; i < c_nearTrianglesMaxCount; i++)
-        //        {
-        //            if (data[i] == -1)
-        //            {
-        //                data[i] = x;
-        //                return;
-        //            }
-        //        }
-        //    }
-        //    public void NSAdd(int x)
-        //    {
-        //        for (int i = 0; i < c_nearTrianglesMaxCount; i++)
-        //        {
-        //            if (data[i] == x)
-        //            {
-        //                return;
-        //            }
-        //            if (data[i] == -1)
-        //            {
-        //                data[i] = x;
-        //                return;
-        //            }
-        //        }
-        //    }
-        //    public NearTriangleIndex(bool nothing)
-        //    {
-        //        data = new int[c_nearTrianglesMaxCount];
-        //        for (int i = 0; i < c_nearTrianglesMaxCount; i++)
-        //            data[i] = -1;
-        //    }
-        //}
-
-        //public void NearTrianglesGenerate()
-        //{
-        //    Dictionary<Vector3, NearTriangleIndex> VerticeMerge = new Dictionary<Vector3, NearTriangleIndex>(Vertices.Count);
-        //    for (int i = 0; i < Vertices.Count; i++)
-        //    {
-        //        if (VerticeMerge.ContainsKey(Vertices[i].Coordinate))
-        //        {
-
-        //        }
-        //        else
-        //        {
-        //            VerticeMerge[Vertices[i].Coordinate] = new NearTriangleIndex(true);
-        //        }
-        //    }
-        //    int td3 = TriangleIndexs.Count / 3;
-        //    //将三角形索引与顶点关联
-        //    for (int i = 0; i < td3; i++)
-        //    {
-        //        int ix3 = i * 3;
-        //        VerticeMerge[Vertices[TriangleIndexs[ix3]].Coordinate].Add(i);
-        //        VerticeMerge[Vertices[TriangleIndexs[ix3 + 1]].Coordinate].Add(i);
-        //        VerticeMerge[Vertices[TriangleIndexs[ix3 + 2]].Coordinate].Add(i);
-        //    }
-
-        //    int[] n1 = new int[td3 * c_nearTrianglesMaxCount];
-        //    for (int i = 0; i < n1.Length; i++)
-        //    {
-        //        n1[i] = -1;
-        //    }
-        //    //将临近的三角形加入引用
-        //    for (int i = 0; i < td3; i++)
-        //    {
-        //        int ix3 = i * 3;
-        //        int[] x1 = VerticeMerge[Vertices[TriangleIndexs[ix3]].Coordinate].data;
-        //        void _Fun2(int triIndex, int val)
-        //        {
-        //            int startIndex = triIndex * c_nearTrianglesMaxCount;
-        //            for (int j = 0; j < c_nearTrianglesMaxCount; j++)
-        //            {
-        //                int xV = n1[j + startIndex];
-        //                if (xV == val)
-        //                {
-        //                    return;
-        //                }
-        //                if (xV == -1)
-        //                {
-        //                    n1[j + startIndex] = val;
-        //                    return;
-        //                }
-        //            }
-        //        }
-        //        void _Fun1()
-        //        {
-        //            for (int j = 0; j < c_nearTrianglesMaxCount; j++)
-        //            {
-        //                if (x1[j] == -1)
-        //                    break;
-        //                if (x1[j] != i)
-        //                    _Fun2(i, x1[j]);
-        //            }
-        //        }
-        //        _Fun1();
-        //        x1 = VerticeMerge[Vertices[TriangleIndexs[ix3 + 1]].Coordinate].data;
-        //        _Fun1();
-        //        x1 = VerticeMerge[Vertices[TriangleIndexs[ix3 + 2]].Coordinate].data;
-        //        _Fun1();
-        //    }
-
-        //    NearTriangleBuffer.Reload(n1);
-        //}
-        //public StaticBuffer NearTriangleBuffer = new StaticBuffer();
     }
     public static partial class PMXFormatExtension
     {
-        public static void Reload2(this MMD3DEntity entity, DeviceResources deviceResources, ProcessingList processingList, PMXFormat modelResource)
+        public static void Reload2(this MMD3DEntity entity, ProcessingList processingList, PMXFormat modelResource)
         {
             entity.ReloadBase();
             entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);
@@ -276,7 +141,6 @@ namespace Coocoo3D.FileFormat
 
             entity.morphStateComponent.Reload(modelResource);
             entity.boneComponent.Reload(modelResource);
-            entity.boneComponent.boneMatricesBuffer.Reload(deviceResources, MMDBoneComponent.c_boneMatrixDataSize);
 
             entity.rendererComponent.Reload(processingList, modelResource);
             entity.ComponentReady = true;

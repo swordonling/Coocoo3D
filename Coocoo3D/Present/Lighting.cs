@@ -10,6 +10,19 @@ using Coocoo3DGraphics;
 
 namespace Coocoo3D.Present
 {
+    public enum LightingType : uint
+    {
+        Directional = 0,
+        Point = 1,
+    }
+    public struct LightingData
+    {
+        public LightingType LightingType;
+        public Vector3 Rotation;
+        public Vector4 Color;
+        public Matrix4x4 vpMatrix;
+        public Matrix4x4 rotateMatrix;
+    }
     public class Lighting : ISceneObject, INotifyPropertyChanged
     {
         public string Name = "";
@@ -36,9 +49,7 @@ namespace Coocoo3D.Present
             if (LightingType == LightingType.Directional)
             {
                 Vector3 lookat = camera.LookAtPoint + Vector3.UnitY * 8;
-                bool extendY = (camera.Angle.X % MathF.PI + MathF.PI) % MathF.PI < MathF.PI / 4;
-                if (extendY)
-                    lookat += Vector3.Normalize((camera.LookAtPoint - camera.Pos) * new Vector3(1, 0, 1)) * ExtendRange;
+                bool extendY = ((camera.Angle.X + MathF.PI / 4) % MathF.PI + MathF.PI) % MathF.PI < MathF.PI / 2;
 
 
                 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, camera.Angle.Y);
@@ -46,22 +57,35 @@ namespace Coocoo3D.Present
                 var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
                 Matrix4x4 vMatrix = Matrix4x4.CreateLookAt(pos + lookat, lookat, up);
                 Matrix4x4 pMatrix;
+
+                float a = MathF.Abs((camera.Angle.X % MathF.PI + MathF.PI) % MathF.PI - MathF.PI / 2) / (MathF.PI / 4) - 0.5f;
+                a = Math.Clamp(a * a - 0.25f, 0, 1);
+                if (extendY)
+                    lookat += Vector3.Normalize((camera.LookAtPoint - camera.Pos) * new Vector3(1, 0, 1)) * ExtendRange * 3 * a;
                 if (!extendY)
                     pMatrix = Matrix4x4.CreateOrthographic(camera.Distance + ExtendRange, camera.Distance + ExtendRange, 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
                 else
-                    pMatrix = Matrix4x4.CreateOrthographic(camera.Distance + ExtendRange * 2, camera.Distance + ExtendRange * 2, 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                {
+                    pMatrix = Matrix4x4.CreateOrthographic(camera.Distance + ExtendRange * (4 * a + 1), camera.Distance + ExtendRange * (4 * a + 1), 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                }
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 
             }
-            else if(LightingType == LightingType.Point)
+            else if (LightingType == LightingType.Point)
             {
 
             }
         }
-    }
-    public enum LightingType : uint
-    {
-        Directional = 0,
-        Point = 1,
+        public LightingData GetLightingData()
+        {
+            return new LightingData()
+            {
+                Color = Color,
+                LightingType = LightingType,
+                rotateMatrix = rotateMatrix,
+                Rotation = Rotation,
+                vpMatrix = vpMatrix,
+            };
+        }
     }
 }

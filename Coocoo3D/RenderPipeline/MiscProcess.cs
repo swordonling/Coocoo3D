@@ -106,6 +106,9 @@ namespace Coocoo3D.RenderPipeline
         public void Process(MiscProcessContext context)
         {
             if (!Ready) return;
+            if (context.miscProcessPairs.Count == 0) return;
+            context.graphicsContext.BeginCommand();
+            context.graphicsContext.SetDescriptorHeapDefault();
             for (int i = 0; i < context.miscProcessPairs.Count; i++)
             {
                 if (context.miscProcessPairs[i].Type.HasFlag(MiscProcessType.GenerateIrradianceMap))
@@ -158,6 +161,8 @@ namespace Coocoo3D.RenderPipeline
                     //context.graphicsContext.Copy(texture0, texture1);
                 }
             }
+            context.graphicsContext.EndCommand();
+            context.graphicsContext.Execute();
             context.Clear();
         }
 

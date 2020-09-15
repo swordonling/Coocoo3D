@@ -245,7 +245,7 @@ namespace Coocoo3D.PropertiesPages
                     {
                         e.AcceptedOperation = DataPackageOperation.Copy;
                     }
-                    else if (".ccshader".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
+                    else if (".hlsl".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
                     {
                         e.AcceptedOperation = DataPackageOperation.Copy;
                     }

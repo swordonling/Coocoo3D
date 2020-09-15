@@ -34,7 +34,7 @@ namespace Coocoo3D.Core
         }
         public void AddSceneObject(Lighting lighting)
         {
-            lock(this)
+            lock (this)
             {
                 LightingLoadList.Add(lighting);
             }
@@ -42,10 +42,41 @@ namespace Coocoo3D.Core
         }
         public void RemoveSceneObject(MMD3DEntity entity)
         {
-            lock(this)
+            lock (this)
             {
                 Entities.Remove(entity);
                 EntityRemoveList.Add(entity);
+            }
+        }
+        public void ClearProcessList()
+        {
+            lock (this)
+            {
+                EntityLoadList.Clear();
+                LightingLoadList.Clear();
+                EntityRemoveList.Clear();
+            }
+        }
+        public void DealProcessList(Coocoo3DPhysics.Physics3DScene physics3DScene)
+        {
+            lock (this)
+            {
+                for (int i = 0; i < EntityLoadList.Count; i++)
+                {
+                    Entities.Add(EntityLoadList[i]);
+                    EntityLoadList[i].boneComponent.AddPhysics(physics3DScene);
+                }
+                for (int i = 0; i < LightingLoadList.Count; i++)
+                {
+                    Lightings.Add(LightingLoadList[i]);
+                }
+                for (int i = 0; i < EntityRemoveList.Count; i++)
+                {
+                    EntityRemoveList[i].boneComponent.RemovePhysics(physics3DScene);
+                }
+                EntityLoadList.Clear();
+                LightingLoadList.Clear();
+                EntityRemoveList.Clear();
             }
         }
         public void SortObjects()
@@ -54,13 +85,13 @@ namespace Coocoo3D.Core
             {
                 Entities.Clear();
                 Lightings.Clear();
-                for(int i=0;i<sceneObjects.Count;i++)
+                for (int i = 0; i < sceneObjects.Count; i++)
                 {
-                    if(sceneObjects[i] is MMD3DEntity entity)
+                    if (sceneObjects[i] is MMD3DEntity entity)
                     {
                         Entities.Add(entity);
                     }
-                    else if(sceneObjects[i] is Lighting lighting)
+                    else if (sceneObjects[i] is Lighting lighting)
                     {
                         Lightings.Add(lighting);
                     }

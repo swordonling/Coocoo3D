@@ -25,7 +25,7 @@ namespace Coocoo3D.RenderPipeline
         Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
-        public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
+        public List<ConstantBufferStatic> entityDataBuffers = new List<ConstantBufferStatic>();
         public List<ConstantBufferStatic> materialBuffers = new List<ConstantBufferStatic>();
 
         public RayTracingRenderPipeline1()
@@ -78,10 +78,10 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].DeltaTime = (float)deltaTime;
             }
         }
-
+        int renderMatCount = 0;
         public override void PrepareRenderData(RenderPipelineContext context)
         {
-            var Entities = context.entities;
+            var Entities = context.renderPipelineDynamicContext.entities;
             var deviceResources = context.deviceResources;
             int countMaterials = 0;
             for (int i = 0; i < Entities.Count; i++)
@@ -91,18 +91,19 @@ namespace Coocoo3D.RenderPipeline
             DesireMaterialBuffers(deviceResources, countMaterials);
             DesireEntityBuffers(deviceResources, Entities.Count);
             var graphicsContext = context.graphicsContext;
-            var cameras = context.cameras;
-            ref var settings = ref context.settings;
+            var cameras = context.renderPipelineDynamicContext.cameras;
+            ref var settings = ref context.renderPipelineDynamicContext.settings;
+            ref var inShaderSettings = ref context.renderPipelineDynamicContext.inShaderSettings;
             for (int i = 0; i < cameras.Count; i++)
             {
-                cameraPresentDatas[i].UpdateCameraData(cameras[i], ref context.settings);
+                cameraPresentDatas[i].UpdateCameraData(cameras[i], ref settings);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
-                Marshal.WriteInt32(pBufferData + 256, settings.EnableAO ? 1 : 0);
-                Marshal.WriteInt32(pBufferData + 256 + 4, settings.EnableShadow ? 1 : 0);
-                Marshal.WriteInt32(pBufferData + 256 + 8, (int)settings.Quality);
+                Marshal.WriteInt32(pBufferData + 256, inShaderSettings.EnableAO ? 1 : 0);
+                Marshal.WriteInt32(pBufferData + 256 + 4, inShaderSettings.EnableShadow ? 1 : 0);
+                Marshal.WriteInt32(pBufferData + 256 + 8, (int)inShaderSettings.Quality);
                 graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize);
             }
             for (int i = 0; i < Entities.Count; i++)
@@ -116,8 +117,8 @@ namespace Coocoo3D.RenderPipeline
             }
 
 
-            IntPtr ptr_rc = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
             #region Update material data
+            IntPtr ptr_rc = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0);
             int matIndex = 0;
             for (int i = 0; i < Entities.Count; i++)
             {
@@ -126,29 +127,35 @@ namespace Coocoo3D.RenderPipeline
                 {
                     Array.Clear(rcDataUploadBuffer, 0, c_materialDataSize);
                     Marshal.StructureToPtr(Materials[j].innerStruct, ptr_rc, true);
-                    WriteLightData(context.lightings, ptr_rc + MMDMatLit.c_materialDataSize);
+                    WriteLightData(context.renderPipelineDynamicContext.lightings, ptr_rc + MMDMatLit.c_materialDataSize);
                     graphicsContext.UpdateResource(materialBuffers[matIndex], rcDataUploadBuffer, c_materialDataSize);
                     matIndex++;
                 }
             }
             #endregion
+            renderMatCount = matIndex;
+        }
 
-            RayTracingScene.NextASIndex(matIndex);
+        public override void BeforeRenderCamera(RenderPipelineContext context)
+        {
+            var graphicsContext = context.graphicsContext;
+
+            RayTracingScene.NextASIndex(renderMatCount);
             RayTracingScene.NextSTIndex();
 
 
-            var entities = context.entities;
+            var entities = context.renderPipelineDynamicContext.entities;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
             for (int i = 0; i < entities.Count; i++)
-                EntitySkinning(context, entities[i], cameraPresentDatas[0], entityDataBuffers[i]);
+                EntitySkinning(context, entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i]);
             graphicsContext.SetSOMesh(null);
 
-            matIndex = 0;
+            int matIndex = 0;
             if (entities.Count > 0)
             {
-                for (int i = 0; i < context.entities.Count; i++)
+                for (int i = 0; i < entities.Count; i++)
                 {
-                    BuildEntityBAS(context, entities[i], ref matIndex);
+                    BuildEntityBAS(context, entities[i].rendererComponent, ref matIndex);
                 }
                 graphicsContext.BuildTopAccelerationStructures(RayTracingScene);
                 RayTracingScene.BuildShaderTableStep1(context.deviceResources, rayGenShaderNames, missShaderNames, c_argumentsSizeInBytes);
@@ -162,7 +169,7 @@ namespace Coocoo3D.RenderPipeline
             context.graphicsContext.SetComputeUAVT(context.outputRTV, 0);
             context.graphicsContext.SetComputeSRVT(context.EnvCubeMap, 3);
             context.graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
-            var entities = context.entities;
+            var entities = context.renderPipelineDynamicContext.entities;
 
             context.graphicsContext.SetComputeCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
 
@@ -172,75 +179,54 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
-        private void EntitySkinning(RenderPipelineContext context, MMD3DEntity entity, PresentData cameraPresentData, ConstantBuffer entityDataBuffer)
+        private void EntitySkinning(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBufferStatic entityDataBuffer)
         {
             var graphicsContext = context.graphicsContext;
-            var Materials = entity.rendererComponent.Materials;
-            graphicsContext.SetCBVR(entity.boneComponent.boneMatricesBuffer, 0);
+            var Materials = rendererComponent.Materials;
+            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
             graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData.DataBuffer, 2);
-            graphicsContext.SetMesh(entity.rendererComponent.mesh);
+            graphicsContext.SetCBVR(cameraPresentData, 2);
+            graphicsContext.SetMesh(rendererComponent.mesh);
+            graphicsContext.SetSOMesh(rendererComponent.mesh);
             int indexCountAll = 0;
             for (int i = 0; i < Materials.Count; i++)
             {
                 indexCountAll += Materials[i].indexCount;
             }
-            var POSkinning = entity.rendererComponent.POSkinning;
+            var POSkinning = rendererComponent.POSkinning;
             if (POSkinning != null && POSkinning.Status == GraphicsObjectStatus.loaded)
                 graphicsContext.SetPObjectStreamOut(POSkinning);
             else
                 graphicsContext.SetPObjectStreamOut(context.RPAssetsManager.PObjectMMDSkinning);
 
-            graphicsContext.SetSOMesh(entity.rendererComponent.mesh);
             graphicsContext.DrawIndexed(indexCountAll, 0, 0);
         }
 
 
-        private void BuildEntityBAS(RenderPipelineContext context, MMD3DEntity entity, ref int matIndex)
+        private void BuildEntityBAS(RenderPipelineContext context, MMDRendererComponent rendererComponent, ref int matIndex)
         {
             Texture2D textureLoading = context.TextureLoading;
             Texture2D textureError = context.TextureError;
             var graphicsContext = context.graphicsContext;
-            MMDRendererComponent rendererComponent = entity.rendererComponent;
 
             var Materials = rendererComponent.Materials;
             int indexStartLocation = 0;
-            List<Texture2D> texs = rendererComponent.texs;
+            List<Texture2D> texs = rendererComponent.textures;
             for (int i = 0; i < Materials.Count; i++)
             {
                 Texture2D tex1 = null;
-                if (texs != null)
-                {
+                if (Materials[i].texIndex != -1)
+                    tex1 = texs[Materials[i].texIndex];
+                tex1 = TextureStatusSelect(tex1, textureLoading, textureError, textureError);
 
-                    if (Materials[i].texIndex != -1)
-                        tex1 = texs[Materials[i].texIndex];
-                    if (tex1 != null)
-                    {
-                        if (tex1.Status == GraphicsObjectStatus.loaded)
-                        {
-
-                        }
-                        else if (tex1.Status == GraphicsObjectStatus.loading)
-                            tex1 = textureLoading;
-                        else
-                            tex1 = textureError;
-                    }
-                    else
-                        tex1 = textureError;
-                }
-                else
-                {
-                    tex1 = textureError;
-                }
-
-                graphicsContext.BuildBASAndParam(RayTracingScene, entity.rendererComponent.mesh, 0x1, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
+                graphicsContext.BuildBASAndParam(RayTracingScene, rendererComponent.mesh, 0x1, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
                 matIndex++;
 
                 indexStartLocation += Materials[i].indexCount;
             }
         }
 
-        private void WriteLightData(IList<Lighting> lightings, IntPtr pBufferData)
+        private void WriteLightData(IList<LightingData> lightings, IntPtr pBufferData)
         {
             int lightCount = 0;
             for (int j = 0; j < lightings.Count; j++)
@@ -262,7 +248,7 @@ namespace Coocoo3D.RenderPipeline
         {
             while (entityDataBuffers.Count < count)
             {
-                ConstantBuffer constantBuffer = new ConstantBuffer();
+                ConstantBufferStatic constantBuffer = new ConstantBufferStatic();
                 constantBuffer.Reload(deviceResources, c_entityDataDataSize);
                 entityDataBuffers.Add(constantBuffer);
             }

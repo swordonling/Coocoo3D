@@ -43,8 +43,9 @@
                             <Flyout Placement="RightEdgeAlignedTop">
                                 <StackPanel>
                                     <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
-                                    <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="多线程渲染" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="Z-Prepass" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
@@ -75,8 +76,17 @@
                 <TextBlock Text="在设置-系统-显示-图形设置 里更改使用的显卡" TextWrapping="Wrap"/>
                 <ToggleSwitch x:Name="vCameraMotionOn" Header="镜头动作" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
                 <TextBlock Text="将VMD文件拖到至此应用镜头" TextWrapping="Wrap"/>
-                <!--<ToggleSwitch Header="测试新代码" Toggled="NewFun_Click"/>
-                <TextBlock Text="time1" Name="showt1"/>
+                <Button Content="重置运行时缓存">
+                    <Button.Flyout>
+                        <Flyout>
+                            <StackPanel>
+                                <Button Content="重置着色器缓存" Click="ShaderCacheReset_Click" ToolTipService.ToolTip="重置缓存以便重新加载着色器"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <!--<ToggleSwitch Header="测试新代码" Toggled="NewFun_Click"/>-->
+                <!--<TextBlock Text="time1" Name="showt1"/>
                 <TextBlock Text="time2" Name="showt2"/>
                 <TextBlock Text="time3" Name="showt3"/>
                 <TextBlock Text="time4" Name="showt4"/>

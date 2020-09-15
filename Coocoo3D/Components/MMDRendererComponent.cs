@@ -21,14 +21,17 @@ namespace Coocoo3D.Components
     public class MMDRendererComponent
     {
         public MMDMesh mesh;
+        public TwinBuffer meshParticleBuffer = new TwinBuffer();
+        public DynamicMesh dynamicMesh = new DynamicMesh();
         public List<MMDMatLit> Materials = new List<MMDMatLit>();
         public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
-        public List<Texture2D> texs;
+        public List<Texture2D> textures = new List<Texture2D>();
 
         public PObject POSkinning;
         public PObject PODraw;
-        //public StaticBuffer NearTriangleBuffer;
+        public PObject POParticleDraw;
+        public ComputePO ParticleCompute;
 
         public Vector3[] meshPosData1;
         public Vector3[] meshPosData2;
@@ -59,7 +62,7 @@ namespace Coocoo3D.Components
             ComputeMaterialMorph(morphStateComponent);
         }
 
-        private void ComputeVertexMorph(MMDMorphStateComponent morphStateComponent)
+        public void ComputeVertexMorph(MMDMorphStateComponent morphStateComponent)
         {
             prevflip = flip;
             flip = ((int)(morphStateComponent.currentTimeA / MMDMorphStateComponent.c_frameInterval) & 1) == 1;
@@ -107,14 +110,12 @@ namespace Coocoo3D.Components
             }
             if (meshNeedUpdateA)
             {
-                IntPtr vptr = Marshal.UnsafeAddrOfPinnedArrayElement(meshPosData1, 0);
-                Marshal.Copy(mesh.m_verticeDataPos, 0, vptr, mesh.m_verticeDataPos.Length);
+                mesh.CopyPosData(meshPosData1);
                 ComputeMorphVertex(meshPosData1, vertexMorph1);
             }
             if (meshNeedUpdateB)
             {
-                IntPtr vptr = Marshal.UnsafeAddrOfPinnedArrayElement(meshPosData2, 0);
-                Marshal.Copy(mesh.m_verticeDataPos, 0, vptr, mesh.m_verticeDataPos.Length);
+                mesh.CopyPosData(meshPosData2);
                 ComputeMorphVertex(meshPosData2, vertexMorph2);
             }
         }
@@ -146,7 +147,7 @@ namespace Coocoo3D.Components
             }
         }
 
-        private void ComputeMaterialMorph(MMDMorphStateComponent morphStateComponent)
+        public void ComputeMaterialMorph(MMDMorphStateComponent morphStateComponent)
         {
             for (int i = 0; i < computedMaterialsData.Count; i++)
             {
@@ -257,6 +258,12 @@ namespace Coocoo3D.FileFormat
             rendererComponent.Materials.Clear();
             rendererComponent.mesh = modelResource.GetMesh();
             processingList.AddObject(rendererComponent.mesh);
+            rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_indexCount / 3 * 128);
+            rendererComponent.dynamicMesh.Reload(rendererComponent.mesh.m_indexCount * 64, 64);
+            processingList.AddObject(rendererComponent.meshParticleBuffer);
+            processingList.AddObject(rendererComponent.dynamicMesh);
+            rendererComponent.POSkinning = new PObject();
+            rendererComponent.PODraw = new PObject();
             rendererComponent.meshPosData1 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.meshPosData2 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosData1 = GCHandle.Alloc(rendererComponent.meshPosData1);
@@ -311,7 +318,6 @@ namespace Coocoo3D.FileFormat
                     rendererComponent.vertexMorph2.Add(null);
                 }
             }
-            //rendererComponent.NearTriangleBuffer = modelResource.NearTriangleBuffer;
         }
     }
 }

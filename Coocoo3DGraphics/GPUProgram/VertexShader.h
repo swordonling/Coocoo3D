@@ -1,5 +1,5 @@
 #pragma once
-#include "DeviceResources.h"
+#include "ShaderMacro.h"
 namespace Coocoo3DGraphics
 {
 	public ref class VertexShader sealed
@@ -8,9 +8,7 @@ namespace Coocoo3DGraphics
 		property bool Ready;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		static VertexShader^ CompileLoad(const Platform::Array<byte>^ sourceCode);
-		void CompileReload(const Platform::Array<byte>^ sourceCode);
-		bool CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint);
+		bool CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro);
 		static VertexShader^ Load(const Platform::Array<byte>^ data);
 		void Reload(const Platform::Array<byte>^ data);
 		virtual ~VertexShader();

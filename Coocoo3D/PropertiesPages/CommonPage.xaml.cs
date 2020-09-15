@@ -229,9 +229,17 @@ namespace Coocoo3D.PropertiesPages
 
         public bool VSaveCpuPower
         {
-            get => appBody.SaveCpuPower; set
+            get => appBody.performaceSettings.SaveCpuPower; set
             {
-                appBody.SaveCpuPower = value;
+                appBody.performaceSettings.SaveCpuPower = value;
+            }
+        }
+
+        public bool VMultiThreadRendering
+        {
+            get => appBody.performaceSettings.MultiThreadRendering; set
+            {
+                appBody.performaceSettings.MultiThreadRendering = value;
             }
         }
 
@@ -239,11 +247,11 @@ namespace Coocoo3D.PropertiesPages
         {
             get
             {
-                return appBody.settings.HighResolutionShadow;
+                return appBody.performaceSettings.HighResolutionShadow;
             }
             set
             {
-                appBody.settings.HighResolutionShadow = value;
+                appBody.performaceSettings.HighResolutionShadow = value;
                 appBody.GameDriverContext.RequireInterruptRender = true;
                 appBody.RequireRender();
             }
@@ -258,17 +266,17 @@ namespace Coocoo3D.PropertiesPages
         }
         public bool VEnableAO
         {
-            get => appBody.settings.EnableAO; set
+            get => appBody.inShaderSettings.EnableAO; set
             {
-                appBody.settings.EnableAO = value;
+                appBody.inShaderSettings.EnableAO = value;
                 appBody.RequireRender();
             }
         }
         public bool VEnableShadow
         {
-            get => appBody.settings.EnableShadow; set
+            get => appBody.inShaderSettings.EnableShadow; set
             {
-                appBody.settings.EnableShadow = value;
+                appBody.inShaderSettings.EnableShadow = value;
                 appBody.RequireRender();
             }
         }
@@ -300,7 +308,7 @@ namespace Coocoo3D.PropertiesPages
 
         private void VQuality_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            appBody.settings.Quality = (uint)(sender as ComboBox).SelectedValue;
+            appBody.inShaderSettings.Quality = (uint)(sender as ComboBox).SelectedValue;
             appBody.RequireRender();
         }
 
@@ -362,6 +370,11 @@ namespace Coocoo3D.PropertiesPages
                     appBody.camera.CameraMotionOn = true;
                 }
             }
+        }
+
+        private void ShaderCacheReset_Click(object sender, RoutedEventArgs e)
+        {
+            appBody.mainCaches.ResetShaderCache();
         }
     }
 }

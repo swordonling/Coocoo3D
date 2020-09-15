@@ -1,5 +1,5 @@
 #pragma once
-#include "PObject.h"
+#include "GPUProgram/PObject.h"
 #include "Texture2D.h"
 namespace Coocoo3DGraphics
 {

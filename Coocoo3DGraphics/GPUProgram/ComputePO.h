@@ -2,6 +2,7 @@
 #include "DeviceResources.h"
 #include "GraphicsObjectStatus.h"
 #include "GraphicsSignature.h"
+#include "ShaderMacro.h"
 namespace Coocoo3DGraphics
 {
 	public ref class ComputePO sealed
@@ -10,6 +11,7 @@ namespace Coocoo3DGraphics
 		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
+		bool CompileReload1(DeviceResources^ deviceResources, GraphicsSignature^ rootSignature, const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro);
 		void CompileReload(DeviceResources^ deviceResources, GraphicsSignature^ rootSignature, const Platform::Array<byte>^ sourcesCode);
 		void Reload(DeviceResources^ deviceResources,GraphicsSignature^ rootSignature, const Platform::Array<byte>^ data);
 	internal:

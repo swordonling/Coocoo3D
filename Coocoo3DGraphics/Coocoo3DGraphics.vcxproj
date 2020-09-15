@@ -270,11 +270,16 @@
   <ItemGroup>
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="ConstantBufferStatic.h" />
-    <ClInclude Include="ComputePO.h" />
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXHelper.h" />
-    <ClInclude Include="GeometryShader.h" />
+    <ClInclude Include="DynamicMesh.h" />
+    <ClInclude Include="GPUProgram\ComputePO.h" />
+    <ClInclude Include="GPUProgram\GeometryShader.h" />
+    <ClInclude Include="GPUProgram\PixelShader.h" />
+    <ClInclude Include="GPUProgram\PObject.h" />
+    <ClInclude Include="GPUProgram\ShaderMacro.h" />
+    <ClInclude Include="GPUProgram\VertexShader.h" />
     <ClInclude Include="GraphicsContext.h" />
     <ClInclude Include="GraphicsObjectStatus.h" />
     <ClInclude Include="GraphicsSignature.h" />
@@ -282,8 +287,6 @@
     <ClInclude Include="Material.h" />
     <ClInclude Include="MMDMesh.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="PixelShader.h" />
-    <ClInclude Include="PObject.h" />
     <ClInclude Include="RayTracingScene.h" />
     <ClInclude Include="RayTracing\DirectXRaytracingHelper.h" />
     <ClInclude Include="ReadBackTexture2D.h" />
@@ -292,15 +295,19 @@
     <ClInclude Include="StaticBuffer.h" />
     <ClInclude Include="Texture2D.h" />
     <ClInclude Include="TextureCube.h" />
-    <ClInclude Include="VertexShader.h" />
+    <ClInclude Include="TwinBuffer.h" />
     <ClInclude Include="WICFactory.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferStatic.cpp" />
-    <ClCompile Include="ComputePO.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
-    <ClCompile Include="GeometryShader.cpp" />
+    <ClCompile Include="DynamicMesh.cpp" />
+    <ClCompile Include="GPUProgram\ComputePO.cpp" />
+    <ClCompile Include="GPUProgram\GeometryShader.cpp" />
+    <ClCompile Include="GPUProgram\PixelShader.cpp" />
+    <ClCompile Include="GPUProgram\PObject.cpp" />
+    <ClCompile Include="GPUProgram\VertexShader.cpp" />
     <ClCompile Include="GraphicsContext.cpp" />
     <ClCompile Include="GraphicsSignature.cpp" />
     <ClCompile Include="Material.cpp" />
@@ -315,8 +322,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="PixelShader.cpp" />
-    <ClCompile Include="PObject.cpp" />
     <ClCompile Include="RayTracingScene.cpp" />
     <ClCompile Include="ReadBackTexture2D.cpp" />
     <ClCompile Include="RenderTexture2D.cpp" />
@@ -324,7 +329,7 @@
     <ClCompile Include="StaticBuffer.cpp" />
     <ClCompile Include="Texture2D.cpp" />
     <ClCompile Include="TextureCube.cpp" />
-    <ClCompile Include="VertexShader.cpp" />
+    <ClCompile Include="TwinBuffer.cpp" />
     <ClCompile Include="WICFactory.cpp" />
   </ItemGroup>
   <ItemGroup>

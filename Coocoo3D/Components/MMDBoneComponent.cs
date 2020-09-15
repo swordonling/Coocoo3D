@@ -15,12 +15,12 @@ namespace Coocoo3D.Components
 {
     public class MMDBoneComponent
     {
-        public bool GpuUsable = false;
         public const int c_boneMatrixDataSize = 65536;
-        public const int c_boneMatricesSize = 1024;
-        public Matrix4x4[] boneMatricesData = new Matrix4x4[c_boneMatricesSize];
+        public const int c_boneMatricesCount = 1024;
+        public Matrix4x4[] boneMatricesData = new Matrix4x4[c_boneMatricesCount];
+        public Matrix4x4[] boneMatricesData1 = new Matrix4x4[c_boneMatricesCount];
         GCHandle gch_boneMatricesData;
-        public ConstantBuffer boneMatricesBuffer = new ConstantBuffer();
+        GCHandle gch_boneMatricesData1;
 
         public List<BoneEntity> bones = new List<BoneEntity>();
         public Dictionary<string, BoneEntity> stringBoneMap = new Dictionary<string, BoneEntity>();
@@ -41,10 +41,12 @@ namespace Coocoo3D.Components
         public MMDBoneComponent()
         {
             gch_boneMatricesData = GCHandle.Alloc(boneMatricesData);
+            gch_boneMatricesData1 = GCHandle.Alloc(boneMatricesData1);
         }
         ~MMDBoneComponent()
         {
             gch_boneMatricesData.Free();
+            gch_boneMatricesData1.Free();
         }
 
         public void ComputeMatricesData()
@@ -272,7 +274,6 @@ namespace Coocoo3D.Components
         public void ResetPhysics(Physics3DScene physics3DScene)
         {
             ComputeMatricesData();
-            WriteMatriticesData();
             for (int i = 0; i < rigidBodyDescs.Count; i++)
             {
                 var desc = rigidBodyDescs[i];
@@ -733,7 +734,7 @@ namespace Coocoo3D.Components
         }
 
         /// <summary>在调用之前确保它的父级已经更新。一般从前向后调用即可。</summary>
-        public Matrix4x4 GetTransformMatrixG(List<BoneEntity> list)
+        public void GetTransformMatrixG(List<BoneEntity> list)
         {
             if (ParentIndex != -1)
             {
@@ -747,7 +748,6 @@ namespace Coocoo3D.Components
                    Matrix4x4.CreateFromQuaternion(rotation) *
                    Matrix4x4.CreateTranslation(staticPosition + dynamicPosition);
             }
-            return _generatedTransform;
         }
         public Vector3 GetPos2()
         {
@@ -832,7 +832,6 @@ namespace Coocoo3D.FileFormat
             boneComponent.bones.Clear();
             boneComponent.stringBoneMap.Clear();
             boneComponent.physics3DRigidBodys.Clear();
-            boneComponent.GpuUsable = false;
             var _bones = modelResource.Bones;
             for (int i = 0; i < _bones.Count; i++)
             {

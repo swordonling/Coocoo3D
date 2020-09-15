@@ -16,8 +16,8 @@ cbuffer cb2 : register(b2)
 
 struct VSSkinnedIn
 {
-	float3 Pos	: POSITION;			//Position
-	float3 PosX	: POSITIONX;		//Position
+	float3 Pos	: POSITION0;			//Position
+	float3 Pos1	: POSITION1;		//Position
 	float4 Weights : WEIGHTS;		//Bone weights
 	uint4  Bones : BONES;			//Bone indices
 	float3 Norm : NORMAL;			//Normal
@@ -28,7 +28,7 @@ struct VSSkinnedIn
 
 struct PSSkinnedIn
 {
-	float4 Pos	: SV_POSITION;		//Position
+	float3 Pos	: POSITION;		//Position
 	float3 Norm : NORMAL;			//Normal
 	float2 Tex	: TEXCOORD;		    //Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
@@ -54,7 +54,7 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 {
 	SkinnedInfo Output = (SkinnedInfo)0;
 
-	float4 Pos = float4(Input.Pos * (1 - g_posAmount1) + Input.PosX * g_posAmount1, 1);
+	float4 Pos = float4(Input.Pos * (1 - g_posAmount1) + Input.Pos1 * g_posAmount1, 1);
 	float3 Norm = Input.Norm;
 	float3 Tan = Input.Tan;
 

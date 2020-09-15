@@ -129,7 +129,6 @@
     <Compile Include="Core\RecorderGameDriver.cs" />
     <Compile Include="Core\Scene.cs" />
     <Compile Include="FileFormat\CCSceneFormat.cs" />
-    <Compile Include="FileFormat\CCShaderFormat.cs" />
     <Compile Include="FileFormat\VPDFormat.cs" />
     <Compile Include="Present\Camera.cs" />
     <Compile Include="Components\MMDBoneComponent.cs" />
@@ -184,6 +183,7 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RenderPipeline\ForwardRenderPipeline1.cs" />
+    <Compile Include="RenderPipeline\InShaderSettings.cs" />
     <Compile Include="RenderPipeline\MiscProcess.cs" />
     <Compile Include="RenderPipeline\PostProcess.cs" />
     <Compile Include="RenderPipeline\RayTracingRenderPipeline1.cs" />

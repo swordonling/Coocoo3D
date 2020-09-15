@@ -1,7 +1,5 @@
 #pragma once
 #include "DeviceResources.h"
-#include "PixelShader.h"
-#include "VertexShader.h"
 #include "MMDMesh.h"
 #include "Material.h"
 #include "Texture2D.h"
@@ -12,9 +10,12 @@
 #include "ConstantBufferStatic.h"
 #include "GraphicsSignature.h"
 #include "RayTracingScene.h"
-#include "ComputePO.h"
+#include "GPUProgram/ComputePO.h"
+#include "GPUProgram/PObject.h"
 #include "ReadBackTexture2D.h"
 #include "StaticBuffer.h"
+#include "TwinBuffer.h"
+#include "DynamicMesh.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -53,7 +54,7 @@ namespace Coocoo3DGraphics
 		static GraphicsContext^ Load(DeviceResources^ deviceResources);
 		void Reload(DeviceResources^ deviceResources);
 		void SetMaterial(Material^ material);
-		void SetPObject(PObject^ pObject, CullMode cullMode, BlendState blendState);
+		void SetPObject(PObject^ pObject, CullMode cullMode);
 		void SetPObject(PObject^ pObject, int index);
 		void SetPObjectDepthOnly(PObject^ pObject);
 		void SetPObjectStreamOut(PObject^ pObject);
@@ -79,8 +80,11 @@ namespace Coocoo3DGraphics
 		void SetUAVT(RenderTexture2D^ texture, int index);
 		void SetComputeSRVT(TextureCube^ texture, int index);
 		void SetComputeSRVT(RenderTextureCube^ texture, int index);
+		void SetComputeSRVRSkinnedMesh(MMDMesh^ mesh, int index);
 		void SetComputeCBVR(ConstantBuffer^ buffer, int index);
 		void SetComputeCBVR(ConstantBufferStatic^ buffer, int index);
+		void SetComputeUAVR(DynamicMesh^ mesh, int index);
+		void SetComputeUAVR(TwinBuffer^ buffer,int bufIndex, int index);
 		void SetComputeUAVT(RenderTexture2D^ texture, int index);
 		void SetComputeUAVT(RenderTextureCube^ texture, int index);
 		void SetSOMesh(MMDMesh^ mesh);
@@ -100,6 +104,7 @@ namespace Coocoo3DGraphics
 		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
+		void SetMesh(DynamicMesh^ mesh);
 		void SetMeshSkinned(MMDMesh^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
