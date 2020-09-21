@@ -52,17 +52,12 @@ namespace Coocoo3D.RenderPipeline
             if (!innerStruct.Equals(prevData))
             {
                 Marshal.StructureToPtr(innerStruct, Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
-                context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize);
+                context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize,0);
                 prevData = innerStruct;
             }
         }
 
-        public override void BeforeRenderCamera(RenderPipelineContext context)
-        {
-
-        }
-
-        public override void RenderCamera(RenderPipelineContext context, int cameraIndex)
+        public override void RenderCamera(RenderPipelineContext context, int cameraCount)
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignaturePostProcess);

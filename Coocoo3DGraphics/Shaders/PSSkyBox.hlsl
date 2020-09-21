@@ -8,9 +8,6 @@ struct PSIn
 cbuffer cb2 : register(b2)
 {
 	CAMERA_DATA_DEFINE//is a macro
-		uint g_enableAO;
-	uint g_enableShadow;
-	uint g_quality;
 };
 TextureCube EnvCube : register (t3);
 SamplerState s0 : register(s0);

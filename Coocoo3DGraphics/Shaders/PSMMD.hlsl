@@ -10,8 +10,6 @@ struct LightInfo
 };
 cbuffer cb1 : register(b1)
 {
-	float4x4 g_mWorld;
-	float4x4 g_mWorld1;
 	LightInfo Lightings[4];
 };
 cbuffer cb3 : register(b3)
@@ -41,9 +39,6 @@ cbuffer cb3 : register(b3)
 cbuffer cb2 : register(b2)
 {
 	CAMERA_DATA_DEFINE//is a macro
-		uint g_enableAO;
-	uint g_enableShadow;
-	uint g_quality;
 };
 Texture2D texture0 :register(t0);
 SamplerState s0 : register(s0);

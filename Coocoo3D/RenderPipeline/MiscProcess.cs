@@ -86,20 +86,6 @@ namespace Coocoo3D.RenderPipeline
             }
             IrradianceMap0.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
             ClearIrradianceMap.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_ClearIrradianceMap.cso"));
-            float fovAngle = MathF.PI / 2;
-            Matrix4x4 fov1 = Matrix4x4.CreatePerspectiveFieldOfView(fovAngle, 1, 0.01f, 1000);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitX, -Vector3.UnitY) * fov1, out var PX);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, -Vector3.UnitX, -Vector3.UnitY) * fov1, out var NX);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitY, Vector3.UnitZ) * fov1, out var PY);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, -Vector3.UnitY, -Vector3.UnitZ) * fov1, out var NY);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, Vector3.UnitZ, -Vector3.UnitY) * fov1, out var PZ);
-            Matrix4x4.Invert(Matrix4x4.CreateLookAt(Vector3.Zero, -Vector3.UnitZ, -Vector3.UnitY) * fov1, out var NZ);
-            _XyzData.PX = Matrix4x4.Transpose(PX);
-            _XyzData.NX = Matrix4x4.Transpose(NX);
-            _XyzData.PY = Matrix4x4.Transpose(PY);
-            _XyzData.NY = Matrix4x4.Transpose(NY);
-            _XyzData.PZ = Matrix4x4.Transpose(PZ);
-            _XyzData.NZ = Matrix4x4.Transpose(NZ);
 
             Ready = true;
         }
@@ -119,7 +105,7 @@ namespace Coocoo3D.RenderPipeline
                     void UpdateGPUBuffer(int bufIndex)
                     {
                         Marshal.StructureToPtr(_XyzData, ptr1, true);
-                        context.graphicsContext.UpdateResource(constantBuffers[bufIndex], cpuBuffer1, 512);
+                        context.graphicsContext.UpdateResource(constantBuffers[bufIndex], cpuBuffer1, 512, 0);
                     }
                     _XyzData.x1 = (int)texture1.m_width;
                     _XyzData.y1 = (int)texture1.m_height;
@@ -168,12 +154,6 @@ namespace Coocoo3D.RenderPipeline
 
         public struct XYZData
         {
-            public Matrix4x4 PX;
-            public Matrix4x4 NX;
-            public Matrix4x4 PY;
-            public Matrix4x4 NY;
-            public Matrix4x4 PZ;
-            public Matrix4x4 NZ;
             public int x1;
             public int y1;
             public int Quality;

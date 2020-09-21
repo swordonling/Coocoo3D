@@ -1,12 +1,6 @@
 #include "../RandomNumberGenerator.hlsli"
 cbuffer cb0 : register(b0)
 {
-	float4x4 xproj;
-	float4x4 nxproj;
-	float4x4 yproj;
-	float4x4 nyproj;
-	float4x4 zproj;
-	float4x4 nzproj;
 	uint2 imageSize;
 }
 RWTexture2DArray<float4> IrradianceMap : register(u0);

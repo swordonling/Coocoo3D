@@ -9,7 +9,8 @@ namespace Coocoo3D.RenderPipeline
 {
     public struct InShaderSettings
     {
-        public Vector4 backgroundColor;
+        //public Vector4 backgroundColor;
+        public float SkyBoxLightMultiple;
         public uint _EnableAO;
         public uint _EnableShadow;
         public uint Quality;

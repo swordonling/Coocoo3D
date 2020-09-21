@@ -117,9 +117,9 @@ namespace Coocoo3D.PropertiesPages
         }
         public float VRY
         {
-            get => _cacheR.Y; set
+            get => -_cacheR.Y; set
             {
-                _cacheR.Y = value;
+                _cacheR.Y = -value;
                 UpdateRotationFromUI();
             }
         }
@@ -142,7 +142,10 @@ namespace Coocoo3D.PropertiesPages
         }
         void UpdateRotationFromUI()
         {
-            _cacheRQ = EularToQuaternionYXZ(_cacheR / 180 * MathF.PI);
+            //_cacheRQ = EularToQuaternionYXZ(_cacheR / 180 * MathF.PI);
+            var t1 = _cacheR / 180 * MathF.PI;
+            _cacheRQ = Quaternion.CreateFromYawPitchRoll(t1.Y,t1.X,t1.Z);
+
             mmd3dEntity.RotationNextFrame = _cacheRQ;
             mmd3dEntity.NeedTransform = true;
             appBody.RequireRender();
@@ -252,12 +255,6 @@ namespace Coocoo3D.PropertiesPages
                 }
             }
         }
-
-        //private void Grid_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
-        //{
-        //    MMDMatLit matLit = (sender as Grid).DataContext as MMDMatLit;
-        //    appBody.ShowDetailPage(typeof(MaterialPropertyPage), new Bundle_Main_Entity_Mat() { main = appBody, entity = mmd3dEntity, matLit = matLit });
-        //}
 
         private void NumberBox_ValueChanged(Microsoft.UI.Xaml.Controls.NumberBox sender, Microsoft.UI.Xaml.Controls.NumberBoxValueChangedEventArgs args)
         {

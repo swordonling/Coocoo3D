@@ -1,16 +1,43 @@
 #include "../RandomNumberGenerator.hlsli"
 cbuffer cb0 : register(b0)
 {
-	float4x4 xproj;
-	float4x4 nxproj;
-	float4x4 yproj;
-	float4x4 nyproj;
-	float4x4 zproj;
-	float4x4 nzproj;
 	uint2 imageSize;
 	int quality;
 	uint batch;
 }
+
+
+const static float4x4 _xproj=
+{ 0,0,-1,0,
+0,-1,0,0,
+0,0,0,-100,
+1,0,0,100, };
+const static float4x4 _nxproj=
+{ 0,0,1,0,
+0,-1,0,0,
+0,0,0,-100,
+-1,0,0,100, };
+const static float4x4 _yproj=
+{ 1,0,0,0,
+0,0,1,0,
+0,0,0,-100,
+0,1,0,100, };
+const static float4x4 _nyproj=
+{ 1,0,0,0,
+0,0,-1,0,
+0,0,0,-100,
+0,-1,0,100, };
+const static float4x4 _zproj=
+{ 1,0,0,0,
+0,-1,0,0,
+0,0,0,-100,
+0,0,1,100, };
+const static float4x4 _nzproj=
+{ -1,0,0,0,
+0,-1,0,0,
+0,0,0,-100,
+0,0,-1,100, };
+
 RWTexture2DArray<float4> IrradianceMap : register(u0);
 TextureCube Image : register(t0);
 SamplerState s0 : register(s0);
@@ -27,27 +54,27 @@ void main(uint3 dtid : SV_DispatchThreadID)
 	}
 	if (dtid.z == 0)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), xproj);
+		dir1 = mul(float4(screenPos, 0, 1), _xproj);
 	}
 	else if (dtid.z == 1)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), nxproj);
+		dir1 = mul(float4(screenPos, 0, 1), _nxproj);
 	}
 	else if (dtid.z == 2)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), yproj);
+		dir1 = mul(float4(screenPos, 0, 1), _yproj);
 	}
 	else if (dtid.z == 3)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), nyproj);
+		dir1 = mul(float4(screenPos, 0, 1), _nyproj);
 	}
 	else if (dtid.z == 4)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), zproj);
+		dir1 = mul(float4(screenPos, 0, 1), _zproj);
 	}
 	else
 	{
-		dir1 = mul(float4(screenPos, 0, 1), nzproj);
+		dir1 = mul(float4(screenPos, 0, 1), _nzproj);
 	}
 	TexDir = normalize(dir1.xyz / dir1.w);
 	float3 col1 = float3(0, 0, 0);

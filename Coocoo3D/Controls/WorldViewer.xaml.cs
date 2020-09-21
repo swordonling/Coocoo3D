@@ -128,7 +128,7 @@ namespace Coocoo3D.Controls
         private void InkCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
             e.Handled = true;
-            AppBody.camera.Distance += -e.GetCurrentPoint(sender as UIElement).Properties.MouseWheelDelta / 20.0f;
+            AppBody.camera.Distance += e.GetCurrentPoint(sender as UIElement).Properties.MouseWheelDelta / 20.0f;
             AppBody.RequireRender();
         }
     }

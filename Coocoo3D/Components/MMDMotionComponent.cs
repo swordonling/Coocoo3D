@@ -273,21 +273,30 @@ namespace Coocoo3D.FileFormat
     {
         public static void ReloadEmpty(this MMDMotionComponent motionComponent)
         {
-            motionComponent.BoneKeyFrameSet.Clear();
-            motionComponent.MorphKeyFrameSet.Clear();
+            lock (motionComponent)
+            {
+                motionComponent.BoneKeyFrameSet.Clear();
+                motionComponent.MorphKeyFrameSet.Clear();
+            }
         }
+        /// <summary>
+        /// 线程安全
+        /// </summary>
         public static void Reload(this MMDMotionComponent motionComponent, VMDFormat vmd)
         {
-            motionComponent.BoneKeyFrameSet.Clear();
-            motionComponent.MorphKeyFrameSet.Clear();
+            lock (motionComponent)
+            {
+                motionComponent.BoneKeyFrameSet.Clear();
+                motionComponent.MorphKeyFrameSet.Clear();
 
-            foreach (var pair in vmd.BoneKeyFrameSet)
-            {
-                motionComponent.BoneKeyFrameSet.Add(pair.Key, new MMDMotionComponent.DataSetStruct<BoneKeyFrame>(pair.Value));
-            }
-            foreach (var pair in vmd.MorphKeyFrameSet)
-            {
-                motionComponent.MorphKeyFrameSet.Add(pair.Key, new MMDMotionComponent.DataSetStruct<MorphKeyFrame>(pair.Value));
+                foreach (var pair in vmd.BoneKeyFrameSet)
+                {
+                    motionComponent.BoneKeyFrameSet.Add(pair.Key, new MMDMotionComponent.DataSetStruct<BoneKeyFrame>(pair.Value));
+                }
+                foreach (var pair in vmd.MorphKeyFrameSet)
+                {
+                    motionComponent.MorphKeyFrameSet.Add(pair.Key, new MMDMotionComponent.DataSetStruct<MorphKeyFrame>(pair.Value));
+                }
             }
         }
     }

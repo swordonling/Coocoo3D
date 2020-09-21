@@ -1,9 +1,11 @@
-//Coocoo3D会自动加载VS、GS、PS、VS1这四个函数
+//VS、GS、VS1、GS1、PS1这五个函数用于渲染
 //VS和GS能在光线追踪中使用
+//VSParticle、GSParticle、PSParticle、CSParticle这四个函数用于粒子系统。
+//CSParticle用于进行粒子发射和更新。
 //随着版本更新，这个文件的内容需要相应改动。register也可能会改动。不能保证兼容性。
 //使用shader model 5.0
 //更多信息请在Coocoo3D源码中的Shaders文件夹里找
-#define MAX_BONE_MATRICES 1024
+#define MAX_BONE_MATRICES 1020
 
 struct LightInfo
 {
@@ -15,16 +17,17 @@ struct LightInfo
 
 cbuffer cbAnimMatrices : register(b0)
 {
-	float4x4 g_mConstBoneWorld[MAX_BONE_MATRICES];
-};
-cbuffer cb1 : register(b1)
-{
 	float4x4 g_mWorld;
 	float g_posAmount1;
 	uint g_vertexCount;
 	uint g_indexCount;
 	float cb1_preserved1;
-	float4 cb1_preserved2[3];
+	float4 g_bonePreserved3[3];
+	float4x4 g_bonePreserved2[2];
+	float4x4 g_mConstBoneWorld[MAX_BONE_MATRICES];
+};
+cbuffer cb1 : register(b1)
+{
 	LightInfo Lightings[4];
 };
 cbuffer cb2 : register(b2)
@@ -565,7 +568,7 @@ struct PSIn
 	float2 TexCoord	: TEXCOORD;		//Texture coordinate
 	float3 Tangent : TANGENT;		//Normalized Tangent vector
 };
-float4 PS(PSIn input) : SV_TARGET
+float4 PS1(PSIn input) : SV_TARGET
 {
 	float3 strength = float3(0,0,0);
 	float3 viewDir = normalize(g_vCamPos - input.wPos);

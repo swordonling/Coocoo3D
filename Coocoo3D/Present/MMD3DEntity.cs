@@ -51,9 +51,12 @@ namespace Coocoo3D.Present
         public void SetMotionTime(float time)
         {
             if (!ComponentReady) return;
-            morphStateComponent.SetPose(motionComponent, time);
-            morphStateComponent.ComputeWeight();
-            boneComponent.SetPose(motionComponent, morphStateComponent, time);
+            lock (motionComponent)
+            {
+                morphStateComponent.SetPose(motionComponent, time);
+                morphStateComponent.ComputeWeight();
+                boneComponent.SetPose(motionComponent, morphStateComponent, time);
+            }
             boneComponent.ComputeMatricesData();
             rendererComponent.SetPose(morphStateComponent);
             needUpdateMotion = true;
@@ -100,7 +103,8 @@ namespace Coocoo3D.FileFormat
             for (int i = 0; i < Vertices.Count; i++)
             {
                 Marshal.StructureToPtr(Vertices[i].innerStruct, ptr, true);
-                Marshal.Copy(Vertices[i].boneId, 0, ptr + 24, 4);
+                for (int j = 0; j < 4; j++)
+                    Marshal.WriteInt32(ptr + 24 + j * 4, Vertices[i].boneId[j]);
                 Marshal.Copy(Vertices[i].weight, 0, ptr + 24 + 16, 4);
                 ptr += c_vertexStride;
             }

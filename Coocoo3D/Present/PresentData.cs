@@ -21,23 +21,21 @@ namespace Coocoo3D.Present
         public ConstantBuffer DataBuffer = new ConstantBuffer();
 
 
-        public void UpdateCameraData(CameraData camera, ref Core.Settings settings)
+        public void UpdateCameraData(CameraData camera)
         {
             wpMatrix = Matrix4x4.Transpose(camera.vpMatrix);
             Matrix4x4.Invert(camera.vpMatrix, out innerStruct.pwMatrix);
             pwMatrix = Matrix4x4.Transpose(pwMatrix);
             CameraPosition = camera.Pos;
             AspectRatio = camera.AspectRatio;
-            innerStruct.SkyBoxMultiple = settings.SkyBoxLightMultiple;
         }
-        public void UpdateCameraData(LightingData lighting, ref Core.Settings settings)
+        public void UpdateCameraData(LightingData lighting)
         {
             wpMatrix = Matrix4x4.Transpose(lighting.vpMatrix);
             Matrix4x4.Invert(lighting.vpMatrix, out innerStruct.pwMatrix);
             pwMatrix = Matrix4x4.Transpose(pwMatrix);
             CameraPosition = lighting.Rotation;
             AspectRatio = 1;
-            innerStruct.SkyBoxMultiple = settings.SkyBoxLightMultiple;
         }
 
         public void Reload(DeviceResources deviceResources, int presentDataSize)
@@ -58,7 +56,6 @@ namespace Coocoo3D.Present
             public float DeltaTime;
             public int RandomValue1;
             public int RandomValue2;
-            public float SkyBoxMultiple;
         }
     }
 }

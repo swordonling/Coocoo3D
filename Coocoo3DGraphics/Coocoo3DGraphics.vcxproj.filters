@@ -206,15 +206,6 @@
     <FxCompile Include="Shaders\PSMMDAlphaClip1.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
-    <FxCompile Include="Shaders\AO\PS_NTAO_Normal.hlsl">
-      <Filter>Shaders\AO</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\AO\VS_NTAO.hlsl">
-      <Filter>Shaders\AO</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\AO\PS_NTAO_1.hlsl">
-      <Filter>Shaders\AO</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli">

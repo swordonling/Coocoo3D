@@ -59,12 +59,12 @@ namespace Coocoo3DGraphics
 		void SetPObjectDepthOnly(PObject^ pObject);
 		void SetPObjectStreamOut(PObject^ pObject);
 		void SetPObject(ComputePO^ pObject);
-		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
-		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte);
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
+		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
+		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
@@ -84,7 +84,7 @@ namespace Coocoo3DGraphics
 		void SetComputeCBVR(ConstantBuffer^ buffer, int index);
 		void SetComputeCBVR(ConstantBufferStatic^ buffer, int index);
 		void SetComputeUAVR(DynamicMesh^ mesh, int index);
-		void SetComputeUAVR(TwinBuffer^ buffer,int bufIndex, int index);
+		void SetComputeUAVR(TwinBuffer^ buffer, int bufIndex, int index);
 		void SetComputeUAVT(RenderTexture2D^ texture, int index);
 		void SetComputeUAVT(RenderTextureCube^ texture, int index);
 		void SetSOMesh(MMDMesh^ mesh);

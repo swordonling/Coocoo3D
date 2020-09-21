@@ -131,30 +131,28 @@ namespace Coocoo3D
 
         private void Play_Click(object sender, RoutedEventArgs e)
         {
-            UI.UISharedCode.Play(appBody);
+            UI.PlayControl.Play(appBody);
             ForceAudioAsync();
 
         }
         private void Pause_Click(object sender, RoutedEventArgs e)
         {
-            UI.UISharedCode.Pause(appBody);
+            UI.PlayControl.Pause(appBody);
             ForceAudioAsync();
         }
         private void Stop_Click(object sender, RoutedEventArgs e)
         {
-            UI.UISharedCode.Stop(appBody);
+            UI.PlayControl.Stop(appBody);
             ForceAudioAsync();
         }
         private void Rewind_Click(object sender, RoutedEventArgs e)
         {
-            appBody.GameDriverContext.Playing = true;
-            appBody.GameDriverContext.PlaySpeed = -2.0f;
+            UI.PlayControl.Rewind(appBody);
             ForceAudioAsync();
         }
         private void FastForward_Click(object sender, RoutedEventArgs e)
         {
-            appBody.GameDriverContext.Playing = true;
-            appBody.GameDriverContext.PlaySpeed = 2.0f;
+            UI.PlayControl.FastForward(appBody);
             ForceAudioAsync();
         }
         private void Front_Click(object sender, RoutedEventArgs e)

@@ -9,8 +9,6 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		property GraphicsObjectStatus Status;
-		property Platform::Object^ LoadTask;
-		property Platform::String^ Path;
 		property Platform::Array<byte>^ m_textureData;
 		property UINT m_width;
 		property UINT m_height;

@@ -15,8 +15,7 @@ namespace Coocoo3D.Components
 {
     public class MMDBoneComponent
     {
-        public const int c_boneMatrixDataSize = 65536;
-        public const int c_boneMatricesCount = 1024;
+        public const int c_boneMatricesCount = 1020;
         public Matrix4x4[] boneMatricesData = new Matrix4x4[c_boneMatricesCount];
         public Matrix4x4[] boneMatricesData1 = new Matrix4x4[c_boneMatricesCount];
         GCHandle gch_boneMatricesData;
@@ -72,13 +71,6 @@ namespace Coocoo3D.Components
                 pair.Value.dynamicPosition = keyframe.translation;
             }
             UpdateAllMatrix();
-            for (int i = 0; i < bones.Count; i++)
-            {
-                if (bones[i].IKTargetIndex != -1)
-                {
-                    IK(i, bones);
-                }
-            }
 
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
@@ -92,6 +84,14 @@ namespace Coocoo3D.Components
                         morphBoneStructs0[j].Rotation = Quaternion.Slerp(Quaternion.Identity, morphBoneStructs1[j].Rotation, computedWeight);
                         morphBoneStructs0[j].Translation = morphBoneStructs1[j].Translation * computedWeight;
                     }
+                }
+            }
+
+            for (int i = 0; i < bones.Count; i++)
+            {
+                if (bones[i].IKTargetIndex != -1)
+                {
+                    IK(i, bones);
                 }
             }
             for (int i = 0; i < boneMorphCache.Count; i++)
@@ -143,7 +143,7 @@ namespace Coocoo3D.Components
                 if (desc.Type == 0) continue;
                 int index = desc.AssociatedBoneIndex;
                 if (index == -1) continue;
-                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1)
+                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(Translate(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1))
                     * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal) - desc.Position + bones[index].staticPosition);
 
                 //Matrix4x4 x4 = physics3DScene.GetRigidBodyTransform(physics3DRigidBodys[i]) * WorldToLocal;
@@ -606,7 +606,12 @@ namespace Coocoo3D.Components
 
         public static Quaternion ToQuaternion(Vector3 angle)
         {
-            return Quaternion.CreateFromYawPitchRoll(-angle.Y, angle.X, angle.Z);
+            return Quaternion.CreateFromYawPitchRoll(angle.Y, angle.X, angle.Z);
+        }
+
+        public static Quaternion Translate(Quaternion q)
+        {
+            return new Quaternion(q.X, q.Y, q.Z, q.W);
         }
 
         private Vector3 LimitAngle(Vector3 angle, bool axis_lim, Vector3 low, Vector3 high)

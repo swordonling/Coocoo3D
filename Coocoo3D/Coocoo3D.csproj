@@ -190,6 +190,7 @@
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="RenderPipeline\RPAssetsManager.cs" />
+    <Compile Include="UI\PlayControl.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />
     <Compile Include="Utility\IDictionaryExt.cs" />

@@ -49,9 +49,10 @@ namespace Coocoo3D.PropertiesPages
 
         private void Remove_Click(object sender, RoutedEventArgs e)
         {
-            if (viewSceneObjects.SelectedItem != null)
+            var selectedItems = viewSceneObjects.SelectedItems;
+            while (0 < selectedItems.Count)
             {
-                UI.UISharedCode.RemoveSceneObject(appBody, appBody.CurrentScene, (ISceneObject)viewSceneObjects.SelectedItem);
+                UI.UISharedCode.RemoveSceneObject(appBody, appBody.CurrentScene, (ISceneObject)selectedItems[0]);
             }
         }
 
@@ -87,7 +88,7 @@ namespace Coocoo3D.PropertiesPages
 
         private void ViewSceneObjects_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
         {
-            if(args.DropResult==Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move)
+            if (args.DropResult == Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move)
             {
                 appBody.CurrentScene.SortObjects();
                 appBody.RequireRender();

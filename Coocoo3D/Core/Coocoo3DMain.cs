@@ -27,7 +27,6 @@ namespace Coocoo3D.Core
     {
         public DeviceResources deviceResources = new DeviceResources();
         public WICFactory wicFactory = new WICFactory();
-        //public DefaultResources defaultResources = new DefaultResources();
         public MainCaches mainCaches = new MainCaches();
 
         public Scene CurrentScene;
@@ -45,7 +44,7 @@ namespace Coocoo3D.Core
         public RecorderGameDriver _RecorderGameDriver = new RecorderGameDriver();
         public GameDriverContext GameDriverContext = new GameDriverContext()
         {
-            FrameInterval = TimeSpan.FromSeconds(1 / 120.0),
+            FrameInterval = TimeSpan.FromSeconds(1 / 240.0),
             recordSettings = new RecordSettings()
             {
                 FPS = 60,
@@ -60,7 +59,7 @@ namespace Coocoo3D.Core
         volatile bool NeedUpdateEntities = false;
 
         public DateTime LatestRenderTime = DateTime.Now;
-        public float Fps = 120;
+        public float Fps = 240;
         public CoreDispatcher Dispatcher;
         public event EventHandler FrameUpdated;
 
@@ -78,18 +77,19 @@ namespace Coocoo3D.Core
             viewSelectedEntityBone = true,
             backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
             ExtendShadowMapRange = 48,
-            SkyBoxLightMultiple = 1.0f,
             ZPrepass = false,
         };
         public InShaderSettings inShaderSettings = new InShaderSettings()
         {
-            backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
+            //backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
+            SkyBoxLightMultiple = 1.0f,
             EnableAO = true,
             EnableShadow = true,
+            Quality = 0,
         };
         public PerformaceSettings performaceSettings = new PerformaceSettings()
         {
-            MultiThreadRendering = false,
+            MultiThreadRendering = true,
             SaveCpuPower = true,
             HighResolutionShadow = false,
         };
@@ -133,7 +133,7 @@ namespace Coocoo3D.Core
             physics3DScene.Reload(physics3D);
             physics3DScene.SetGravitation(new Vector3(0, -98.01f, 0));
 
-            CurrentScene = new Scene(this);
+            CurrentScene = new Scene();
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
             threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 10.0));
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
@@ -142,10 +142,7 @@ namespace Coocoo3D.Core
                   {
                       DateTime now = DateTime.Now;
                       if (now - LatestRenderTime < GameDriverContext.FrameInterval) continue;
-                      //if (NeedRender || Playing)
-                      //{
                       bool actualRender = RenderFrame2();
-                      //}
                       if (performaceSettings.SaveCpuPower)
                           System.Threading.Thread.Sleep(1);
                   }
@@ -195,14 +192,16 @@ namespace Coocoo3D.Core
                     //var entity = Entities[i];
                     //if (!entity.ComponentReady) continue;
 
+                    //lock (entity.motionComponent)
+                    //{
                     //entity.morphStateComponent.SetPose(entity.motionComponent, playTime);
                     //entity.morphStateComponent.ComputeWeight();
 
 
                     //stopwatch1.Restart();
                     //entity.boneComponent.SetPose(entity.motionComponent, entity.morphStateComponent, playTime);
-
                     //stopwatch1.Stop();
+                    //}
                     //StopwatchTimes[0] = stopwatch1.ElapsedTicks;
                     //stopwatch1.Restart();
                     //entity.boneComponent.ComputeMatricesData();
@@ -242,12 +241,14 @@ namespace Coocoo3D.Core
                 stopwatch1.Restart();
                 renderPipelineContext.renderPipelineDynamicContext1.ClearCollections();
                 CurrentScene.DealProcessList(physics3DScene);
-                for (int i = 0; i < CurrentScene.Lightings.Count; i++)
-                    CurrentScene.Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
-                renderPipelineContext.renderPipelineDynamicContext1.entities.AddRange(CurrentScene.Entities);
-                for (int i = 0; i < CurrentScene.Lightings.Count; i++)
+                lock (CurrentScene)
                 {
-                    renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
+                    renderPipelineContext.renderPipelineDynamicContext1.entities.AddRange(CurrentScene.Entities);
+                    for (int i = 0; i < CurrentScene.Lightings.Count; i++)
+                    {
+                        CurrentScene.Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
+                        renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
+                    }
                 }
 
                 var entities = renderPipelineContext.renderPipelineDynamicContext1.entities;
@@ -332,6 +333,7 @@ namespace Coocoo3D.Core
                 ////endtest code-------------------
 
                 if (RenderTask1 != null && RenderTask1.Status != TaskStatus.RanToCompletion) RenderTask1.Wait();
+                #region Render preparing
                 var temp1 = renderPipelineContext.renderPipelineDynamicContext1;
                 renderPipelineContext.renderPipelineDynamicContext1 = renderPipelineContext.renderPipelineDynamicContext;
                 renderPipelineContext.renderPipelineDynamicContext = temp1;
@@ -382,11 +384,9 @@ namespace Coocoo3D.Core
 
                 GraphicsContext.BeginAlloctor(deviceResources);
 
-                {
-                    miscProcessContext.MoveToAnother(_miscProcessContext);
-                    _miscProcessContext.graphicsContext = graphicsContext2;
-                    miscProcess.Process(_miscProcessContext);
-                }
+                miscProcessContext.MoveToAnother(_miscProcessContext);
+                _miscProcessContext.graphicsContext = graphicsContext2;
+                miscProcess.Process(_miscProcessContext);
 
                 //stopwatch1.Restart();
                 if (swapChainReady && !GameDriverContext.RequireResize)
@@ -404,9 +404,11 @@ namespace Coocoo3D.Core
 
                     var currentRenderPipeline = _currentRenderPipeline;//避免在渲染时切换
                     if (GameDriverContext.Playing || needUpdateEntities)
-                    {
                         currentRenderPipeline.TimeChange(GameDriverContext.PlayTime, GameDriverContext.deltaTime);
-                    }
+                    else
+                        currentRenderPipeline.TimeChange(GameDriverContext.PlayTime, 0);
+
+
                     var entities1 = renderPipelineContext.renderPipelineDynamicContext.entities;
                     for (int i = 0; i < entities1.Count; i++)
                     {
@@ -414,15 +416,16 @@ namespace Coocoo3D.Core
                     }
                     currentRenderPipeline.PrepareRenderData(renderPipelineContext);
                     postProcess.PrepareRenderData(renderPipelineContext);
-                    void _Fun1()
+                    #endregion
+
+                    void _RenderFunction()
                     {
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
                         renderPipelineContext.UpdateGPUResource();
                         if (currentRenderPipeline.Ready && RPAssetsManager.Ready)
                         {
                             //stopwatch1.Restart();
-                            currentRenderPipeline.BeforeRenderCamera(renderPipelineContext);
-                            currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
+                            currentRenderPipeline.RenderCamera(renderPipelineContext, 1);
                             //stopwatch1.Stop();
                             //StopwatchTimes[4] = stopwatch1.ElapsedTicks;
 
@@ -437,7 +440,7 @@ namespace Coocoo3D.Core
                         }
                         if (postProcess.Ready && RPAssetsManager.Ready)
                         {
-                            postProcess.RenderCamera(renderPipelineContext, 0);
+                            postProcess.RenderCamera(renderPipelineContext, 1);
                         }
                         //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
                         //{
@@ -460,9 +463,9 @@ namespace Coocoo3D.Core
 
                     }
                     if (performaceSettings.MultiThreadRendering)
-                        RenderTask1 = Task.Run(_Fun1);
+                        RenderTask1 = Task.Run(_RenderFunction);
                     else
-                        _Fun1();
+                        _RenderFunction();
                 }
                 //stopwatch1.Stop();
                 //StopwatchTimes[3] = stopwatch1.ElapsedTicks;
@@ -489,6 +492,12 @@ namespace Coocoo3D.Core
             }
         }
 
+        public async Task WaitForResourcesLoadedAsync()
+        {
+            if (!renderPipelineContext.LoadTask.IsCompleted)
+                await renderPipelineContext.LoadTask;
+        }
+        #region UI
         public StorageFolder openedStorageFolder;
         public event EventHandler OpenedStorageFolderChanged;
         public void OpenedStorageFolderChange(StorageFolder storageFolder)
@@ -496,13 +505,6 @@ namespace Coocoo3D.Core
             openedStorageFolder = storageFolder;
             OpenedStorageFolderChanged?.Invoke(this, null);
         }
-
-        public async Task WaitForResourcesLoadedAsync()
-        {
-            if (!renderPipelineContext.LoadTask.IsCompleted)
-                await renderPipelineContext.LoadTask;
-        }
-        #region UI
         public Frame frameViewProperties;
         public void ShowDetailPage(Type page, object parameter)
         {
@@ -523,7 +525,6 @@ namespace Coocoo3D.Core
         public bool viewSelectedEntityBone;
         public Vector4 backgroundColor;
         public float ExtendShadowMapRange;
-        public float SkyBoxLightMultiple;
         public bool ZPrepass;
         public uint RenderStyle;
     }

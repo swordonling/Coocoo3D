@@ -186,10 +186,10 @@ namespace Coocoo3D.PropertiesPages
         float _cacheFOV;
         public float VD
         {
-            get => _cacheDistance; set
+            get => -_cacheDistance; set
             {
-                _cacheDistance = value;
-                appBody.camera.Distance = value;
+                _cacheDistance = -value;
+                appBody.camera.Distance = -value;
                 appBody.RequireRender();
             }
         }
@@ -375,6 +375,11 @@ namespace Coocoo3D.PropertiesPages
         private void ShaderCacheReset_Click(object sender, RoutedEventArgs e)
         {
             appBody.mainCaches.ResetShaderCache();
+        }
+
+        private void TextureCacheReset_Click(object sender, RoutedEventArgs e)
+        {
+            appBody.mainCaches.ResetTextureCache();
         }
     }
 }

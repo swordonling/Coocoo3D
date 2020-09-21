@@ -37,7 +37,7 @@ const std::map<DXGI_FORMAT, UINT>dxgiFormatBytesPerPixel =
 	{DXGI_FORMAT_B5G6R5_UNORM,2},
 };
 
-inline void DX12UAVResourceBarrier(ID3D12GraphicsCommandList* commandList,ID3D12Resource* resource,D3D12_RESOURCE_STATES& stateRef)
+inline void DX12UAVResourceBarrier(ID3D12GraphicsCommandList* commandList, ID3D12Resource* resource, D3D12_RESOURCE_STATES& stateRef)
 {
 	if (stateRef != D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
 		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, stateRef, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
@@ -128,12 +128,6 @@ void GraphicsContext::SetPObject(ComputePO^ pObject)
 	m_commandList->SetPipelineState(pObject->m_pipelineState.Get());
 }
 
-void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
-{
-	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
-	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin(), sizeInByte);
-}
-
 void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
 {
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
@@ -160,11 +154,6 @@ inline void UpdateCBStaticResource(ConstantBufferStatic^ buffer, ID3D12GraphicsC
 	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffers[lastUpdateIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 
-void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte)
-{
-	UpdateCBStaticResource(buffer, m_commandList.Get(), data->begin(), sizeInByte, 0);
-}
-
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
 {
 	UpdateCBStaticResource(buffer, m_commandList.Get(), data->begin(), sizeInByte, dataOffset);
@@ -173,6 +162,16 @@ void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platfor
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset)
 {
 	UpdateCBStaticResource(buffer, m_commandList.Get(), data->begin(), sizeInByte, dataOffset);
+}
+
+void GraphicsContext::UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
+{
+	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size + bufferDataOffset, data->begin() + dataOffset, sizeInByte);
+}
+
+void GraphicsContext::UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset)
+{
+	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size + bufferDataOffset, data->begin() + dataOffset, sizeInByte);
 }
 
 void GraphicsContext::UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData)
@@ -381,7 +380,7 @@ void GraphicsContext::SetComputeUAVR(DynamicMesh^ mesh, int index)
 	m_commandList->SetComputeRootUnorderedAccessView(index, mesh->m_vertice->GetGPUVirtualAddress());
 }
 
-void GraphicsContext::SetComputeUAVR(TwinBuffer^ buffer,int bufIndex, int index)
+void GraphicsContext::SetComputeUAVR(TwinBuffer^ buffer, int bufIndex, int index)
 {
 	DX12UAVResourceBarrier(m_commandList.Get(), buffer->m_buffer[bufIndex].Get(), buffer->m_prevResourceState[bufIndex]);
 	m_commandList->SetComputeRootUnorderedAccessView(index, buffer->m_buffer[bufIndex]->GetGPUVirtualAddress());

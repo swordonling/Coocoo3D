@@ -3,7 +3,7 @@
 namespace Coocoo3DGraphics
 {
 	static const UINT c_frameCount = 3;		// 使用三重缓冲。
-	static const UINT c_graphicsPipelineHeapMaxCount = 65536;		// 使用三重缓冲。
+	static const UINT c_graphicsPipelineHeapMaxCount = 65536;
 
 	public enum struct DxgiFormat
 	{
@@ -136,6 +136,8 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		DeviceResources();
+		void CreateDeviceResources();
+
 		void SetSwapChainPanel(Windows::UI::Xaml::Controls::SwapChainPanel^ window);
 		void SetLogicalSize(Windows::Foundation::Size logicalSize);
 		// 呈现器目标的大小，以像素为单位。
@@ -146,7 +148,6 @@ namespace Coocoo3DGraphics
 		void SetDpi(float dpi);
 		float GetDpi() { return m_effectiveDpi; }
 		void ValidateDevice();
-		void Present();
 		void Present(bool vsync);
 		void WaitForGpu();
 		bool IsRayTracingSupport();
@@ -185,8 +186,6 @@ namespace Coocoo3DGraphics
 		UINT											m_rtvHeapAllocCount;
 		UINT											m_dsvHeapAllocCount;
 	private:
-		void CreateDeviceIndependentResources();
-		void CreateDeviceResources();
 		void CreateWindowSizeDependentResources();
 		void UpdateRenderTargetSize();
 		void MoveToNextFrame();

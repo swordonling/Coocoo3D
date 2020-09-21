@@ -45,9 +45,9 @@
                                     <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
                                     <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="多线程渲染" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="超高分辨率阴影" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="Z-Prepass" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="环境光遮蔽" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="超高分辨率阴影（仅forward）" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="Z-Prepass（仅forward）" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
+                                    <ToggleSwitch Header="环境光遮蔽（仅光线追踪）" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
                                     <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
                                     <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="VQuality_SelectionChanged" SelectedIndex="0"/>
                                 </StackPanel>
@@ -73,14 +73,15 @@
                     <ComboBoxItem Content="卡通1"/>
                 </ComboBox>-->
                 <TextBlock x:Name="VRayTracingSupport" Text="使用的显卡不支持光线追踪"/>
-                <TextBlock Text="在设置-系统-显示-图形设置 里更改使用的显卡" TextWrapping="Wrap"/>
+                <TextBlock Text="在Windows设置-系统-显示-图形设置 里更改使用的显卡" TextWrapping="Wrap"/>
                 <ToggleSwitch x:Name="vCameraMotionOn" Header="镜头动作" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
                 <TextBlock Text="将VMD文件拖到至此应用镜头" TextWrapping="Wrap"/>
                 <Button Content="重置运行时缓存">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel>
-                                <Button Content="重置着色器缓存" Click="ShaderCacheReset_Click" ToolTipService.ToolTip="重置缓存以便重新加载着色器"/>
+                                <Button Content="重置着色器缓存" Click="ShaderCacheReset_Click" ToolTipService.ToolTip="重置着色器缓存以便重新加载着色器"/>
+                                <Button Content="重置纹理缓存" Click="TextureCacheReset_Click" ToolTipService.ToolTip="重置纹理缓存以便重新加载纹理"/>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

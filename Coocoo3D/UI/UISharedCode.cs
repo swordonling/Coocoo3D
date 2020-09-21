@@ -14,6 +14,7 @@ using Windows.Storage;
 using Coocoo3D.Utility;
 using Coocoo3D.Core;
 using Windows.Storage.Streams;
+using System.Threading;
 
 namespace Coocoo3D.UI
 {
@@ -44,32 +45,8 @@ namespace Coocoo3D.UI
             entity.Reload2(appBody.ProcessingList, pmx);
             entity.rendererComponent.textures = GetTextureListForModel(appBody, storageFolder, pmx);
             scene.AddSceneObject(entity);
-            _ = LoadModelTextures(appBody, storageFolder, pmx, entity.rendererComponent.textures);
             appBody.RequireRender();
 
-        }
-
-        public static void Play(Coocoo3DMain appBody)
-        {
-            appBody.GameDriverContext.Playing = true;
-            appBody.GameDriverContext.PlaySpeed = 1.0f;
-            appBody.LatestRenderTime = DateTime.Now - appBody.GameDriverContext.FrameInterval;
-            appBody.RequireRender();
-        }
-        public static void Pause(Coocoo3DMain appBody)
-        {
-            appBody.GameDriverContext.Playing = false;
-        }
-        public static void Stop(Coocoo3DMain appBody)
-        {
-            if (appBody.Recording)
-            {
-                appBody.GameDriver = appBody._GeneralGameDriver;
-                appBody.Recording = false;
-            }
-            appBody.GameDriverContext.Playing = false;
-            appBody.GameDriverContext.PlayTime = 0;
-            appBody.RequireRender(true);
         }
         public static void NewLighting(Coocoo3DMain appBody)
         {
@@ -90,10 +67,7 @@ namespace Coocoo3D.UI
                 }
                 else if (sceneObject is Lighting lighting)
                 {
-                    lock (appBody.CurrentScene)
-                    {
-                        scene.Lightings.Remove(lighting);
-                    }
+                    scene.RemoveSceneObject(lighting);
                 }
             }
             appBody.RequireRender();
@@ -119,98 +93,121 @@ namespace Coocoo3D.UI
         {
             BinaryReader reader = new BinaryReader((await storageFile.OpenReadAsync()).AsStreamForRead());
             VMDFormat motionSet = VMDFormat.Load(reader);
-            lock (appBody.deviceResources)
-            {
-                entity.motionComponent.Reload(motionSet);
-            }
+            entity.motionComponent.Reload(motionSet);
             appBody.RequireRender(true);
         }
 
         public static void LoadShaderForEntities1(Coocoo3DMain appBody, StorageFile storageFile, StorageFolder storageFolder, IList<MMD3DEntity> entities)
         {
-            RPShaderPack shaderPack = new RPShaderPack();
+            RPShaderPack shaderPack;
             lock (appBody.mainCaches.RPShaderPackCaches)
             {
                 shaderPack = appBody.mainCaches.RPShaderPackCaches.GetOrCreate(storageFile.Path);
-                if (shaderPack.LoadTask == null && shaderPack.Status != GraphicsObjectStatus.loaded)
+                if (shaderPack.Status != GraphicsObjectStatus.loaded)
                 {
-                    shaderPack.Status = GraphicsObjectStatus.loading;
-                    shaderPack.POSkinning.Status = GraphicsObjectStatus.loading;
-                    shaderPack.PODraw.Status = GraphicsObjectStatus.loading;
-                    shaderPack.POParticleDraw.Status = GraphicsObjectStatus.loading;
-                    shaderPack.CSParticle.Status = GraphicsObjectStatus.loading;
-
-                    shaderPack.LoadTask = Task.Run(async () =>
+                    int testValue = Interlocked.Increment(ref shaderPack.taskLockCounter);
+                    if (testValue == 1)
                     {
-                        byte[] datas = null;
-                        try
-                        {
-                            datas = await ReadAllBytes(storageFile);
-                        }
-                        catch
-                        {
-                            shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
-                            shaderPack.PODraw.Status = GraphicsObjectStatus.error;
-                            shaderPack.Status = GraphicsObjectStatus.error;
-                            shaderPack.LoadTask = null;
-                            appBody.RequireRender();
-                            return;
-                        }
-                        VertexShader vs0 = shaderPack.VS;
-                        GeometryShader gs0 = shaderPack.GS;
-                        PixelShader ps0 = shaderPack.PS;
-                        VertexShader vs1 = shaderPack.VS1;
+                        shaderPack.Status = GraphicsObjectStatus.loading;
+                        shaderPack.POSkinning.Status = GraphicsObjectStatus.loading;
+                        shaderPack.PODraw.Status = GraphicsObjectStatus.loading;
+                        shaderPack.POParticleDraw.Status = GraphicsObjectStatus.loading;
+                        shaderPack.CSParticle.Status = GraphicsObjectStatus.loading;
 
-                        VertexShader vs2 = shaderPack.VSParticle;
-                        GeometryShader gs2 = shaderPack.GSParticle;
-                        PixelShader ps2 = shaderPack.PSParticle;
-                        ComputePO cs1 = shaderPack.CSParticle;
-
-
-                        var RPAssetsManager = appBody.RPAssetsManager;
-                        bool haveVs = vs0.CompileReload1(datas, "VS", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool haveGs = gs0.CompileReload1(datas, "GS", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool havePs = ps0.CompileReload1(datas, "PS", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool haveVS1 = vs1.CompileReload1(datas, "VS1", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool haveVSParticle = vs2.CompileReload1(datas, "VSParticle", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool haveGSParticle = gs2.CompileReload1(datas, "GSParticle", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool havePSParticle = ps2.CompileReload1(datas, "PSParticle", ShaderMacro.DEFINE_COO_SURFACE);
-                        bool haveCS1 = cs1.CompileReload1(appBody.deviceResources, RPAssetsManager.rootSignatureCompute, datas, "CSParticle", ShaderMacro.DEFINE_COO_PARTICLE);
-                        if (haveVs || haveGs)
+                        _ = Task.Run(async () =>
                         {
-                            if (shaderPack.POSkinning.ReloadSkinning(appBody.deviceResources, RPAssetsManager.rootSignature, haveVs ? vs0 : RPAssetsManager.VSMMDSkinning2, haveGs ? gs0 : null))
-                                shaderPack.POSkinning.Status = GraphicsObjectStatus.loaded;
-                            else
+                            byte[] datas = null;
+                            try
+                            {
+                                datas = await ReadAllBytes(storageFile);
+                            }
+                            catch
+                            {
                                 shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
-                        }
-                        else
-                        {
-                            shaderPack.POSkinning.Status = GraphicsObjectStatus.unload;
-                        }
-                        if (havePs || haveVS1)
-                        {
-                            if (shaderPack.PODraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha, haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform, null, havePs ? ps0 : RPAssetsManager.PSMMD, appBody.RTFormat))
-                                shaderPack.PODraw.Status = GraphicsObjectStatus.loaded;
-                            else
                                 shaderPack.PODraw.Status = GraphicsObjectStatus.error;
-                        }
-                        else
-                        {
-                            shaderPack.PODraw.Status = GraphicsObjectStatus.unload;
-                        }
-                        if (haveVSParticle || havePSParticle)
-                        {
-                            if (shaderPack.POParticleDraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha, haveVSParticle ? vs2 : RPAssetsManager.VSMMDTransform, null, havePSParticle ? ps2 : RPAssetsManager.PSMMD, appBody.RTFormat))
-                                shaderPack.POParticleDraw.Status = GraphicsObjectStatus.loaded;
-                            else
                                 shaderPack.POParticleDraw.Status = GraphicsObjectStatus.error;
-                        }
-                        if (haveCS1)
-                            shaderPack.CSParticle.Status = GraphicsObjectStatus.loaded;
-                        shaderPack.Status = GraphicsObjectStatus.loaded;
-                        shaderPack.LoadTask = null;
-                        appBody.RequireRender();
-                    });
+                                shaderPack.CSParticle.Status = GraphicsObjectStatus.error;
+                                shaderPack.Status = GraphicsObjectStatus.error;
+                                appBody.RequireRender();
+                                Interlocked.Decrement(ref shaderPack.taskLockCounter);
+                                return;
+                            }
+                            VertexShader vs0 = shaderPack.VS;
+                            GeometryShader gs0 = shaderPack.GS;
+                            VertexShader vs1 = shaderPack.VS1;
+                            GeometryShader gs1 = shaderPack.GS1;
+                            PixelShader ps1 = shaderPack.PS1;
+
+                            VertexShader vs2 = shaderPack.VSParticle;
+                            GeometryShader gs2 = shaderPack.GSParticle;
+                            PixelShader ps2 = shaderPack.PSParticle;
+                            ComputePO cs1 = shaderPack.CSParticle;
+
+
+                            var RPAssetsManager = appBody.RPAssetsManager;
+                            bool haveVS = vs0.CompileReload1(datas, "VS", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool haveGS = gs0.CompileReload1(datas, "GS", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool haveVS1 = vs1.CompileReload1(datas, "VS1", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool haveGS1 = gs1.CompileReload1(datas, "GS1", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool havePS1 = ps1.CompileReload1(datas, "PS1", ShaderMacro.DEFINE_COO_SURFACE);
+
+                            bool haveVSParticle = vs2.CompileReload1(datas, "VSParticle", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool haveGSParticle = gs2.CompileReload1(datas, "GSParticle", ShaderMacro.DEFINE_COO_SURFACE);
+                            bool havePSParticle = ps2.CompileReload1(datas, "PSParticle", ShaderMacro.DEFINE_COO_SURFACE);
+
+
+                            bool haveCS1 = cs1.CompileReload1(appBody.deviceResources, RPAssetsManager.rootSignatureCompute, datas, "CSParticle", ShaderMacro.DEFINE_COO_PARTICLE);
+                            if (haveVS || haveGS)
+                            {
+                                if (shaderPack.POSkinning.ReloadSkinning(appBody.deviceResources, RPAssetsManager.rootSignature,
+                                    haveVS ? vs0 : RPAssetsManager.VSMMDSkinning2,
+                                    haveGS ? gs0 : null))
+                                    shaderPack.POSkinning.Status = GraphicsObjectStatus.loaded;
+                                else
+                                    shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
+                            }
+                            else
+                                shaderPack.POSkinning.Status = GraphicsObjectStatus.unload;
+                            if (haveVS1 || haveGS1 || havePS1)
+                            {
+                                if (shaderPack.PODraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha,
+                                    haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform,
+                                    haveGS1 ? gs1 : null,
+                                    havePS1 ? ps1 : RPAssetsManager.PSMMD, appBody.RTFormat))
+                                    shaderPack.PODraw.Status = GraphicsObjectStatus.loaded;
+                                else
+                                    shaderPack.PODraw.Status = GraphicsObjectStatus.error;
+                            }
+                            else
+                                shaderPack.PODraw.Status = GraphicsObjectStatus.unload;
+                            if (haveVSParticle || haveGSParticle || havePSParticle)
+                            {
+                                if (shaderPack.POParticleDraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha,
+                                    haveVSParticle ? vs2 : RPAssetsManager.VSMMDTransform,
+                                    haveGSParticle ? gs2 : null,
+                                    havePSParticle ? ps2 : RPAssetsManager.PSMMD, appBody.RTFormat))
+                                    shaderPack.POParticleDraw.Status = GraphicsObjectStatus.loaded;
+                                else
+                                    shaderPack.POParticleDraw.Status = GraphicsObjectStatus.error;
+                            }
+                            else
+                                shaderPack.POParticleDraw.Status = GraphicsObjectStatus.unload;
+                            if (haveCS1)
+                                shaderPack.CSParticle.Status = GraphicsObjectStatus.loaded;
+                            else
+                                shaderPack.CSParticle.Status = GraphicsObjectStatus.unload;
+
+                            shaderPack.Status = GraphicsObjectStatus.loaded;
+                            appBody.RequireRender();
+                            Interlocked.Decrement(ref shaderPack.taskLockCounter);
+                        });
+
+                    }
+                    else
+                    {
+                        Interlocked.Decrement(ref shaderPack.taskLockCounter);
+                    }
+
                 }
             }
             foreach (var entity in entities)
@@ -227,81 +224,67 @@ namespace Coocoo3D.UI
         {
             List<Texture2D> textures = new List<Texture2D>();
             List<string> paths = new List<string>();
+            List<string> relativePaths = new List<string>();
             foreach (var vTex in pmx.Textures)
             {
                 string relativePath = vTex.TexturePath.Replace("//", "\\").Replace('/', '\\');
                 string texPath = Path.Combine(storageFolder.Path, relativePath);
                 paths.Add(texPath);
+                relativePaths.Add(relativePath);
             }
             lock (appBody.mainCaches.textureCaches)
             {
                 for (int i = 0; i < pmx.Textures.Count; i++)
                 {
-                    Texture2D tex = appBody.mainCaches.textureCaches.GetOrCreate(paths[i]);
-                    if (tex.Status != GraphicsObjectStatus.loaded) tex.Status = GraphicsObjectStatus.loading;
-                    tex.Path = paths[i];
-                    textures.Add(tex);
+                    Texture2DPack tex = appBody.mainCaches.textureCaches.GetOrCreate(paths[i]);
+                    LoadTexture(appBody, tex, storageFolder, relativePaths[i]);
+                    textures.Add(tex.texture2D);
                 }
             }
             return textures;
         }
-
-        public static async Task LoadModelTextures(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx, List<Texture2D> textures)
+        /// <summary>异步加载纹理</summary>
+        public static void LoadTexture(Coocoo3DMain appBody, Texture2DPack texturePack, StorageFolder storageFolder, string relativePath)
         {
-            for (int i = 0; i < textures.Count; i++)
+            if (texturePack.Status != GraphicsObjectStatus.loaded)
             {
-                Texture2D tex = textures[i];
-                string relativePath = pmx.Textures[i].TexturePath.Replace("//", "\\").Replace('/', '\\');
-                IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
-
-                if (storageItem is StorageFile texFile)
-                {
-                    if (tex.Status != GraphicsObjectStatus.loaded && tex.LoadTask == null)
-                    {
-                        tex.LoadTask = new Task(async () =>
-                        {
-                            async Task _LoadImage(StorageFile f1)
-                            {
-                                tex.ReloadFromImage(appBody.wicFactory, await FileIO.ReadBufferAsync(f1));
-                                appBody.ProcessingList.AddObject(tex);
-                                tex.Status = GraphicsObjectStatus.loaded;
-                                appBody.RequireRender();
-                            }
-                            try
-                            {
-                                if (texFile.FileType.Equals(".tga", StringComparison.CurrentCultureIgnoreCase))
-                                {
-                                    IStorageItem item1 = await storageFolder.TryGetItemAsync(relativePath.Replace(".tga", ".png"));
-                                    if (item1 != null && item1 is StorageFile file)
-                                    {
-                                        await _LoadImage(file);
-                                    }
-                                    else
-                                    {
-                                        tex.Status = GraphicsObjectStatus.error;
-                                        appBody.RequireRender();
-                                    }
-                                }
-                                else
-                                {
-                                    await _LoadImage(texFile);
-                                }
-                            }
-                            catch
-                            {
-                                tex.Status = GraphicsObjectStatus.error;
-                                appBody.RequireRender();
-                            }
-                            tex.LoadTask = null;
-                        });
-                        tex.Status = GraphicsObjectStatus.loading;
-                        (tex.LoadTask as Task).Start();
-                    }
-                }
+                int testValue = Interlocked.Increment(ref texturePack.taskLockCounter);
+                if (testValue == 1)
+                    _ = Task.Run(async () =>
+                  {
+                      texturePack.Status = GraphicsObjectStatus.loading;
+                      texturePack.texture2D.Status = GraphicsObjectStatus.loading;
+                      if (Path.GetExtension(relativePath).Equals(".tga", StringComparison.OrdinalIgnoreCase))
+                      {
+                          relativePath = Path.ChangeExtension(relativePath, ".png");
+                      }
+                      IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
+                      if (storageItem is StorageFile texFile)
+                      {
+                          try
+                          {
+                              texturePack.texture2D.ReloadFromImage(appBody.wicFactory, await FileIO.ReadBufferAsync(texFile));
+                              appBody.ProcessingList.AddObject(texturePack.texture2D);
+                              texturePack.Status = GraphicsObjectStatus.loaded;
+                              texturePack.texture2D.Status = GraphicsObjectStatus.loaded;
+                          }
+                          catch
+                          {
+                              texturePack.Status = GraphicsObjectStatus.error;
+                              texturePack.texture2D.Status = GraphicsObjectStatus.error;
+                          }
+                      }
+                      else
+                      {
+                          texturePack.Status = GraphicsObjectStatus.error;
+                          texturePack.texture2D.Status = GraphicsObjectStatus.error;
+                      }
+                      appBody.RequireRender();
+                      Interlocked.Decrement(ref texturePack.taskLockCounter);
+                  });
                 else
                 {
-                    tex.Status = GraphicsObjectStatus.error;
-                    appBody.RequireRender();
+                    Interlocked.Decrement(ref texturePack.taskLockCounter);
                 }
             }
         }

@@ -10,6 +10,7 @@ using namespace Windows::Graphics::Display;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Xaml::Controls;
 using namespace Platform;
+using namespace Coocoo3DGraphics;
 
 // 用于计算屏幕旋转的常量。
 namespace ScreenRotation
@@ -57,13 +58,8 @@ bool IsDirectXRaytracingSupported(IDXGIAdapter1* adapter)
 		&& featureSupportData.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 }
 
-// 配置不依赖于 Direct3D 设备的资源。
-void Coocoo3DGraphics::DeviceResources::CreateDeviceIndependentResources()
-{
-}
-
 // 配置 Direct3D 设备，并存储设备句柄和设备上下文。
-void Coocoo3DGraphics::DeviceResources::CreateDeviceResources()
+void DeviceResources::CreateDeviceResources()
 {
 #if defined(_DEBUG)
 	// 如果项目处于调试生成阶段，请通过 SDK 层启用调试。
@@ -161,7 +157,7 @@ void Coocoo3DGraphics::DeviceResources::CreateDeviceResources()
 }
 
 // 每次更改窗口大小时需要重新创建这些资源。
-void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
+void DeviceResources::CreateWindowSizeDependentResources()
 {
 	// 让Present函数处理它
 	m_ResolutionChange = true;
@@ -351,7 +347,7 @@ void Coocoo3DGraphics::DeviceResources::CreateWindowSizeDependentResources()
 }
 
 // 确定呈现器目标的尺寸及其是否将缩小。
-void Coocoo3DGraphics::DeviceResources::UpdateRenderTargetSize()
+void DeviceResources::UpdateRenderTargetSize()
 {
 	m_effectiveDpi = m_dpi;
 
@@ -364,7 +360,7 @@ void Coocoo3DGraphics::DeviceResources::UpdateRenderTargetSize()
 	m_outputSize.Height = max(m_outputSize.Height, 1);
 }
 
-Coocoo3DGraphics::DeviceResources::DeviceResources() :
+DeviceResources::DeviceResources() :
 	m_currentFrame(0),
 	m_screenViewport(),
 	m_rtvDescriptorSize(0),
@@ -381,12 +377,11 @@ Coocoo3DGraphics::DeviceResources::DeviceResources() :
 	m_effectiveDpi(-1.0f),
 	m_deviceRemoved(false)
 {
-	CreateDeviceIndependentResources();
 	CreateDeviceResources();
 }
 
 // 当创建(或重新创建) CoreWindow 时调用此方法。
-void Coocoo3DGraphics::DeviceResources::SetSwapChainPanel(SwapChainPanel^ window)
+void DeviceResources::SetSwapChainPanel(SwapChainPanel^ window)
 {
 	DisplayInformation^ currentDisplayInformation = DisplayInformation::GetForCurrentView();
 
@@ -402,7 +397,7 @@ void Coocoo3DGraphics::DeviceResources::SetSwapChainPanel(SwapChainPanel^ window
 }
 
 // 在 SizeChanged 事件的事件处理程序中调用此方法。
-void Coocoo3DGraphics::DeviceResources::SetLogicalSize(Windows::Foundation::Size logicalSize)
+void DeviceResources::SetLogicalSize(Windows::Foundation::Size logicalSize)
 {
 	if (m_logicalSize != logicalSize)
 	{
@@ -412,7 +407,7 @@ void Coocoo3DGraphics::DeviceResources::SetLogicalSize(Windows::Foundation::Size
 }
 
 // 在 DpiChanged 事件的事件处理程序中调用此方法。
-void Coocoo3DGraphics::DeviceResources::SetDpi(float dpi)
+void DeviceResources::SetDpi(float dpi)
 {
 	if (dpi != m_dpi)
 	{
@@ -426,7 +421,7 @@ void Coocoo3DGraphics::DeviceResources::SetDpi(float dpi)
 }
 
 // 在 OrientationChanged 事件的事件处理程序中调用此方法。
-void Coocoo3DGraphics::DeviceResources::SetCurrentOrientation(DisplayOrientations currentOrientation)
+void DeviceResources::SetCurrentOrientation(DisplayOrientations currentOrientation)
 {
 	if (m_currentOrientation != currentOrientation)
 	{
@@ -436,7 +431,7 @@ void Coocoo3DGraphics::DeviceResources::SetCurrentOrientation(DisplayOrientation
 }
 
 // 在 DisplayContentsInvalidated 事件的事件处理程序中调用此方法。
-void Coocoo3DGraphics::DeviceResources::ValidateDevice()
+void DeviceResources::ValidateDevice()
 {
 	// 如果默认适配器更改，D3D 设备将不再有效，因为该设备
 	// 已创建或该设备已移除。
@@ -475,13 +470,7 @@ void Coocoo3DGraphics::DeviceResources::ValidateDevice()
 	}
 }
 
-// 将交换链的内容显示到屏幕上。
-void Coocoo3DGraphics::DeviceResources::Present()
-{
-	Present(true);
-}
-
-void Coocoo3DGraphics::DeviceResources::Present(bool vsync)
+void DeviceResources::Present(bool vsync)
 {
 	// 第一个参数指示 DXGI 进行阻止直到 VSync，这使应用程序
 // 在下一个 VSync 前进入休眠。这将确保我们不会浪费任何周期渲染
@@ -527,7 +516,7 @@ void Coocoo3DGraphics::DeviceResources::Present(bool vsync)
 }
 
 // 等待挂起的 GPU 工作完成。
-void Coocoo3DGraphics::DeviceResources::WaitForGpu()
+void DeviceResources::WaitForGpu()
 {
 	// 在队列中安排信号命令。
 	DX::ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), m_fenceValues[m_currentFrame]));
@@ -540,18 +529,18 @@ void Coocoo3DGraphics::DeviceResources::WaitForGpu()
 	m_fenceValues[m_currentFrame]++;
 }
 
-bool Coocoo3DGraphics::DeviceResources::IsRayTracingSupport()
+bool DeviceResources::IsRayTracingSupport()
 {
 	return m_isRayTracingSupport;
 }
 
-Coocoo3DGraphics::DxgiFormat Coocoo3DGraphics::DeviceResources::GetBackBufferFormat1()
+DxgiFormat DeviceResources::GetBackBufferFormat1()
 {
 	return DxgiFormat(m_backBufferFormat);
 }
 
 // 准备呈现下一帧。
-void Coocoo3DGraphics::DeviceResources::MoveToNextFrame()
+void DeviceResources::MoveToNextFrame()
 {
 	// 在队列中安排信号命令。
 	const UINT64 currentFenceValue = m_fenceValues[m_currentFrame];
@@ -573,7 +562,7 @@ void Coocoo3DGraphics::DeviceResources::MoveToNextFrame()
 
 // 此方法确定以下两个元素之间的旋转方式: 显示设备的本机方向和
 // 当前显示方向。
-DXGI_MODE_ROTATION Coocoo3DGraphics::DeviceResources::ComputeDisplayRotation()
+DXGI_MODE_ROTATION DeviceResources::ComputeDisplayRotation()
 {
 	DXGI_MODE_ROTATION rotation = DXGI_MODE_ROTATION_UNSPECIFIED;
 
@@ -628,7 +617,7 @@ DXGI_MODE_ROTATION Coocoo3DGraphics::DeviceResources::ComputeDisplayRotation()
 
 // 此方法获取支持 Direct3D 12 的第一个可用硬件适配器。
 // 如果找不到此类适配器，则 *ppAdapter 将设置为 nullptr。
-void Coocoo3DGraphics::DeviceResources::GetHardwareAdapter(IDXGIAdapter1** ppAdapter)
+void DeviceResources::GetHardwareAdapter(IDXGIAdapter1** ppAdapter)
 {
 	ComPtr<IDXGIAdapter1> adapter;
 	*ppAdapter = nullptr;

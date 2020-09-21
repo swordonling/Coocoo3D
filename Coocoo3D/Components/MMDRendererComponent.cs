@@ -264,6 +264,8 @@ namespace Coocoo3D.FileFormat
             processingList.AddObject(rendererComponent.dynamicMesh);
             rendererComponent.POSkinning = new PObject();
             rendererComponent.PODraw = new PObject();
+            rendererComponent.ParticleCompute = null;
+            rendererComponent.POParticleDraw = null;
             rendererComponent.meshPosData1 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.meshPosData2 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosData1 = GCHandle.Alloc(rendererComponent.meshPosData1);

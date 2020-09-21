@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Storage;
@@ -29,6 +30,9 @@ namespace Coocoo3D.RenderPipeline
     }
     public class RenderPipelineContext
     {
+        const int c_entityDataBufferSize = 65536;
+        byte[] bigBuffer = new byte[65536];
+        GCHandle _bigBufferHandle;
         public RenderTexture2D outputRTV = new RenderTexture2D();
         public RenderTexture2D[] ScreenSizeRenderTextures = new RenderTexture2D[4];
         public RenderTexture2D[] ScreenSizeDSVs = new RenderTexture2D[2];
@@ -53,16 +57,11 @@ namespace Coocoo3D.RenderPipeline
         public RenderPipelineDynamicContext renderPipelineDynamicContext = new RenderPipelineDynamicContext();
         public RenderPipelineDynamicContext renderPipelineDynamicContext1 = new RenderPipelineDynamicContext();
 
-        //public Settings settings;
-
-        //public List<MMD3DEntity> entities = new List<MMD3DEntity>();
-        //public List<Lighting> lightings = new List<Lighting>();
-        //public List<Camera> cameras = new List<Camera>();
-
         public List<ConstantBuffer> CBs_Bone = new List<ConstantBuffer>();
 
         public RenderPipelineContext()
         {
+            _bigBufferHandle = GCHandle.Alloc(bigBuffer);
             for (int i = 0; i < ScreenSizeRenderTextures.Length; i++)
             {
                 ScreenSizeRenderTextures[i] = new RenderTexture2D();
@@ -72,6 +71,10 @@ namespace Coocoo3D.RenderPipeline
                 ScreenSizeDSVs[i] = new RenderTexture2D();
             }
         }
+        ~RenderPipelineContext()
+        {
+            _bigBufferHandle.Free();
+        }
 
         public void UpdateGPUResource()
         {
@@ -80,12 +83,21 @@ namespace Coocoo3D.RenderPipeline
             while (CBs_Bone.Count < count)
             {
                 ConstantBuffer constantBuffer = new ConstantBuffer();
-                constantBuffer.Reload(deviceResources, Components.MMDBoneComponent.c_boneMatrixDataSize);
+                constantBuffer.Reload(deviceResources, c_entityDataBufferSize);
                 CBs_Bone.Add(constantBuffer);
             }
-            for (int i = 0; i < renderPipelineDynamicContext.entities.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                graphicsContext.UpdateResource(CBs_Bone[i], renderPipelineDynamicContext.entities[i].boneComponent.boneMatricesData, Components.MMDBoneComponent.c_boneMatrixDataSize, 0);
+                var entity = renderPipelineDynamicContext.entities[i];
+                IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(bigBuffer, 0);
+                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
+                Marshal.StructureToPtr(Matrix4x4.Transpose(world), ptr1, true);
+                Marshal.StructureToPtr(entity.rendererComponent.amountAB, ptr1 + 64, true);
+                Marshal.StructureToPtr(entity.rendererComponent.mesh.m_vertexCount, ptr1 + 68, true);
+                Marshal.StructureToPtr(entity.rendererComponent.mesh.m_indexCount, ptr1 + 72, true);
+
+                graphicsContext.UpdateResource(CBs_Bone[i], bigBuffer, 256, 0);
+                graphicsContext.UpdateResourceRegion(CBs_Bone[i], 256, renderPipelineDynamicContext.entities[i].boneComponent.boneMatricesData, 65280, 0);
             }
             #endregion
         }

@@ -52,7 +52,7 @@ namespace Coocoo3D.Present
                 bool extendY = ((camera.Angle.X + MathF.PI / 4) % MathF.PI + MathF.PI) % MathF.PI < MathF.PI / 2;
 
 
-                rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, camera.Angle.Y);
+                rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, camera.Angle.Z);
                 var pos = Vector3.Transform(-Vector3.UnitZ * 128, rotateMatrix);
                 var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
                 Matrix4x4 vMatrix = Matrix4x4.CreateLookAt(pos + lookat, lookat, up);
@@ -60,13 +60,14 @@ namespace Coocoo3D.Present
 
                 float a = MathF.Abs((camera.Angle.X % MathF.PI + MathF.PI) % MathF.PI - MathF.PI / 2) / (MathF.PI / 4) - 0.5f;
                 a = Math.Clamp(a * a - 0.25f, 0, 1);
+                float dist = MathF.Abs(camera.Distance);
                 if (extendY)
                     lookat += Vector3.Normalize((camera.LookAtPoint - camera.Pos) * new Vector3(1, 0, 1)) * ExtendRange * 3 * a;
                 if (!extendY)
-                    pMatrix = Matrix4x4.CreateOrthographic(camera.Distance + ExtendRange, camera.Distance + ExtendRange, 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange, dist + ExtendRange, 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
                 else
                 {
-                    pMatrix = Matrix4x4.CreateOrthographic(camera.Distance + ExtendRange * (4 * a + 1), camera.Distance + ExtendRange * (4 * a + 1), 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (4 * a + 1), dist + ExtendRange * (4 * a + 1), 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
                 }
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 

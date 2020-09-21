@@ -50,9 +50,6 @@ RWTexture2D<float4> g_renderTarget : register(u0);
 cbuffer cb0 : register(b0)
 {
 	CAMERA_DATA_DEFINE//is a macro
-		uint g_enableAO;
-	uint g_enableShadow;
-	uint g_quality;
 };
 //local
 StructuredBuffer<PSSkinnedIn> Vertices : register(t1, space1);
