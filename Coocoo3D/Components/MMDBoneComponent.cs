@@ -24,7 +24,6 @@ namespace Coocoo3D.Components
         public List<BoneEntity> bones = new List<BoneEntity>();
         public Dictionary<string, BoneEntity> stringBoneMap = new Dictionary<string, BoneEntity>();
 
-        public List<NMMD_MorphBoneDesc[]> boneMorphCache;
         public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
         public List<Physics3DJoint> physics3DJoints = new List<Physics3DJoint>();
         public List<NMMD_JointDesc> jointDescs = new List<NMMD_JointDesc>();
@@ -33,7 +32,7 @@ namespace Coocoo3D.Components
         public Matrix4x4 LocalToWorld = Matrix4x4.Identity;
         public Matrix4x4 WorldToLocal = Matrix4x4.Identity;
 
-        public Dictionary<int, List<List<int>>> IKNeedUpdateMatIndexs;
+        public Dictionary<int, List<List<int>>> IKNeedUpdateIndexs;
         public List<int> AppendNeedUpdateMatIndexs = new List<int>();
         public List<int> PhysicsNeedUpdateMatIndexs = new List<int>();
 
@@ -74,15 +73,15 @@ namespace Coocoo3D.Components
 
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Bone && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Bone)
                 {
-                    NMMD_MorphBoneDesc[] morphBoneStructs0 = boneMorphCache[i];
-                    NMMD_MorphBoneDesc[] morphBoneStructs1 = morphStateComponent.morphs[i].MorphBones;
+                    NMMD_MorphBoneDesc[] morphBoneStructs = morphStateComponent.morphs[i].MorphBones;
                     float computedWeight = morphStateComponent.computedWeights[i];
-                    for (int j = 0; j < morphBoneStructs0.Length; j++)
+                    for (int j = 0; j < morphBoneStructs.Length; j++)
                     {
-                        morphBoneStructs0[j].Rotation = Quaternion.Slerp(Quaternion.Identity, morphBoneStructs1[j].Rotation, computedWeight);
-                        morphBoneStructs0[j].Translation = morphBoneStructs1[j].Translation * computedWeight;
+                        var morphBoneStruct = morphBoneStructs[j];
+                        bones[morphBoneStruct.BoneIndex].rotation *= Quaternion.Slerp(Quaternion.Identity, morphBoneStruct.Rotation, computedWeight);
+                        bones[morphBoneStruct.BoneIndex].dynamicPosition += morphBoneStruct.Translation * computedWeight;
                     }
                 }
             }
@@ -92,17 +91,6 @@ namespace Coocoo3D.Components
                 if (bones[i].IKTargetIndex != -1)
                 {
                     IK(i, bones);
-                }
-            }
-            for (int i = 0; i < boneMorphCache.Count; i++)
-            {
-                if (boneMorphCache[i] == null) continue;
-                NMMD_MorphBoneDesc[] morphBoneStructs = boneMorphCache[i];
-                for (int j = 0; j < morphBoneStructs.Length; j++)
-                {
-                    NMMD_MorphBoneDesc morphBoneStruct = morphBoneStructs[j];
-                    bones[morphBoneStruct.BoneIndex].rotation *= morphBoneStruct.Rotation;
-                    bones[morphBoneStruct.BoneIndex].dynamicPosition += morphBoneStruct.Translation;
                 }
             }
 
@@ -127,10 +115,10 @@ namespace Coocoo3D.Components
                 var desc = rigidBodyDescs[i];
                 if (desc.Type != 0) continue;
                 int index = desc.AssociatedBoneIndex;
-                var mat1 = bones[index].GeneratedTransform * LocalToWorld;
-                Matrix4x4.Decompose(mat1, out _, out var rot, out _);
 
-                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], Vector3.Transform(desc.Position, mat1), rot * desc.Rotation);
+                Matrix4x4 mat2 = Matrix4x4.CreateFromQuaternion(desc.Rotation) * Matrix4x4.CreateTranslation(desc.Position)* bones[index].GeneratedTransform * LocalToWorld ;
+                physics3DScene.MoveRigidBody(physics3DRigidBodys[i], mat2);
+
             }
         }
 
@@ -143,11 +131,8 @@ namespace Coocoo3D.Components
                 if (desc.Type == 0) continue;
                 int index = desc.AssociatedBoneIndex;
                 if (index == -1) continue;
-                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-bones[index].staticPosition) * Matrix4x4.CreateFromQuaternion(Translate(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1))
-                    * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal) - desc.Position + bones[index].staticPosition);
-
-                //Matrix4x4 x4 = physics3DScene.GetRigidBodyTransform(physics3DRigidBodys[i]) * WorldToLocal;
-                //bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-desc.Position) * x4;
+                    bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-desc.Position) * Matrix4x4.CreateFromQuaternion(Translate(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1))
+                        * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal));
             }
 
             for (int i = 0; i < bones.Count; i++)
@@ -167,8 +152,8 @@ namespace Coocoo3D.Components
                     }
                 }
             }
-            UpdateMatrixs(PhysicsNeedUpdateMatIndexs);
-            UpdateMatrixs(AppendNeedUpdateMatIndexs);
+            UpdateMatrices(PhysicsNeedUpdateMatIndexs);
+            UpdateMatrices(AppendNeedUpdateMatIndexs);
         }
 
         void IK(int index, List<BoneEntity> bones)
@@ -181,7 +166,7 @@ namespace Coocoo3D.Components
             entity.GetPosRot2(out var posTarget, out var rot0);
 
 
-            var ax = IKNeedUpdateMatIndexs[index];
+            var ax = IKNeedUpdateIndexs[index];
             int h1 = entity.CCDIterateLimit / 2;
             Vector3 posSource = entitySource.GetPos2();
             if ((posTarget - posSource).LengthSquared() < 1e-8f) return;
@@ -264,7 +249,7 @@ namespace Coocoo3D.Components
                                 throw new NotImplementedException();
                         }
                     }
-                    UpdateMatrixs(ax[j]);
+                    UpdateMatrices(ax[j]);
                 }
                 posSource = entitySource.GetPos2();
                 if ((posTarget - posSource).LengthSquared() < 1e-8f) return;
@@ -288,7 +273,7 @@ namespace Coocoo3D.Components
 
         public void BakeSequenceProcessMatrixsIndex()
         {
-            IKNeedUpdateMatIndexs = new Dictionary<int, List<List<int>>>();
+            IKNeedUpdateIndexs = new Dictionary<int, List<List<int>>>();
             bool[] testArray = new bool[bones.Count];
 
             for (int i = 0; i < bones.Count; i++)
@@ -318,7 +303,7 @@ namespace Coocoo3D.Components
                         }
                         ax.Add(bx);
                     }
-                    IKNeedUpdateMatIndexs[i] = ax;
+                    IKNeedUpdateIndexs[i] = ax;
                 }
             }
             Array.Clear(testArray, 0, bones.Count);
@@ -358,7 +343,7 @@ namespace Coocoo3D.Components
                 bones[i].GetTransformMatrixG(bones);
             }
         }
-        void UpdateMatrixs(List<int> indexs)
+        void UpdateMatrices(List<int> indexs)
         {
             for (int i = 0; i < indexs.Count; i++)
             {
@@ -693,9 +678,8 @@ namespace Coocoo3D.Components
     public class BoneEntity
     {
         public int index;
-        public Vector3 dynamicPosition;
-        public Vector3 relativePosition;
         public Vector3 staticPosition;
+        public Vector3 dynamicPosition;
         public Quaternion rotation;
 
         public Matrix4x4 _generatedTransform = Matrix4x4.Identity;
@@ -727,16 +711,6 @@ namespace Coocoo3D.Components
             else
                 return rotation;
         }
-        public Quaternion GetParentRotation(List<BoneEntity> list)
-        {
-            if (ParentIndex != -1)
-            {
-                var parnet = list[ParentIndex];
-                return Quaternion.Normalize(parnet.GetRotation(list));
-            }
-            else
-                return Quaternion.Identity;
-        }
 
         /// <summary>在调用之前确保它的父级已经更新。一般从前向后调用即可。</summary>
         public void GetTransformMatrixG(List<BoneEntity> list)
@@ -764,30 +738,7 @@ namespace Coocoo3D.Components
             pos = Vector3.Transform(staticPosition, _generatedTransform);
             Matrix4x4.Decompose(_generatedTransform, out _, out rot, out _);
         }
-        public BoneEntity GetCopy()
-        {
-            return new BoneEntity()
-            {
-                index = index,
-                dynamicPosition = dynamicPosition,
-                relativePosition = relativePosition,
-                staticPosition = staticPosition,
-                rotation = rotation,
-                ParentIndex = ParentIndex,
-                CCDAngleLimit = CCDAngleLimit,
-                CCDIterateLimit = CCDIterateLimit,
-                Name = Name,
-                NameEN = NameEN,
-                IKTargetIndex = IKTargetIndex,
-                boneIKLinks = boneIKLinks,
-                _generatedTransform = _generatedTransform,
-                Flags = Flags,
-                AppendParentIndex = AppendParentIndex,
-                AppendRatio = AppendRatio,
-                AppendRotation = AppendRotation,
-                AppendTranslation = AppendTranslation,
-            };
-        }
+
         public struct IKLink
         {
             public int LinkedIndex;
@@ -851,14 +802,6 @@ namespace Coocoo3D.FileFormat
                 boneEntity.NameEN = _bone.NameEN;
                 boneEntity.Flags = _bone.Flags;
 
-                if (boneEntity.ParentIndex != -1)
-                {
-                    boneEntity.relativePosition = _bone.Position - _bones[boneEntity.ParentIndex].Position;
-                }
-                else
-                {
-                    boneEntity.relativePosition = _bone.Position;
-                }
                 if (_bone.Flags.HasFlag(NMMDE_BoneFlag.HasIK))
                 {
                     boneEntity.IKTargetIndex = _bone.boneIK.IKTargetIndex;
@@ -950,9 +893,12 @@ namespace Coocoo3D.FileFormat
                 var rigidBodyData = rigidBodys[i];
                 Physics3DRigidBody physics3DRigidBody = new Physics3DRigidBody();
                 boneComponent.physics3DRigidBodys.Add(physics3DRigidBody);
-                boneComponent.rigidBodyDescs.Add(MMDBoneComponent.GetRigidBodyDesc(rigidBodyData));
+                var rigidBodyDesc = MMDBoneComponent.GetRigidBodyDesc(rigidBodyData);
+
+                boneComponent.rigidBodyDescs.Add(rigidBodyDesc);
                 if (rigidBodyData.Type != NMMDE_RigidBodyType.Kinematic && rigidBodyData.AssociatedBoneIndex != -1)
                     boneComponent.bones[rigidBodyData.AssociatedBoneIndex].IsPhysicsFreeBone = true;
+
             }
             var joints = modelResource.Joints;
             for (int i = 0; i < joints.Count; i++)
@@ -962,25 +908,6 @@ namespace Coocoo3D.FileFormat
             }
 
             int morphCount = modelResource.Morphs.Count;
-            boneComponent.boneMorphCache = new List<NMMD_MorphBoneDesc[]>();
-            for (int i = 0; i < morphCount; i++)
-            {
-                if (modelResource.Morphs[i].Type == NMMDE_MorphType.Bone)
-                {
-                    NMMD_MorphBoneDesc[] morphBoneStructs = new NMMD_MorphBoneDesc[modelResource.Morphs[i].MorphBones.Length];
-                    NMMD_MorphBoneDesc[] morphBoneStructs2 = modelResource.Morphs[i].MorphBones;
-                    for (int j = 0; j < morphBoneStructs.Length; j++)
-                    {
-                        morphBoneStructs[j].BoneIndex = morphBoneStructs2[j].BoneIndex;
-                        morphBoneStructs[j].Rotation = Quaternion.Identity;
-                    }
-                    boneComponent.boneMorphCache.Add(morphBoneStructs);
-                }
-                else
-                {
-                    boneComponent.boneMorphCache.Add(null);
-                }
-            }
         }
     }
 }

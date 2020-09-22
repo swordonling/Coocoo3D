@@ -174,6 +174,11 @@ void PhysX::SceneMoveRigidBody(void* _scene, void* _rigidBody, float3 position, 
 	rigidBody->m_rigidBody->setKinematicTarget(Util::GetPxTransform(position, rotation));
 }
 
+void PhysX::SceneMoveRigidBody(void* _scene, void* _rigidBody, float4x4 matrix)
+{
+	throw ref new Platform::NotImplementedException();
+}
+
 float3 PhysX::SceneGetRigidBodyPosition(void* _scene, void* _rigidBody)
 {
 	auto rigidBody = reinterpret_cast<PhysXRigidBody*>(_rigidBody);

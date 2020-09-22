@@ -39,9 +39,8 @@ cbuffer cb2 : register(b2)
 	float g_time;
 	float g_deltaTime;
 	uint2 g_camera_randomValue;
+	float4 g_camera_preserved2[6];
 	float g_skyBoxMultiple;
-	float3 g_camera_preserved;
-	float4 g_camera_preserved2[5];
 	uint g_enableAO;
 	uint g_enableShadow;
 	uint g_quality;

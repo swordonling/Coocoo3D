@@ -13,7 +13,7 @@ namespace Util
 		return physx::PxVec3(f.x, f.y, f.z);
 	}
 
-	inline physx::PxTransform GetPxTransform(Windows::Foundation::Numerics::float3 f,Windows::Foundation::Numerics::quaternion q)
+	inline physx::PxTransform GetPxTransform(Windows::Foundation::Numerics::float3 f, Windows::Foundation::Numerics::quaternion q)
 	{
 		return physx::PxTransform(f.x, f.y, f.z, physx::PxQuat(q.x, q.y, q.z, q.w));
 	}
@@ -28,13 +28,20 @@ namespace Util
 		return btVector3(f.x, f.y, f.z);
 	}
 
+	inline btTransform GetbtTransform(Windows::Foundation::Numerics::float4x4 mat)
+	{
+		btTransform mat1;
+		mat1.setFromOpenGLMatrix((const btScalar*)&mat);
+		return mat1;
+	}
+
 	inline btTransform GetbtTransform(Windows::Foundation::Numerics::float3 f, Windows::Foundation::Numerics::quaternion q)
 	{
 		return btTransform(btQuaternion(q.x, q.y, q.z, q.w), btVector3(f.x, f.y, f.z));
 	}
 
-	inline btTransform GetbtTransform2(Windows::Foundation::Numerics::float3 f, Windows::Foundation::Numerics::quaternion q,float worldScale)
+	inline btTransform GetbtTransform2(Windows::Foundation::Numerics::float3 f, Windows::Foundation::Numerics::quaternion q, float worldScale)
 	{
-		return btTransform(btQuaternion(q.x, q.y, q.z, q.w), btVector3(f.x, f.y, f.z)*(1/worldScale));
+		return btTransform(btQuaternion(q.x, q.y, q.z, q.w), btVector3(f.x, f.y, f.z) * (1 / worldScale));
 	}
 }

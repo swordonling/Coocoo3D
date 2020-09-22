@@ -21,6 +21,7 @@ namespace Coocoo3DPhysics
 		virtual void SceneSimulate(void* _scene, double time);
 		virtual void SceneFetchResults(void* _scene);
 		virtual void SceneMoveRigidBody(void* _scene, void* _rigidBody, float3 position, quaternion rotation);
+		virtual void SceneMoveRigidBody(void* _scene, void* _rigidBody, float4x4 matrix);
 		virtual float3 SceneGetRigidBodyPosition(void* _scene, void* _rigidBody);
 		virtual quaternion SceneGetRigidBodyRotation(void* _scene, void* _rigidBody);
 		virtual float4x4 SceneGetRigidBodyTransform(void* _scene, void* _rigidBody);

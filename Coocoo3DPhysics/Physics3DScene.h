@@ -25,6 +25,7 @@ namespace Coocoo3DPhysics
 		void RemoveJoint(Physics3DJoint^ joint);
 		void SetGravitation(float3 gravitation);
 		void MoveRigidBody(Physics3DRigidBody^ rigidBody, float3 position, quaternion rotation);
+		void MoveRigidBody(Physics3DRigidBody^ rigidBody, float4x4 matrix);
 		float3 GetRigidBodyPosition(Physics3DRigidBody^ rigidBody);
 		quaternion GetRigidBodyRotation(Physics3DRigidBody^ rigidBody);
 		float4x4 GetRigidBodyTransform(Physics3DRigidBody^ rigidBody);

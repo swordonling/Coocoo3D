@@ -109,8 +109,6 @@ void Bullet::SceneAddJoint(void* _scene, void* _joint, float3 position, quaterni
 	btGeneric6DofSpringConstraint* bt_constraint = new btGeneric6DofSpringConstraint(*r1->m_rigidBody, *r2->m_rigidBody, t1, t2, true);
 	bt_constraint->setLinearLowerLimit(Util::GetbtVector3(PositionMinimum) / c_worldScale);
 	bt_constraint->setLinearUpperLimit(Util::GetbtVector3(PositionMaximum) / c_worldScale);
-	//bt_constraint->setLinearLowerLimit(btVector3(0, 0, 0));
-	//bt_constraint->setLinearUpperLimit(btVector3(0.1f, 0.1f, 0.1f));
 	bt_constraint->setAngularLowerLimit(Util::GetbtVector3(RotationMinimum));
 	bt_constraint->setAngularUpperLimit(Util::GetbtVector3(RotationMaximum));
 
@@ -194,6 +192,15 @@ void Bullet::SceneMoveRigidBody(void* _scene, void* _rigidBody, float3 position,
 
 	auto body = rigidBody->m_rigidBody;
 	body->getMotionState()->setWorldTransform(Util::GetbtTransform2(position, rotation, c_worldScale));
+}
+
+void Bullet::SceneMoveRigidBody(void* _scene, void* _rigidBody, float4x4 matrix)
+{
+	auto rigidBody = reinterpret_cast<BulletRigidBody*>(_rigidBody);
+	auto scene = reinterpret_cast<BulletScene*>(_scene);
+
+	auto body = rigidBody->m_rigidBody;
+	body->getMotionState()->setWorldTransform(Util::GetbtTransform(matrix));
 }
 
 float3 Bullet::SceneGetRigidBodyPosition(void* _scene, void* _rigidBody)

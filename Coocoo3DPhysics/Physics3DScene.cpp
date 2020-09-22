@@ -58,6 +58,11 @@ void Physics3DScene::MoveRigidBody(Physics3DRigidBody^ rigidBody, float3 positio
 	m_sdkRef->SceneMoveRigidBody(m_sceneData, rigidBody->m_rigidBodyData, position, rotation);
 }
 
+void Physics3DScene::MoveRigidBody(Physics3DRigidBody^ rigidBody, float4x4 matrix)
+{
+	m_sdkRef->SceneMoveRigidBody(m_sceneData, rigidBody->m_rigidBodyData, matrix);
+}
+
 float3 Physics3DScene::GetRigidBodyPosition(Physics3DRigidBody^ rigidBody)
 {
 	return m_sdkRef->SceneGetRigidBodyPosition(m_sceneData, rigidBody->m_rigidBodyData);
