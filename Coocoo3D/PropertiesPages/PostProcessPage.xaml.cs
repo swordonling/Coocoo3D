@@ -44,13 +44,24 @@ namespace Coocoo3D.PropertiesPages
         }
 
 
-        private bool StrEq(string a, string b)
-        {
-            return a.Equals(b, StringComparison.CurrentCultureIgnoreCase);
-        }
         private bool IsImageExtName(string extName)
         {
-            return StrEq(".jpg", extName) || StrEq(".jpeg", extName) || StrEq(".png", extName) || StrEq(".bmp", extName) || StrEq(".tif", extName) || StrEq(".tiff", extName) || StrEq(".gif", extName);
+            string lower = extName.ToLower();
+            switch (lower)
+            {
+                case ".jpg":
+                case ".jpeg":
+                case ".png":
+                case ".bmp":
+                case ".tif":
+                case ".tiff":
+                case ".gif":
+                //case ".tga":
+                //case ".hdr":
+                    return true;
+                default:
+                    return false;
+            }
         }
         private void _img0_DragOver(object sender, DragEventArgs e)
         {

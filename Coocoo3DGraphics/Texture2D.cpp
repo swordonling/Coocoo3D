@@ -1,50 +1,16 @@
 #include "pch.h"
 #include "Texture2D.h"
 #include "DirectXHelper.h"
+#include "DirectXTex/DirectXTex.h"
 using namespace Coocoo3DGraphics;
 using namespace Microsoft::WRL;
-
-struct wicToDxgiFormat
-{
-	DXGI_FORMAT dxgiFormat;
-	WICPixelFormatGUID fallbackWicFormat;
-};
-struct GUIDComparer
-{
-	bool operator()(const GUID& Left, const GUID& Right) const
-	{
-		return memcmp(&Left, &Right, sizeof(GUID)) < 0;
-	}
-};
-
-const std::map<GUID, wicToDxgiFormat, GUIDComparer>wicFormatInfo =
-{
-	{GUID_WICPixelFormat128bppRGBAFloat,{DXGI_FORMAT_R32G32B32A32_FLOAT,0}},
-	{GUID_WICPixelFormat32bppPRGBA,{DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,0}},
-	{GUID_WICPixelFormat32bppRGBA,{DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,0}},
-	{GUID_WICPixelFormat32bppBGRA,{DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,0}},
-	{GUID_WICPixelFormat32bppBGR,{DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,0}},
-	{GUID_WICPixelFormat16bppBGR565,{DXGI_FORMAT_B5G6R5_UNORM,0}},
-	{GUID_WICPixelFormat24bppBGR,{DXGI_FORMAT_UNKNOWN,GUID_WICPixelFormat32bppRGBA}},
-	{GUID_WICPixelFormat8bppIndexed,{DXGI_FORMAT_UNKNOWN,GUID_WICPixelFormat32bppRGBA}},
-};
-const std::map<DXGI_FORMAT, UINT>dxgiFormatBytesPerPixel =
-{
-	{DXGI_FORMAT_R32G32B32A32_FLOAT,16},
-	{DXGI_FORMAT_R8G8B8A8_UNORM,4},
-	{DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,4},
-	{DXGI_FORMAT_B8G8R8A8_UNORM,4},
-	{DXGI_FORMAT_B8G8R8A8_UNORM_SRGB,4},
-	{DXGI_FORMAT_B5G6R5_UNORM,2},
-};
 
 void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics::float4 color)
 {
 	m_width = width;
 	m_height = height;
 	m_format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-	m_bindFlags = D3D11_BIND_SHADER_RESOURCE;
-
+	m_mipLevels = 1;
 	int count = width * height;
 	m_textureData = ref new Platform::Array<byte, 1>(count * 16);
 
@@ -57,122 +23,121 @@ void Texture2D::ReloadPure(int width, int height, Windows::Foundation::Numerics:
 		*(p1 + 3) = color.w;
 		p1 += 4;
 	}
+	m_imageMipsData.clear();
+	m_imageMipsData.emplace_back(ImageMipsData{ m_width, m_height });
+}
+
+inline UINT CountMips(_In_ UINT width, _In_ UINT height) noexcept
+{
+	UINT mipLevels = 1;
+
+	while (height > 1 || width > 1)
+	{
+		if (height > 1)
+			height >>= 1;
+
+		if (width > 1)
+			width >>= 1;
+
+		++mipLevels;
+	}
+
+	return mipLevels;
+}
+
+inline void _Fun1(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::ScratchImage& scratchImage, DirectX::ScratchImage& generatedMips)
+{
+	tex->m_format = DirectX::MakeSRGB(metaData.format);
+	tex->m_width = metaData.width;
+	tex->m_height = metaData.height;
+
+	tex->m_mipLevels = max(CountMips(tex->m_width, tex->m_height) - 6, 1);
+	if (tex->m_mipLevels > 1)
+	{
+		DX::ThrowIfFailed(DirectX::GenerateMipMaps(*scratchImage.GetImage(0, 0, 0), DirectX::TEX_FILTER_LINEAR | DirectX::TEX_FILTER_MIRROR| DirectX::TEX_FILTER_SEPARATE_ALPHA, tex->m_mipLevels, generatedMips));
+		tex->m_textureData = ref new Platform::Array<byte, 1>(generatedMips.GetPixelsSize());
+
+		tex->m_imageMipsData.clear();
+		tex->m_imageMipsData.reserve(generatedMips.GetImageCount());
+		for (int i = 0; i < generatedMips.GetImageCount(); i++)
+		{
+			auto image = generatedMips.GetImage(i, 0, 0);
+			tex->m_imageMipsData.emplace_back(ImageMipsData{ static_cast<UINT>(image->width), static_cast<UINT>(image->height) });
+		}
+		memcpy(tex->m_textureData->begin(), generatedMips.GetPixels(), generatedMips.GetPixelsSize());
+	}
+	else
+	{
+		tex->m_textureData = ref new Platform::Array<byte, 1>(scratchImage.GetPixelsSize());
+		tex->m_imageMipsData.clear();
+		tex->m_imageMipsData.emplace_back(ImageMipsData{ tex->m_width, tex->m_height });
+		memcpy(tex->m_textureData->begin(), scratchImage.GetPixels(), scratchImage.GetPixelsSize());
+	}
 }
 
 void Texture2D::ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<byte>^ data)
 {
-	HGLOBAL HGlobalImage = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, data->Length);
-	ComPtr<IStream> memStream = nullptr;
-	DX::ThrowIfFailed(CreateStreamOnHGlobal(HGlobalImage, true, &memStream));
-	DX::ThrowIfFailed(memStream->Write(data->begin(), data->Length, nullptr));
-	DX::ThrowIfFailed(memStream->Seek(LARGE_INTEGER{ 0,0 }, STREAM_SEEK_SET, nullptr));
-
-	auto factory = wicFactory->GetWicImagingFactory();
-	ComPtr<IWICBitmapDecoder> decoder = nullptr;
-	ComPtr<IWICBitmapFrameDecode> frameDecode = nullptr;
-	DX::ThrowIfFailed(factory->CreateDecoderFromStream(memStream.Get(), nullptr, WICDecodeMetadataCacheOnDemand, &decoder));
-	DX::ThrowIfFailed(decoder->GetFrame(0, &frameDecode));
-	WICPixelFormatGUID pixelFormatGuid;
-	frameDecode->GetPixelFormat(&pixelFormatGuid);
-
-	auto wicdata = wicFormatInfo.at(pixelFormatGuid);
-	DXGI_FORMAT dxgiFormat = wicdata.dxgiFormat;
-	DXGI_FORMAT fallbackDxgiFormat;
-	WICPixelFormatGUID fallbackWicFormat = wicdata.fallbackWicFormat;
-	UINT bytesPerPixel;
-	if (dxgiFormat != DXGI_FORMAT_UNKNOWN)
-		bytesPerPixel = dxgiFormatBytesPerPixel.at(dxgiFormat);
-	else {
-		wicdata = wicFormatInfo.at(fallbackWicFormat);
-		fallbackDxgiFormat = wicdata.dxgiFormat;
-		bytesPerPixel = dxgiFormatBytesPerPixel.at(fallbackDxgiFormat);
+	DirectX::TexMetadata metaData;
+	DirectX::ScratchImage scratchImage;
+	DirectX::ScratchImage generatedMips;
+	HRESULT hr1 = DirectX::GetMetadataFromTGAMemory(data->begin(), data->Length, metaData);
+	if (SUCCEEDED(hr1))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromTGAMemory(data->begin(), data->Length, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	UINT width1;
-	UINT height1;
 
-	DX::ThrowIfFailed(frameDecode->GetSize(&width1, &height1));
-	m_width = width1;
-	m_height = height1;
-	m_textureData = ref new Platform::Array<byte, 1>(m_width * m_height * bytesPerPixel);
-	m_bindFlags = D3D11_BIND_SHADER_RESOURCE;
-	WICRect rect = {};
-	rect.Width = m_width;
-	rect.Height = m_height;
-
-
-	if (dxgiFormat != DXGI_FORMAT_UNKNOWN) {
-		DX::ThrowIfFailed(frameDecode->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
-		m_format = dxgiFormat;
+	HRESULT hr2 = DirectX::GetMetadataFromHDRMemory(data->begin(), data->Length, metaData);
+	if (SUCCEEDED(hr2))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromHDRMemory(data->begin(), data->Length, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	else {
-		ComPtr<IWICBitmapSource> convertedBitmap = nullptr;
-		DX::ThrowIfFailed(WICConvertBitmapSource(fallbackWicFormat, frameDecode.Get(), &convertedBitmap));
 
-		DX::ThrowIfFailed(convertedBitmap->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
-		m_format = fallbackDxgiFormat;
+	HRESULT hr3 = DirectX::GetMetadataFromWICMemory(data->begin(), data->Length, DirectX::WIC_FLAGS_NONE, metaData);
+	if (SUCCEEDED(hr3))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(data->begin(), data->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	GlobalUnlock(HGlobalImage);
 }
 
 void Texture2D::ReloadFromImage(WICFactory^ wicFactory, IBuffer^ file1)
 {
-	HGLOBAL HGlobalImage = GlobalAlloc(GMEM_ZEROINIT | GMEM_MOVEABLE, file1->Length);
-
 	ComPtr<IBufferByteAccess> bufferByteAccess;
 	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
 	byte* pixels = nullptr;
 	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pixels));
 
-	ComPtr<IStream> memStream = nullptr;
-	DX::ThrowIfFailed(CreateStreamOnHGlobal(HGlobalImage, true, &memStream));
-	DX::ThrowIfFailed(memStream->Write(pixels, file1->Length, nullptr));
-	DX::ThrowIfFailed(memStream->Seek(LARGE_INTEGER{ 0,0 }, STREAM_SEEK_SET, nullptr));
-
-	auto factory = wicFactory->GetWicImagingFactory();
-	ComPtr<IWICBitmapDecoder> decoder = nullptr;
-	ComPtr<IWICBitmapFrameDecode> frameDecode = nullptr;
-	DX::ThrowIfFailed(factory->CreateDecoderFromStream(memStream.Get(), nullptr, WICDecodeMetadataCacheOnDemand, &decoder));
-	DX::ThrowIfFailed(decoder->GetFrame(0, &frameDecode));
-	WICPixelFormatGUID pixelFormatGuid;
-	frameDecode->GetPixelFormat(&pixelFormatGuid);
-
-	auto wicdata = wicFormatInfo.at(pixelFormatGuid);
-	DXGI_FORMAT dxgiFormat = wicdata.dxgiFormat;
-	DXGI_FORMAT fallbackDxgiFormat;
-	WICPixelFormatGUID fallbackWicFormat = wicdata.fallbackWicFormat;
-	UINT bytesPerPixel;
-	if (dxgiFormat != DXGI_FORMAT_UNKNOWN)
-		bytesPerPixel = dxgiFormatBytesPerPixel.at(dxgiFormat);
-	else {
-		wicdata = wicFormatInfo.at(fallbackWicFormat);
-		fallbackDxgiFormat = wicdata.dxgiFormat;
-		bytesPerPixel = dxgiFormatBytesPerPixel.at(fallbackDxgiFormat);
+	DirectX::TexMetadata metaData;
+	DirectX::ScratchImage scratchImage;
+	DirectX::ScratchImage generatedMips;
+	HRESULT hr1 = DirectX::GetMetadataFromTGAMemory(pixels, file1->Length, metaData);
+	if (SUCCEEDED(hr1))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromTGAMemory(pixels, file1->Length, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	UINT width1;
-	UINT height1;
 
-	DX::ThrowIfFailed(frameDecode->GetSize(&width1, &height1));
-	m_width = width1;
-	m_height = height1;
-	m_textureData = ref new Platform::Array<byte, 1>(m_width * m_height * bytesPerPixel);
-	m_bindFlags = D3D11_BIND_SHADER_RESOURCE;
-	WICRect rect = {};
-	rect.Width = m_width;
-	rect.Height = m_height;
-
-
-	if (dxgiFormat != DXGI_FORMAT_UNKNOWN) {
-		DX::ThrowIfFailed(frameDecode->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
-		m_format = dxgiFormat;
+	HRESULT hr2 = DirectX::GetMetadataFromHDRMemory(pixels, file1->Length, metaData);
+	if (SUCCEEDED(hr2))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromHDRMemory(pixels, file1->Length, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	else {
-		ComPtr<IWICBitmapSource> convertedBitmap = nullptr;
-		DX::ThrowIfFailed(WICConvertBitmapSource(fallbackWicFormat, frameDecode.Get(), &convertedBitmap));
 
-		DX::ThrowIfFailed(convertedBitmap->CopyPixels(&rect, m_width * bytesPerPixel, m_width * m_height * bytesPerPixel, m_textureData->begin()));
-		m_format = fallbackDxgiFormat;
+	HRESULT hr3 = DirectX::GetMetadataFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, metaData);
+	if (SUCCEEDED(hr3))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
+		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
 	}
-	GlobalUnlock(HGlobalImage);
 }
 
 void Texture2D::Reload(Texture2D^ texture)
@@ -182,6 +147,7 @@ void Texture2D::Reload(Texture2D^ texture)
 	m_textureData = texture->m_textureData;
 	m_texture = texture->m_texture;
 	m_heapRefIndex = texture->m_heapRefIndex;
+	m_mipLevels = texture->m_mipLevels;
 }
 
 void Texture2D::Unload()
@@ -192,7 +158,6 @@ void Texture2D::Unload()
 	m_texture.Reset();
 	m_textureUpload.Reset();
 	m_format = DXGI_FORMAT_UNKNOWN;
-	m_bindFlags = 0;
 }
 
 void Texture2D::ReleaseUploadHeapResource()

@@ -254,10 +254,10 @@ namespace Coocoo3D.UI
                   {
                       texturePack.Status = GraphicsObjectStatus.loading;
                       texturePack.texture2D.Status = GraphicsObjectStatus.loading;
-                      if (Path.GetExtension(relativePath).Equals(".tga", StringComparison.OrdinalIgnoreCase))
-                      {
-                          relativePath = Path.ChangeExtension(relativePath, ".png");
-                      }
+                      //if (Path.GetExtension(relativePath).Equals(".tga", StringComparison.OrdinalIgnoreCase))
+                      //{
+                      //    relativePath = Path.ChangeExtension(relativePath, ".png");
+                      //}
                       IStorageItem storageItem = await storageFolder.TryGetItemAsync(relativePath);
                       if (storageItem is StorageFile texFile)
                       {

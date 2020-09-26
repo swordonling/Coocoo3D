@@ -93,19 +93,7 @@ namespace Coocoo3D.Components
                     IK(i, bones);
                 }
             }
-
-            //for (int i = 0; i < bones.Count; i++)
-            //{
-            //    var bone = bones[i];
-            //    if (bone.AppendTranslation)
-            //    {
-            //        bone.dynamicPosition += Vector3.Transform(bones[bone.AppendParentIndex].dynamicPosition, bones[bone.AppendParentIndex].GetParentRotation(bones)) * bone.AppendRatio;
-            //    }
-            //    if (bone.AppendRotation)
-            //    {
-            //        bone.rotation *= Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
-            //    }
-            //}
+            UpdateAppendBones();
         }
 
         public void SetPhysicsPose(Physics3DScene physics3DScene)
@@ -116,7 +104,7 @@ namespace Coocoo3D.Components
                 if (desc.Type != 0) continue;
                 int index = desc.AssociatedBoneIndex;
 
-                Matrix4x4 mat2 = Matrix4x4.CreateFromQuaternion(desc.Rotation) * Matrix4x4.CreateTranslation(desc.Position)* bones[index].GeneratedTransform * LocalToWorld ;
+                Matrix4x4 mat2 = Matrix4x4.CreateFromQuaternion(desc.Rotation) * Matrix4x4.CreateTranslation(desc.Position) * bones[index].GeneratedTransform * LocalToWorld;
                 physics3DScene.MoveRigidBody(physics3DRigidBodys[i], mat2);
 
             }
@@ -131,28 +119,33 @@ namespace Coocoo3D.Components
                 if (desc.Type == 0) continue;
                 int index = desc.AssociatedBoneIndex;
                 if (index == -1) continue;
-                    bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-desc.Position) * Matrix4x4.CreateFromQuaternion(Translate(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1))
-                        * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal));
+                bones[index]._generatedTransform = Matrix4x4.CreateTranslation(-desc.Position) * Matrix4x4.CreateFromQuaternion(Translate(physics3DScene.GetRigidBodyRotation(physics3DRigidBodys[i]) / desc.Rotation * q1))
+                    * Matrix4x4.CreateTranslation(Vector3.Transform(physics3DScene.GetRigidBodyPosition(physics3DRigidBodys[i]), WorldToLocal));
             }
+            UpdateMatrices(PhysicsNeedUpdateMatIndexs);
 
+            UpdateAppendBones();
+        }
+
+        void UpdateAppendBones()
+        {
             for (int i = 0; i < bones.Count; i++)
             {
                 var bone = bones[i];
-                if (bone.AppendTranslation || bone.AppendRotation)
+                if (bone.IsAppendTranslation || bone.IsAppendRotation)
                 {
                     var mat1 = bones[bone.AppendParentIndex].GeneratedTransform;
                     Matrix4x4.Decompose(mat1, out _, out var rot, out var tran);
-                    if (bone.AppendTranslation)
+                    if (bone.IsAppendTranslation)
                     {
-                        bone.dynamicPosition += tran * bone.AppendRatio;
+                        bone.appendTranslation = tran * bone.AppendRatio;
                     }
-                    if (bone.AppendRotation)
+                    if (bone.IsAppendRotation)
                     {
-                        bone.rotation *= Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
+                        bone.appendRotation = Quaternion.Slerp(Quaternion.Identity, bones[bone.AppendParentIndex].rotation, bone.AppendRatio);
                     }
                 }
             }
-            UpdateMatrices(PhysicsNeedUpdateMatIndexs);
             UpdateMatrices(AppendNeedUpdateMatIndexs);
         }
 
@@ -313,7 +306,7 @@ namespace Coocoo3D.Components
                 var bone = bones[i];
                 if (bones[i].ParentIndex != -1)
                     testArray[i] |= testArray[bones[i].ParentIndex];
-                testArray[i] |= bone.AppendTranslation || bone.AppendRotation;
+                testArray[i] |= bone.IsAppendTranslation || bone.IsAppendRotation;
                 if (testArray[i])
                 {
                     AppendNeedUpdateMatIndexs.Add(i);
@@ -640,47 +633,15 @@ namespace Coocoo3D.Components
             return vector3 / MathF.Sqrt(dp3);
         }
         #endregion
-        public static NMMD_RigidBodyDesc GetRigidBodyDesc(MMDRigidBody rigidBody)
-        {
-            NMMD_RigidBodyDesc desc = new NMMD_RigidBodyDesc();
-            desc.AssociatedBoneIndex = rigidBody.AssociatedBoneIndex;
-            desc.CollisionGroup = rigidBody.CollisionGroup;
-            desc.CollisionMask = rigidBody.CollisionMask;
-            desc.Shape = rigidBody.Shape;
-            desc.Dimemsions = rigidBody.Dimemsions;
-            desc.Position = rigidBody.Position;
-            desc.Rotation = ToQuaternion(rigidBody.Rotation);
-            desc.Mass = rigidBody.Mass;
-            desc.TranslateDamp = rigidBody.TranslateDamp;
-            desc.RotateDamp = rigidBody.RotateDamp;
-            desc.Restitution = rigidBody.Restitution;
-            desc.Friction = rigidBody.Friction;
-            desc.Type = rigidBody.Type;
-            return desc;
-        }
-        public static NMMD_JointDesc GetJointDesc(MMDJoint joint)
-        {
-            NMMD_JointDesc desc = new NMMD_JointDesc();
-            desc.Type = joint.Type;
-            desc.AssociatedRigidBodyIndex1 = joint.AssociatedRigidBodyIndex1;
-            desc.AssociatedRigidBodyIndex2 = joint.AssociatedRigidBodyIndex2;
-            desc.Position = joint.Position;
-            desc.Rotation = joint.Rotation;
-            desc.PositionMinimum = joint.PositionMinimum;
-            desc.PositionMaximum = joint.PositionMaximum;
-            desc.RotationMinimum = joint.RotationMinimum;
-            desc.RotationMaximum = joint.RotationMaximum;
-            desc.PositionSpring = joint.PositionSpring;
-            desc.RotationSpring = joint.RotationSpring;
-            return desc;
-        }
     }
     public class BoneEntity
     {
         public int index;
         public Vector3 staticPosition;
         public Vector3 dynamicPosition;
-        public Quaternion rotation;
+        public Quaternion rotation = Quaternion.Identity;
+        public Vector3 appendTranslation;
+        public Quaternion appendRotation = Quaternion.Identity;
 
         public Matrix4x4 _generatedTransform = Matrix4x4.Identity;
         public Matrix4x4 GeneratedTransform { get => _generatedTransform; }
@@ -696,21 +657,10 @@ namespace Coocoo3D.Components
 
         public int AppendParentIndex = -1;
         public float AppendRatio;
-        public bool AppendRotation;
-        public bool AppendTranslation;
+        public bool IsAppendRotation;
+        public bool IsAppendTranslation;
         public bool IsPhysicsFreeBone;
         public NMMDE_BoneFlag Flags;
-
-        public Quaternion GetRotation(List<BoneEntity> list)
-        {
-            if (ParentIndex != -1)
-            {
-                var parnet = list[ParentIndex];
-                return parnet.GetRotation(list) * rotation;
-            }
-            else
-                return rotation;
-        }
 
         /// <summary>在调用之前确保它的父级已经更新。一般从前向后调用即可。</summary>
         public void GetTransformMatrixG(List<BoneEntity> list)
@@ -718,14 +668,14 @@ namespace Coocoo3D.Components
             if (ParentIndex != -1)
             {
                 _generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
-                   Matrix4x4.CreateFromQuaternion(rotation) *
-                   Matrix4x4.CreateTranslation(staticPosition + dynamicPosition) * list[ParentIndex]._generatedTransform;
+                   Matrix4x4.CreateFromQuaternion(rotation * appendRotation) *
+                   Matrix4x4.CreateTranslation(staticPosition + appendTranslation + dynamicPosition) * list[ParentIndex]._generatedTransform;
             }
             else
             {
                 _generatedTransform = Matrix4x4.CreateTranslation(-staticPosition) *
-                   Matrix4x4.CreateFromQuaternion(rotation) *
-                   Matrix4x4.CreateTranslation(staticPosition + dynamicPosition);
+                   Matrix4x4.CreateFromQuaternion(rotation * appendRotation) *
+                   Matrix4x4.CreateTranslation(staticPosition + appendTranslation + dynamicPosition);
             }
         }
         public Vector3 GetPos2()
@@ -776,6 +726,41 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
+        public static NMMD_RigidBodyDesc GetRigidBodyDesc(MMDRigidBody rigidBody)
+        {
+            NMMD_RigidBodyDesc desc = new NMMD_RigidBodyDesc();
+            desc.AssociatedBoneIndex = rigidBody.AssociatedBoneIndex;
+            desc.CollisionGroup = rigidBody.CollisionGroup;
+            desc.CollisionMask = rigidBody.CollisionMask;
+            desc.Shape = rigidBody.Shape;
+            desc.Dimemsions = rigidBody.Dimemsions;
+            desc.Position = rigidBody.Position;
+            desc.Rotation = MMDBoneComponent.ToQuaternion(rigidBody.Rotation);
+            desc.Mass = rigidBody.Mass;
+            desc.TranslateDamp = rigidBody.TranslateDamp;
+            desc.RotateDamp = rigidBody.RotateDamp;
+            desc.Restitution = rigidBody.Restitution;
+            desc.Friction = rigidBody.Friction;
+            desc.Type = rigidBody.Type;
+            return desc;
+        }
+        public static NMMD_JointDesc GetJointDesc(MMDJoint joint)
+        {
+            NMMD_JointDesc desc = new NMMD_JointDesc();
+            desc.Type = joint.Type;
+            desc.AssociatedRigidBodyIndex1 = joint.AssociatedRigidBodyIndex1;
+            desc.AssociatedRigidBodyIndex2 = joint.AssociatedRigidBodyIndex2;
+            desc.Position = joint.Position;
+            desc.Rotation = joint.Rotation;
+            desc.PositionMinimum = joint.PositionMinimum;
+            desc.PositionMaximum = joint.PositionMaximum;
+            desc.RotationMinimum = joint.RotationMinimum;
+            desc.RotationMaximum = joint.RotationMaximum;
+            desc.PositionSpring = joint.PositionSpring;
+            desc.RotationSpring = joint.RotationSpring;
+            return desc;
+        }
+
         public static MMDBoneComponent LoadBoneComponent(PMXFormat source)
         {
             MMDBoneComponent boneComponent = new MMDBoneComponent();
@@ -870,15 +855,15 @@ namespace Coocoo3D.FileFormat
                 {
                     boneEntity.AppendParentIndex = _bone.AppendBoneIndex;
                     boneEntity.AppendRatio = _bone.AppendBoneRatio;
-                    boneEntity.AppendRotation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireRotate);
-                    boneEntity.AppendTranslation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireTranslate);
+                    boneEntity.IsAppendRotation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireRotate);
+                    boneEntity.IsAppendTranslation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireTranslate);
                 }
                 else
                 {
                     boneEntity.AppendParentIndex = -1;
                     boneEntity.AppendRatio = 0;
-                    boneEntity.AppendRotation = false;
-                    boneEntity.AppendTranslation = false;
+                    boneEntity.IsAppendRotation = false;
+                    boneEntity.IsAppendTranslation = false;
                 }
                 boneComponent.bones.Add(boneEntity);
                 if (boneComponent.stringBoneMap.ContainsKey(_bone.Name)) continue;
@@ -893,7 +878,7 @@ namespace Coocoo3D.FileFormat
                 var rigidBodyData = rigidBodys[i];
                 Physics3DRigidBody physics3DRigidBody = new Physics3DRigidBody();
                 boneComponent.physics3DRigidBodys.Add(physics3DRigidBody);
-                var rigidBodyDesc = MMDBoneComponent.GetRigidBodyDesc(rigidBodyData);
+                var rigidBodyDesc = GetRigidBodyDesc(rigidBodyData);
 
                 boneComponent.rigidBodyDescs.Add(rigidBodyDesc);
                 if (rigidBodyData.Type != NMMDE_RigidBodyType.Kinematic && rigidBodyData.AssociatedBoneIndex != -1)
@@ -903,7 +888,7 @@ namespace Coocoo3D.FileFormat
             var joints = modelResource.Joints;
             for (int i = 0; i < joints.Count; i++)
             {
-                boneComponent.jointDescs.Add(MMDBoneComponent.GetJointDesc(joints[i]));
+                boneComponent.jointDescs.Add(GetJointDesc(joints[i]));
                 boneComponent.physics3DJoints.Add(new Physics3DJoint());
             }
 

@@ -21,8 +21,9 @@ namespace Coocoo3DGraphics
 	internal:
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_texture;
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_textureUpload;
+		std::vector<ImageMipsData> m_imageMipsData;
 		UINT m_heapRefIndex;
 		DXGI_FORMAT m_format;
-		UINT m_bindFlags;
+		UINT m_mipLevels;
 	};
 }

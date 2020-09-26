@@ -71,7 +71,15 @@ cbuffer cb3 : register(b3)
 	float _Metallic;
 	float _Roughness;
 	float _Emission;
-	float4 preserved1[8];
+	float _Subsurface;
+	float _Specular;
+	float _SpecularTint;
+	float _Anisotropic;
+	float _Sheen;
+	float _SheenTint;
+	float _Clearcoat;
+	float _ClearcoatGloss;
+	float4 preserved1[6];
 	LightInfo _LightInfo[8];
 };
 
@@ -106,7 +114,7 @@ void MyRaygenShader()
 	ray2.TMin = 0.001;
 	ray2.TMax = 10000.0;
 	RayPayload payload = { float4(0, 0, 0, 0),ray.direction,0 };
-	TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, ray2, payload);
+	TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, ray2, payload);
 	g_renderTarget[DispatchRaysIndex().xy] = payload.color;
 }
 
@@ -278,7 +286,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 		rayX.Direction = payloadX.direction;
 		rayX.TMin = 1e-6f;
 		rayX.TMax = 10000.0;
-		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadX);
+		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayX, payloadX);
 		indirect1.specular = payloadX.color.rgb;
 	}
 	else
@@ -295,13 +303,13 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 	rayNext.TMin = 1e-6f;
 	rayNext.TMax = 10000.0;
 	if (payload.depth < 3 && payload.color.a < 1 - 1e-4f)
-		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayNext, payload);
+		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayNext, payload);
 }
 
 [shader("miss")]
 void MissShaderColor(inout RayPayload payload)
 {
-	payload.color += EnvCube.SampleLevel(s0, payload.direction, 0) * g_skyBoxMultiple;
+	payload.color += EnvCube.SampleLevel(s0, payload.direction, payload.depth) * g_skyBoxMultiple;
 }
 
 [shader("closesthit")]

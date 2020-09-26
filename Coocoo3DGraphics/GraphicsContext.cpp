@@ -231,7 +231,7 @@ void GraphicsContext::SetSRVT(Texture2D^ texture, int index)
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
 		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -246,7 +246,7 @@ void GraphicsContext::SetSRVT(TextureCube^ texture, int index)
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
 		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -265,7 +265,7 @@ void GraphicsContext::SetSRVT(RenderTexture2D^ texture, int index)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
 		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -284,7 +284,7 @@ void GraphicsContext::SetSRVT(RenderTextureCube^ texture, int index)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
 		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -313,7 +313,7 @@ void GraphicsContext::SetUAVT(RenderTexture2D^ texture, int index)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_UNORDERED_ACCESS));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
 		m_commandList->SetGraphicsRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -328,7 +328,7 @@ void GraphicsContext::SetComputeSRVT(TextureCube^ texture, int index)
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	if (texture != nullptr)
 	{
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_heapRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -347,7 +347,7 @@ void GraphicsContext::SetComputeSRVT(RenderTextureCube^ texture, int index)
 			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), texture->prevResourceState, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE));
 		texture->prevResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_srvRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -394,7 +394,7 @@ void GraphicsContext::SetComputeUAVT(RenderTexture2D^ texture, int index)
 	{
 		DX12UAVResourceBarrier(m_commandList.Get(), texture->m_texture.Get(), texture->prevResourceState);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -411,7 +411,7 @@ void GraphicsContext::SetComputeUAVT(RenderTextureCube^ texture, int index)
 	{
 		DX12UAVResourceBarrier(m_commandList.Get(), texture->m_texture.Get(), texture->prevResourceState);
 
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), texture->m_uavRefIndex, incrementSize);
 		m_commandList->SetComputeRootDescriptorTable(index, gpuHandle);
 	}
 	else
@@ -667,119 +667,136 @@ void GraphicsContext::UploadTexture(ITexture^ texture)
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	if (tex2D != nullptr)
 	{
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = tex2D->m_mipLevels;
+		textureDesc.Format = tex2D->m_format;
+		textureDesc.Width = tex2D->m_width;
+		textureDesc.Height = tex2D->m_height;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&tex2D->m_texture)));
+		NAME_D3D12_OBJECT(tex2D->m_texture);
+
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(tex2D->m_textureData->Length),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&tex2D->m_textureUpload)));
+		std::vector<D3D12_SUBRESOURCE_DATA>subresources;
+
+		subresources.reserve(textureDesc.MipLevels);
+		byte* pdata = tex2D->m_textureData->begin();
+		int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
+		for (int i = 0; i < textureDesc.MipLevels; i++)
 		{
-			D3D12_RESOURCE_DESC textureDesc = {};
-			textureDesc.MipLevels = 1;
-			textureDesc.Format = tex2D->m_format;
-			textureDesc.Width = tex2D->m_width;
-			textureDesc.Height = tex2D->m_height;
-			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-			textureDesc.DepthOrArraySize = 1;
-			textureDesc.SampleDesc.Count = 1;
-			textureDesc.SampleDesc.Quality = 0;
-			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			D3D12_SUBRESOURCE_DATA subresourcedata = {};
+			subresourcedata.pData = pdata;
+			subresourcedata.RowPitch = tex2D->m_imageMipsData[i].width * bitsPerPixel / 8;
+			subresourcedata.SlicePitch = tex2D->m_imageMipsData[i].width * tex2D->m_imageMipsData[i].height * bitsPerPixel / 8;
+			pdata += tex2D->m_imageMipsData[i].width * tex2D->m_imageMipsData[i].height * bitsPerPixel / 8;
 
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&textureDesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&tex2D->m_texture)));
-			NAME_D3D12_OBJECT(tex2D->m_texture);
-
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(tex2D->m_textureData->Length),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&tex2D->m_textureUpload)));
-
-			D3D12_SUBRESOURCE_DATA textureData = {};
-			textureData.pData = tex2D->m_textureData->begin();
-			textureData.RowPitch = tex2D->m_textureData->Length / tex2D->m_height;
-			textureData.SlicePitch = tex2D->m_textureData->Length;
-
-			UpdateSubresources(m_commandList.Get(), tex2D->m_texture.Get(), tex2D->m_textureUpload.Get(), 0, 0, 1, &textureData);
-
-			CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
-				CD3DX12_RESOURCE_BARRIER::Transition(tex2D->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-			m_commandList->ResourceBarrier(1, &textureResourceBarrier);
+			subresources.push_back(subresourcedata);
 		}
-		{
-			UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			tex2D->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-			m_deviceResources->m_graphicsPipelineHeapAllocCount++;
 
-			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srvDesc.Format = tex2D->m_format;
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = 1;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_heapRefIndex);
-			d3dDevice->CreateShaderResourceView(tex2D->m_texture.Get(), &srvDesc, handle);
+		UpdateSubresources(m_commandList.Get(), tex2D->m_texture.Get(), tex2D->m_textureUpload.Get(), 0, 0, textureDesc.MipLevels, subresources.data());
 
-		}
+		CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
+			CD3DX12_RESOURCE_BARRIER::Transition(tex2D->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+		m_commandList->ResourceBarrier(1, &textureResourceBarrier);
+		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		tex2D->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = tex2D->m_format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
+		d3dDevice->CreateShaderResourceView(tex2D->m_texture.Get(), &srvDesc, CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_heapRefIndex));
 	}
 	else if (texCube != nullptr)
 	{
+		D3D12_RESOURCE_DESC textureDesc = {};
+		textureDesc.MipLevels = texCube->m_mipLevels;
+		textureDesc.Format = texCube->m_format;
+		textureDesc.Width = texCube->m_width;
+		textureDesc.Height = texCube->m_height;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		textureDesc.DepthOrArraySize = 6;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+		int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&textureDesc,
+			D3D12_RESOURCE_STATE_COPY_DEST,
+			nullptr,
+			IID_PPV_ARGS(&texCube->m_texture)));
+
+		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+			D3D12_HEAP_FLAG_NONE,
+			&CD3DX12_RESOURCE_DESC::Buffer(texCube->m_textureData->Length),
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&texCube->m_textureUpload)));
+		NAME_D3D12_OBJECT(texCube->m_texture);
+
+		std::vector<D3D12_SUBRESOURCE_DATA>subresources;
+
+		subresources.reserve(textureDesc.MipLevels*6);
+
+		D3D12_SUBRESOURCE_DATA textureDatas[6] = {};
+		for (int i = 0; i < 6; i++)
 		{
-			D3D12_RESOURCE_DESC textureDesc = {};
-			textureDesc.MipLevels = 1;
-			textureDesc.Format = texCube->m_format;
-			textureDesc.Width = texCube->m_width;
-			textureDesc.Height = texCube->m_height;
-			textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-			textureDesc.DepthOrArraySize = 6;
-			textureDesc.SampleDesc.Count = 1;
-			textureDesc.SampleDesc.Quality = 0;
-			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+			//textureDatas[i].pData = texCube->m_textureData->begin() + (texCube->m_textureData->Length / 6) * i;
+			//textureDatas[i].RowPitch = texCube->m_width * bitsPerPixel / 8;
+			//textureDatas[i].SlicePitch = texCube->m_width * texCube->m_height * bitsPerPixel / 8;
 
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-				D3D12_HEAP_FLAG_NONE,
-				&textureDesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&texCube->m_texture)));
-
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-				D3D12_HEAP_FLAG_NONE,
-				&CD3DX12_RESOURCE_DESC::Buffer(texCube->m_textureData->Length),
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&texCube->m_textureUpload)));
-			NAME_D3D12_OBJECT(texCube->m_texture);
-
-			D3D12_SUBRESOURCE_DATA textureDatas[6] = {};
-			for (int i = 0; i < 6; i++)
+			byte* pdata = texCube->m_textureData->begin() + (texCube->m_textureData->Length / 6) * i;
+			for (int j = 0; j < textureDesc.MipLevels; j++)
 			{
-				textureDatas[i].pData = texCube->m_textureData->begin() + (texCube->m_textureData->Length / 6) * i;
-				textureDatas[i].RowPitch = texCube->m_textureData->Length / texCube->m_height / 6;
-				textureDatas[i].SlicePitch = texCube->m_textureData->Length / 6;
+				D3D12_SUBRESOURCE_DATA subresourcedata = {};
+				subresourcedata.pData = pdata;
+				subresourcedata.RowPitch = texCube->m_imageMipsData[j].width * bitsPerPixel / 8;
+				subresourcedata.SlicePitch = texCube->m_imageMipsData[j].width * texCube->m_imageMipsData[j].height * bitsPerPixel / 8;
+				pdata += texCube->m_imageMipsData[j].width * texCube->m_imageMipsData[j].height * bitsPerPixel / 8;
+
+				subresources.push_back(subresourcedata);
 			}
-
-			UpdateSubresources(m_commandList.Get(), texCube->m_texture.Get(), texCube->m_textureUpload.Get(), 0, 0, 6, textureDatas);
-
-			CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
-				CD3DX12_RESOURCE_BARRIER::Transition(texCube->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			m_commandList->ResourceBarrier(1, &textureResourceBarrier);
 		}
-		{
-			UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			texCube->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-			m_deviceResources->m_graphicsPipelineHeapAllocCount++;
 
-			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srvDesc.Format = texCube->m_format;
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-			srvDesc.TextureCube.MipLevels = 1;
-			CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texCube->m_heapRefIndex);
-			d3dDevice->CreateShaderResourceView(texCube->m_texture.Get(), &srvDesc, handle);
-		}
+		//UpdateSubresources(m_commandList.Get(), texCube->m_texture.Get(), texCube->m_textureUpload.Get(), 0, 0, 6, textureDatas);
+		UpdateSubresources(m_commandList.Get(), texCube->m_texture.Get(), texCube->m_textureUpload.Get(), 0, 0, textureDesc.MipLevels * 6, subresources.data());
+
+		CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
+			CD3DX12_RESOURCE_BARRIER::Transition(texCube->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		m_commandList->ResourceBarrier(1, &textureResourceBarrier);
+
+		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		texCube->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Format = texCube->m_format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+		srvDesc.TextureCube.MipLevels = textureDesc.MipLevels;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texCube->m_heapRefIndex);
+		d3dDevice->CreateShaderResourceView(texCube->m_texture.Get(), &srvDesc, handle);
+
 	}
 }
 
@@ -813,8 +830,7 @@ void GraphicsContext::UploadBuffer(StaticBuffer^ buffer)
 
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	buffer->m_heapRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-	m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+	buffer->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -822,7 +838,7 @@ void GraphicsContext::UploadBuffer(StaticBuffer^ buffer)
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	srvDesc.Buffer.StructureByteStride = buffer->m_stride;
 	srvDesc.Buffer.NumElements = buffer->m_bufferData->Length / buffer->m_stride;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * buffer->m_heapRefIndex);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * buffer->m_heapRefIndex);
 	d3dDevice->CreateShaderResourceView(buffer->m_buffer.Get(), &srvDesc, handle);
 }
 
@@ -835,22 +851,18 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 	{
 		if (tex2D->m_texture == nullptr)
 		{
-			tex2D->m_srvRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-			m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+			tex2D->m_srvRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
 			if (tex2D->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 			{
-				tex2D->m_dsvHeapRefIndex = m_deviceResources->m_dsvHeapAllocCount;
-				m_deviceResources->m_dsvHeapAllocCount++;
+				tex2D->m_dsvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_dsvHeapAllocCount) - 1;
 			}
 			if (tex2D->m_rtvFormat != DXGI_FORMAT_UNKNOWN)
 			{
-				tex2D->m_rtvHeapRefIndex = m_deviceResources->m_rtvHeapAllocCount;
-				m_deviceResources->m_rtvHeapAllocCount++;
+				tex2D->m_rtvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_rtvHeapAllocCount) - 1;
 			}
 			if (tex2D->m_uavFormat != DXGI_FORMAT_UNKNOWN)
 			{
-				tex2D->m_uavRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-				m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+				tex2D->m_uavRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
 			}
 		}
 
@@ -902,7 +914,7 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 		srvDesc.Texture2D.MipLevels = 1;
 
 		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_srvRefIndex);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_srvRefIndex);
 		d3dDevice->CreateShaderResourceView(tex2D->m_texture.Get(), &srvDesc, handle);
 		if (tex2D->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 		{
@@ -926,7 +938,7 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 
 
 			incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE handle2 = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_uavRefIndex);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE handle2 = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_uavRefIndex);
 			d3dDevice->CreateUnorderedAccessView(tex2D->m_texture.Get(), nullptr, &uavDesc, handle2);
 		}
 	}
@@ -934,22 +946,18 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 	{
 		if (texCube->m_texture == nullptr)
 		{
-			texCube->m_srvRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-			m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+			texCube->m_srvRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
 			//if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 			//{
-			//	texture->m_dsvHeapRefIndex = m_deviceResources->m_dsvHeapAllocCount;
-			//	m_deviceResources->m_dsvHeapAllocCount++;
+			//	texture->m_dsvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_dsvHeapAllocCount)-1;
 			//}
 			//if (texture->m_rtvFormat != DXGI_FORMAT_UNKNOWN)
 			//{
-			//	texture->m_rtvHeapRefIndex = m_deviceResources->m_rtvHeapAllocCount;
-			//	m_deviceResources->m_rtvHeapAllocCount++;
+			//	texture->m_rtvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_rtvHeapAllocCount)-1;
 			//}
 			if (texCube->m_uavFormat != DXGI_FORMAT_UNKNOWN)
 			{
-				texCube->m_uavRefIndex = m_deviceResources->m_graphicsPipelineHeapAllocCount;
-				m_deviceResources->m_graphicsPipelineHeapAllocCount++;
+				texCube->m_uavRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
 			}
 		}
 
@@ -1000,7 +1008,7 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.Texture2D.MipLevels = 1;
 		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart());
+		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart());
 		handle.Offset(incrementSize * texCube->m_srvRefIndex);
 		d3dDevice->CreateShaderResourceView(texCube->m_texture.Get(), &srvDesc, handle);
 		//if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
@@ -1025,7 +1033,7 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 			uavDesc.Texture2DArray.ArraySize = 6;
 
 			incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			CD3DX12_CPU_DESCRIPTOR_HANDLE handle2 = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_graphicsPipelineHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texCube->m_uavRefIndex);
+			CD3DX12_CPU_DESCRIPTOR_HANDLE handle2 = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texCube->m_uavRefIndex);
 			d3dDevice->CreateUnorderedAccessView(texCube->m_texture.Get(), nullptr, &uavDesc, handle2);
 		}
 	}
@@ -1124,7 +1132,7 @@ void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationSt
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	void* pBase = (byte*)rayTracingAccelerationStructure->pArgumentCache + (RayTracingScene::c_argumentCacheStride * rayTracingAccelerationStructure->m_instanceDescs.size());
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_graphicsPipelineHeap->GetGPUDescriptorHandleForHeapStart(), diff->m_heapRefIndex, incrementSize);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE gpuHandle(m_deviceResources->m_cbvSrvUavHeap->GetGPUDescriptorHandleForHeapStart(), diff->m_heapRefIndex, incrementSize);
 
 	*(D3D12_GPU_VIRTUAL_ADDRESS*)(pBase) = mat->GetCurrentVirtualAddress();
 	*(D3D12_GPU_VIRTUAL_ADDRESS*)((byte*)pBase + sizeof(D3D12_GPU_VIRTUAL_ADDRESS)) = mesh->m_skinnedVertice.Get()->GetGPUVirtualAddress() + MMDMesh::c_skinnedVerticeStride * vertexBegin;
@@ -1359,7 +1367,7 @@ void GraphicsContext::BeginAlloctor(DeviceResources^ deviceResources)
 
 void GraphicsContext::SetDescriptorHeapDefault()
 {
-	ID3D12DescriptorHeap* heaps[] = { m_deviceResources->m_graphicsPipelineHeap.Get() };
+	ID3D12DescriptorHeap* heaps[] = { m_deviceResources->m_cbvSrvUavHeap.Get() };
 	m_commandList->SetDescriptorHeaps(_countof(heaps), heaps);
 }
 

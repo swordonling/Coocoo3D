@@ -10,4 +10,9 @@ namespace Coocoo3DGraphics
 	{
 
 	};
+	struct ImageMipsData
+	{
+		UINT width;
+		UINT height;
+	};
 }

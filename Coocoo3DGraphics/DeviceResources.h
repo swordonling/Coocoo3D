@@ -152,6 +152,7 @@ namespace Coocoo3DGraphics
 		void WaitForGpu();
 		bool IsRayTracingSupport();
 		DxgiFormat GetBackBufferFormat1();
+		static UINT BitsPerPixel(DxgiFormat format);
 	internal:
 		bool						IsDeviceRemoved() const { return m_deviceRemoved; }
 
@@ -178,13 +179,15 @@ namespace Coocoo3DGraphics
 			return CD3DX12_CPU_DESCRIPTOR_HANDLE(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		}
 
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_graphicsPipelineHeap;
-		UINT											m_graphicsPipelineHeapAllocCount;
+		static UINT BitsPerPixel(DXGI_FORMAT format);
 
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_cbvSrvUavHeap;
+		volatile UINT									m_cbvSrvUavHeapAllocCount;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_rtvHeap;
+		volatile UINT									m_rtvHeapAllocCount;
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_dsvHeap;
-		UINT											m_rtvHeapAllocCount;
-		UINT											m_dsvHeapAllocCount;
+		volatile UINT									m_dsvHeapAllocCount;
+
 	private:
 		void CreateWindowSizeDependentResources();
 		void UpdateRenderTargetSize();

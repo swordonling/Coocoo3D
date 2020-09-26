@@ -137,7 +137,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 	light1.dir = float3(0,1,0);
 	UnityIndirect indirect1;
 	indirect1.diffuse = IrradianceCube.Sample(s1, norm) * g_skyBoxMultiple;
-	indirect1.specular = EnvCube.Sample(s1, reflect(-viewDir, norm)) * g_skyBoxMultiple;
+	indirect1.specular = EnvCube.SampleLevel(s1, reflect(-viewDir, norm), _Roughness * 6) * g_skyBoxMultiple;
 	strength += BRDF1_Unity_PBS(diff, specCol, _Metallic, 1 - _Roughness, norm, viewDir, light1, indirect1);
 
 	return float4(strength, texColor.a);

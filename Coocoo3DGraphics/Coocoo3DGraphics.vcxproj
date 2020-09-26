@@ -273,6 +273,13 @@
     <ClInclude Include="d3dx12.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXHelper.h" />
+    <ClInclude Include="DirectXTex\BC.h" />
+    <ClInclude Include="DirectXTex\BCDirectCompute.h" />
+    <ClInclude Include="DirectXTex\DDS.h" />
+    <ClInclude Include="DirectXTex\DirectXTex.h" />
+    <ClInclude Include="DirectXTex\DirectXTexP.h" />
+    <ClInclude Include="DirectXTex\Filters.h" />
+    <ClInclude Include="DirectXTex\scoped.h" />
     <ClInclude Include="DynamicMesh.h" />
     <ClInclude Include="GPUProgram\ComputePO.h" />
     <ClInclude Include="GPUProgram\GeometryShader.h" />
@@ -302,6 +309,27 @@
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="ConstantBufferStatic.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
+    <ClCompile Include="DirectXTex\BC.cpp" />
+    <ClCompile Include="DirectXTex\BC4BC5.cpp" />
+    <ClCompile Include="DirectXTex\BC6HBC7.cpp" />
+    <ClCompile Include="DirectXTex\BCDirectCompute.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexCompress.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexCompressGPU.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexConvert.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexD3D11.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexD3D12.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexDDS.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexFlipRotate.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexHDR.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexImage.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexMipmaps.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexMisc.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexNormalMaps.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexPMAlpha.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexResize.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexTGA.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexUtil.cpp" />
+    <ClCompile Include="DirectXTex\DirectXTexWIC.cpp" />
     <ClCompile Include="DynamicMesh.cpp" />
     <ClCompile Include="GPUProgram\ComputePO.cpp" />
     <ClCompile Include="GPUProgram\GeometryShader.cpp" />
@@ -767,6 +795,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="DirectXTex\DirectXTex.inl" />
     <None Include="Shaders\CameraDataDefine.hlsli" />
     <None Include="Shaders\FromDisney\DisneyBRDF.hlsli" />
     <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli" />
