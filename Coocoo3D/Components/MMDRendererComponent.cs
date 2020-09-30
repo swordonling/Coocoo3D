@@ -3,6 +3,7 @@ using Coocoo3D.Core;
 using Coocoo3D.FileFormat;
 using Coocoo3D.MMDSupport;
 using Coocoo3D.Present;
+using Coocoo3D.RenderPipeline;
 using Coocoo3DGraphics;
 using Coocoo3DNativeInteroperable;
 using System;

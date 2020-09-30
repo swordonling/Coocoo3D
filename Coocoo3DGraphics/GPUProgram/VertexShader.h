@@ -2,16 +2,12 @@
 #include "ShaderMacro.h"
 namespace Coocoo3DGraphics
 {
+	using namespace Windows::Storage::Streams;
 	public ref class VertexShader sealed
 	{
 	public:
-		property bool Ready;
-		property Platform::Object^ LoadTask;
-		property Platform::String^ Path;
-		bool CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro);
-		static VertexShader^ Load(const Platform::Array<byte>^ data);
-		void Reload(const Platform::Array<byte>^ data);
-		virtual ~VertexShader();
+		bool CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro);
+		void Reload(IBuffer^ data);
 	internal:
 		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;
 	};

@@ -23,6 +23,14 @@ namespace Coocoo3D.Present
         public Matrix4x4 vpMatrix;
         public Matrix4x4 rotateMatrix;
     }
+    public struct LightingData2
+    {
+        public LightingType LightingType;
+        public Vector3 Rotation;
+        public Vector4 Color;
+        public Matrix4x4 vpMatrix;
+        public Matrix4x4 rotateMatrix;
+    }
     public class Lighting : ISceneObject, INotifyPropertyChanged
     {
         public string Name = "";

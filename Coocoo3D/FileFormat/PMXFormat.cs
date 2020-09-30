@@ -279,6 +279,7 @@ namespace Coocoo3D.FileFormat
                             vertexStruct.Offset = ReadVector3(reader);
                             morph.MorphVertexs[j] = vertexStruct;
                         }
+                        Array.Sort(morph.MorphVertexs, _morphVertexCmp);//optimize for cpu L1 cache
                         break;
                     case NMMDE_MorphType.Bone:
                         morph.MorphBones = new NMMD_MorphBoneDesc[countOfMorphData];
@@ -402,6 +403,11 @@ namespace Coocoo3D.FileFormat
 
                 Joints.Add(joint);
             }
+        }
+
+        private int _morphVertexCmp(NMMD_MorphVertexDesc x, NMMD_MorphVertexDesc y)
+        {
+            return x.VertexIndex.CompareTo(y.VertexIndex);
         }
 
         enum WeightDeformType

@@ -3,8 +3,14 @@
 #include "DirectXHelper.h"
 using namespace Coocoo3DGraphics;
 
-bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro)
+bool PixelShader::CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro)
 {
+
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* sourceCode = nullptr;
+	if (FAILED(bufferByteAccess->Buffer(&sourceCode)))return false;
+
 	const D3D_SHADER_MACRO* macros = nullptr;
 	if (macro == ShaderMacro::DEFINE_COO_SURFACE)macros = MACROS_DEFINE_COO_SURFACE;
 	else if (macro == ShaderMacro::DEFINE_COO_PARTICLE)macros = MACROS_DEFINE_COO_PARTICLE;
@@ -16,8 +22,8 @@ bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platfo
 	WideCharToMultiByte(CP_ACP, 0, wstr1, length1, entryPointStr, strlen1, NULL, NULL);
 	entryPointStr[strlen1] = 0;
 	HRESULT hr = D3DCompile(
-		sourceCode->begin(),
-		sourceCode->Length,
+		sourceCode,
+		file1->Length,
 		nullptr,
 		macros,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -35,17 +41,15 @@ bool PixelShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platfo
 		return true;
 }
 
-PixelShader^ PixelShader::Load(const Platform::Array<byte>^ data)
+void PixelShader::Reload(IBuffer^ data)
 {
-	PixelShader^ pixelShader = ref new PixelShader();
-	pixelShader->Reload(data);
-	return pixelShader;
-}
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(data)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* pData = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pData));
 
-void PixelShader::Reload(const Platform::Array<byte>^ data)
-{
 	DX::ThrowIfFailed(D3DCreateBlob(data->Length, &byteCode));
-	memcpy(byteCode->GetBufferPointer(), data->begin(), data->Length);
+	memcpy(byteCode->GetBufferPointer(), pData, data->Length);
 }
 
 PixelShader::~PixelShader()

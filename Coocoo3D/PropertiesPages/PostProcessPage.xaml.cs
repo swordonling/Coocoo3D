@@ -113,7 +113,7 @@ namespace Coocoo3D.PropertiesPages
             {
                 return;
             }
-            appBody.renderPipelineContext.postProcessBackground.ReloadFromImage(appBody.wicFactory, await FileIO.ReadBufferAsync(file));
+            appBody.renderPipelineContext.postProcessBackground.ReloadFromImage(await FileIO.ReadBufferAsync(file));
             appBody.ProcessingList.AddObject(appBody.renderPipelineContext.postProcessBackground);
             appBody.RequireRender();
         }

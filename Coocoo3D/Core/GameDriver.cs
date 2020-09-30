@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Coocoo3D.RenderPipeline;
 using Coocoo3DGraphics;
 
 namespace Coocoo3D.Core

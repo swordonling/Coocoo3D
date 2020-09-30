@@ -117,7 +117,7 @@ namespace Coocoo3D.Core
                 await renderPipelineContext.ReloadDefalutResources(wicFactory, ProcessingList, miscProcessContext);
 
                 await RPAssetsManager.ReloadAssets();
-                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, RTFormat, backBufferFormat);
+                RPAssetsManager.ChangeRenderTargetFormat(deviceResources,ProcessingList, RTFormat, backBufferFormat);
 
                 //await forwardRenderPipeline1.ReloadAssets(deviceResources);
 
@@ -378,6 +378,7 @@ namespace Coocoo3D.Core
                     }
                     deviceResources.WaitForGpu();
                     _processingList._DealStep2(graphicsContext, deviceResources);
+                    RPAssetsManager._DealStep3(deviceResources, _processingList);
                     _processingList.Clear();
                 }
                 #endregion

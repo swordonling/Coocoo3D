@@ -345,9 +345,10 @@ namespace Coocoo3D.RenderPipeline
             var Materials = rendererComponent.Materials;
             int indexStartLocation = 0;
             List<Texture2D> texs = rendererComponent.textures;
-            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData, 2);
+            //graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+            //graphicsContext.SetCBVR(entityDataBuffer, 1);
+            //graphicsContext.SetCBVR(cameraPresentData, 2);
+            CooGExtension.SetCBVBuffer3(graphicsContext, entityBoneDataBuffer, entityDataBuffer, cameraPresentData, 0);
             for (int i = 0; i < Materials.Count; i++)
             {
                 if (Materials[i].innerStruct.DiffuseColor.W <= 0)
@@ -363,8 +364,9 @@ namespace Coocoo3D.RenderPipeline
                 if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
                     tex2 = texs[Materials[i].toonIndex];
                 graphicsContext.SetCBVR(materialBuffers[matIndex], 3);
-                graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-                graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
+                //graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
+                //graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
+                CooGExtension.SetSRVTexture2(graphicsContext, tex1, tex2, 4, textureLoading, textureError);
                 CullMode cullMode = CullMode.back;
                 if (Materials[i].DrawFlags.HasFlag(NMMDE_DrawFlag.DrawDoubleFace))
                     cullMode = CullMode.none;
@@ -402,9 +404,10 @@ namespace Coocoo3D.RenderPipeline
             var PODraw = PObjectStatusSelect(rendererComponent.POParticleDraw, context.RPAssetsManager.PObjectMMDLoading, context.RPAssetsManager.PObjectMMDError, context.RPAssetsManager.PObjectMMDError);
             int indexStartLocation = 0;
             List<Texture2D> texs = rendererComponent.textures;
-            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData, 2);
+            //graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+            //graphicsContext.SetCBVR(entityDataBuffer, 1);
+            //graphicsContext.SetCBVR(cameraPresentData, 2);
+            CooGExtension.SetCBVBuffer3(graphicsContext, entityBoneDataBuffer, entityDataBuffer, cameraPresentData, 0);
             for (int i = 0; i < Materials.Count; i++)
             {
                 Texture2D tex1 = null;
@@ -414,8 +417,9 @@ namespace Coocoo3D.RenderPipeline
                 if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
                     tex2 = texs[Materials[i].toonIndex];
                 graphicsContext.SetCBVR(materialBuffers[matIndex], 3);
-                graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-                graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
+                //graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
+                //graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
+                CooGExtension.SetSRVTexture2(graphicsContext, tex1, tex2, 4, textureLoading, textureError);
                 graphicsContext.SetPObject(PODraw, CullMode.none);
                 graphicsContext.Draw(Materials[i].indexCount, indexStartLocation);
                 matIndex++;

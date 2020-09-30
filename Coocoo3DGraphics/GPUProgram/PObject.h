@@ -18,7 +18,7 @@ namespace Coocoo3DGraphics
 		none = 0,
 		alpha = 1,
 	};
-	public enum struct PObjectType
+	public enum struct eInputLayout
 	{
 		mmd = 0,
 		postProcess = 1,
@@ -30,11 +30,14 @@ namespace Coocoo3DGraphics
 		property GraphicsObjectStatus Status;
 		property Platform::Object^ LoadTask;
 		property Platform::String^ Path;
-		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, PObjectType type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
-		void ReloadDepthOnly(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vsTransform, PixelShader^ psDepthAlphaClip, int depthOffset);
-		bool ReloadSkinning(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, VertexShader^ vs, GeometryShader^ gs);
-		bool ReloadDrawing(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat);
-		void Reload(PObject^ pObject);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, eInputLayout type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
+		//使用Upload上传GPU
+		void ReloadDepthOnly(VertexShader^ vs, PixelShader^ ps, int depthOffset);
+		//使用Upload上传GPU
+		void ReloadSkinning(VertexShader^ vs, GeometryShader^ gs);
+		//使用Upload上传GPU
+		void ReloadDrawing(BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat);
+		bool Upload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature);
 		void Unload();
 	internal:
 		VertexShader^ m_vertexShader;
@@ -43,7 +46,22 @@ namespace Coocoo3DGraphics
 		static const UINT c_indexPipelineStateDepth = 6;
 		static const UINT c_indexPipelineStateSkinning = 7;
 
+		bool m_useStreamOutput;
+		bool m_isDepthOnly;
+		DXGI_FORMAT m_renderTargetFormat;
+		BlendState m_blendState;
+		int m_depthBias;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[10];
-	private:
+
+		inline void ClearState()
+		{
+			m_vertexShader = nullptr;
+			m_pixelShader = nullptr;
+			m_geometryShader = nullptr;
+			m_renderTargetFormat = DXGI_FORMAT_UNKNOWN;
+			m_useStreamOutput = false;
+			m_blendState = BlendState::none;
+			m_depthBias = 0;
+		}
 	};
 }

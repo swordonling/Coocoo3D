@@ -6,9 +6,8 @@ namespace Coocoo3DGraphics
 	public ref class PixelShader sealed
 	{
 	public:
-		bool CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro);
-		static PixelShader^ Load(const Platform::Array<byte>^ data);
-		void Reload(const Platform::Array<byte>^ data);
+		bool CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro);
+		void Reload(IBuffer^ data);
 		virtual ~PixelShader();
 	internal:
 		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;

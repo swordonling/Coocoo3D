@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Coocoo3D.Core
+namespace Coocoo3D.RenderPipeline
 {
     public class ProcessingList
     {
@@ -27,6 +27,8 @@ namespace Coocoo3D.Core
         public List<ReadBackTexture2D> readBackTextureList = new List<ReadBackTexture2D>();
         public List<TwinBuffer> twinBufferList = new List<TwinBuffer>();
         public List<DynamicMesh> dynamicMeshList = new List<DynamicMesh>();
+        public List<PObject>[] pobjectLists = new List<PObject>[] { new List<PObject>(), new List<PObject>(), new List<PObject>(), };
+        public List<ComputePO>[] computePObjectLists = new List<ComputePO>[] { new List<ComputePO>(),};
 
         public void AddObject(MMDMesh mesh)
         {
@@ -77,6 +79,21 @@ namespace Coocoo3D.Core
                 dynamicMeshList.Add(buffer);
             }
         }
+        /// <summary>无法用语言描述的函数 </summary>
+        public void RS(PObject pObject, int slot)
+        {
+            lock (pobjectLists[slot])
+            {
+                pobjectLists[slot].Add(pObject);
+            }
+        }
+        public void RS(ComputePO pObject, int slot)
+        {
+            lock (computePObjectLists[slot])
+            {
+                computePObjectLists[slot].Add(pObject);
+            }
+        }
 
         public void MoveToAnother(ProcessingList another)
         {
@@ -87,6 +104,10 @@ namespace Coocoo3D.Core
             Move1(staticBufferList, another.staticBufferList);
             Move1(twinBufferList, another.twinBufferList);
             Move1(dynamicMeshList, another.dynamicMeshList);
+            for (int i = 0; i < pobjectLists.Length; i++)
+                Move1(pobjectLists[i], another.pobjectLists[i]);
+            for (int i = 0; i < computePObjectLists.Length; i++)
+                Move1(computePObjectLists[i], another.computePObjectLists[i]);
         }
 
         public void Clear()
@@ -98,10 +119,21 @@ namespace Coocoo3D.Core
             staticBufferList.Clear();
             twinBufferList.Clear();
             dynamicMeshList.Clear();
+            for (int i = 0; i < pobjectLists.Length; i++)
+                pobjectLists[i].Clear();
+            for (int i = 0; i < computePObjectLists.Length; i++)
+                computePObjectLists[i].Clear();
         }
 
         public bool IsEmpty()
         {
+            for (int i = 0; i < pobjectLists.Length; i++)
+                if (pobjectLists[i].Count == 0)
+                    return false;
+            for (int i = 0; i < computePObjectLists.Length; i++)
+                if (computePObjectLists[i].Count == 0)
+                    return false;
+
             return TextureLoadList.Count == 0 &&
                 RenderTextureUpdateList.Count == 0 &&
                 MMDMeshLoadList.Count == 0 &&
@@ -138,7 +170,7 @@ namespace Coocoo3D.Core
             for (int i = 0; i < staticBufferList.Count; i++)
                 graphicsContext.UploadBuffer(staticBufferList[i]);
         }
-        public void _DealStep2(GraphicsContext graphicsContext,DeviceResources deviceResources)
+        public void _DealStep2(GraphicsContext graphicsContext, DeviceResources deviceResources)
         {
             for (int i = 0; i < TextureLoadList.Count; i++)
                 TextureLoadList[i].ReleaseUploadHeapResource();

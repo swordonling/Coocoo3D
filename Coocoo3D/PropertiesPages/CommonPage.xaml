@@ -76,12 +76,12 @@
                 <TextBlock Text="在Windows设置-系统-显示-图形设置 里更改使用的显卡" TextWrapping="Wrap"/>
                 <ToggleSwitch x:Name="vCameraMotionOn" Header="镜头动作" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
                 <TextBlock Text="将VMD文件拖到至此应用镜头" TextWrapping="Wrap"/>
-                <Button Content="重置运行时缓存">
+                <Button Content="刷新缓存">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel>
-                                <Button Content="重置着色器缓存" Click="ShaderCacheReset_Click" ToolTipService.ToolTip="重置着色器缓存以便重新加载着色器"/>
-                                <Button Content="重置纹理缓存" Click="TextureCacheReset_Click" ToolTipService.ToolTip="重置纹理缓存以便重新加载纹理"/>
+                                <Button Content="刷新着色器" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
+                                <Button Content="刷新纹理" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

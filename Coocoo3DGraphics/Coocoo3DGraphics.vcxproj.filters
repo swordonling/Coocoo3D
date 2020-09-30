@@ -35,6 +35,9 @@
     <Filter Include="DirectXTex">
       <UniqueIdentifier>{35ff6d03-2e05-4b11-8f6c-c6e20fbee415}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Extension">
+      <UniqueIdentifier>{dc8429a7-4a7a-406e-bb38-df7e5d3df773}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -141,6 +144,9 @@
     <ClCompile Include="DirectXTex\DirectXTexWIC.cpp">
       <Filter>DirectXTex</Filter>
     </ClCompile>
+    <ClCompile Include="Extension\CooGExtension.cpp">
+      <Filter>Extension</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -218,6 +224,9 @@
     </ClInclude>
     <ClInclude Include="DirectXTex\scoped.h">
       <Filter>DirectXTex</Filter>
+    </ClInclude>
+    <ClInclude Include="Extension\CooGExtension.h">
+      <Filter>Extension</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

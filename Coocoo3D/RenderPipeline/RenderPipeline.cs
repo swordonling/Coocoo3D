@@ -53,15 +53,20 @@ namespace Coocoo3D.RenderPipeline
 
         protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)
         {
-            pixelShader.Reload(await ReadAllBytes(uri));
+            pixelShader.Reload(await ReadFile(uri));
         }
         protected async Task ReloadVertexShader(VertexShader vertexShader, string uri)
         {
-            vertexShader.Reload(await ReadAllBytes(uri));
+            vertexShader.Reload(await ReadFile(uri));
         }
         protected async Task ReloadGeometryShader(GeometryShader geometryShader, string uri)
         {
-            geometryShader.Reload(await ReadAllBytes(uri));
+            geometryShader.Reload(await ReadFile(uri));
+        }
+        protected async Task<IBuffer> ReadFile(string uri)
+        {
+            StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
+            return await FileIO.ReadBufferAsync(file);
         }
         protected async Task<byte[]> ReadAllBytes(string uri)
         {

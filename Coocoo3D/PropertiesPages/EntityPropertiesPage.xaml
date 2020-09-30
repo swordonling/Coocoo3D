@@ -91,6 +91,9 @@
                 </ScrollViewer>
             </Grid>
         </Flyout>
+        <DataTemplate x:Key="itemMaterial" x:DataType="ccc:MMDMatLit">
+            <Button Content="{x:Bind}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="Button_Click"/>
+        </DataTemplate>
     </Page.Resources>
     <ScrollViewer Padding="0,0,20,30">
         <StackPanel Grid.Row="0">
@@ -112,19 +115,25 @@
                 <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
                 <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
             </Grid>
-            <ScrollViewer Height="200" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
-                <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
-            </ScrollViewer>
-            <TextBlock Text="材质列表"/>
-            <ListView Height="300" x:Name="ViewMaterials" SelectionMode="Single" SelectionChanged="ViewMaterials_SelectionChanged"> <!--ItemTemplate="{StaticResource dtMaterial}"-->
-                <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                        <Setter Property="Margin" Value="0"/>
-                    </Style>
-                </ListView.ItemContainerStyle>
-            </ListView>
+            <mu:TabView>
+                <mu:TabViewItem Header="描述">
+                    <ScrollViewer Height="300" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
+                        <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
+                    </ScrollViewer>
+                </mu:TabViewItem>
+                <mu:TabViewItem Header="材质">
+                    <ListView Height="300" x:Name="ViewMaterials" SelectionMode="Single" ItemTemplate="{StaticResource itemMaterial}">
+                        
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Margin" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </mu:TabViewItem>
+            </mu:TabView>
             <ScrollViewer Height="150">
                 <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
             </ScrollViewer>

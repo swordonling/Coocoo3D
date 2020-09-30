@@ -144,7 +144,7 @@ namespace Coocoo3D.PropertiesPages
         {
             //_cacheRQ = EularToQuaternionYXZ(_cacheR / 180 * MathF.PI);
             var t1 = _cacheR / 180 * MathF.PI;
-            _cacheRQ = Quaternion.CreateFromYawPitchRoll(t1.Y,t1.X,t1.Z);
+            _cacheRQ = Quaternion.CreateFromYawPitchRoll(t1.Y, t1.X, t1.Z);
 
             mmd3dEntity.RotationNextFrame = _cacheRQ;
             mmd3dEntity.NeedTransform = true;
@@ -268,15 +268,13 @@ namespace Coocoo3D.PropertiesPages
 
         PropertyChangedEventArgs eaCurrentMat = new PropertyChangedEventArgs("CurrentMat");
         MMDMatLit CurrentMat;
-        private void ViewMaterials_SelectionChanged(object sender, SelectionChangedEventArgs e)
+
+        private void Button_Click(object sender, RoutedEventArgs e)
         {
-            ListView view1 = sender as ListView;
-            if (e.AddedItems.Count == 1)
-            {
-                CurrentMat = ((MMDMatLit)e.AddedItems[0]);
-                PropertyChanged?.Invoke(this, eaCurrentMat);
-                flyout1.ShowAt(view1);
-            }
+            Button button = sender as Button;
+            CurrentMat = ((MMDMatLit)button.DataContext);
+            PropertyChanged?.Invoke(this, eaCurrentMat);
+            flyout1.ShowAt(button);
         }
     }
     public struct Bundle_Main_Entity_Mat

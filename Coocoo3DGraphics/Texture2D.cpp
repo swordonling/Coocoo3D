@@ -75,7 +75,7 @@ inline void _Fun1(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::Scrat
 	}
 }
 
-void Texture2D::ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<byte>^ data)
+void Texture2D::ReloadFromImage1(const Platform::Array<byte>^ data)
 {
 	DirectX::TexMetadata metaData;
 	DirectX::ScratchImage scratchImage;
@@ -105,7 +105,7 @@ void Texture2D::ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<b
 	}
 }
 
-void Texture2D::ReloadFromImage(WICFactory^ wicFactory, IBuffer^ file1)
+void Texture2D::ReloadFromImage(IBuffer^ file1)
 {
 	ComPtr<IBufferByteAccess> bufferByteAccess;
 	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));

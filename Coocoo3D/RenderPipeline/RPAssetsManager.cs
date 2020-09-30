@@ -39,13 +39,13 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectMMDError = new PObject();
         public PObject PObjectSkyBox = new PObject();
         public PObject PObjectPostProcess = new PObject();
-        public DxgiFormat CurrentRenderTargetFormat;
+        public DxgiFormat RTFormat;
         public bool Ready;
         public void Reload(DeviceResources deviceResources)
         {
             rootSignature.ReloadMMD(deviceResources);
             rootSignaturePostProcess.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.SRVTable, GSD.SRVTable });
-            rootSignatureCompute.ReloadCompute(deviceResources, new GraphicSignatureDesc[] { GSD.CBV,GSD.CBV,GSD.CBV,GSD.SRV, GSD.UAV, GSD.UAV });
+            rootSignatureCompute.ReloadCompute(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.CBV, GSD.SRV, GSD.UAV, GSD.UAV });
         }
         public async Task ReloadAssets()
         {
@@ -65,47 +65,63 @@ namespace Coocoo3D.RenderPipeline
             await ReloadVertexShader(VSPostProcess, "ms-appx:///Coocoo3DGraphics/VSPostProcess.cso");
             await ReloadPixelShader(PSPostProcess, "ms-appx:///Coocoo3DGraphics/PSPostProcess.cso");
         }
-        public void ChangeRenderTargetFormat(DeviceResources deviceResources, DxgiFormat format, DxgiFormat backBufferFormat)
+        public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat backBufferFormat)
         {
-            CurrentRenderTargetFormat = format;
-            PObjectMMDSkinning.ReloadSkinning(deviceResources, rootSignature, VSMMDSkinning2, null);
+            RTFormat = format;
+            PObjectMMDSkinning.ReloadSkinning(VSMMDSkinning2, null);
+            uploadProcess.RS(PObjectMMDSkinning, 0);
 
-            PObjectMMD.ReloadDrawing(deviceResources, rootSignature, BlendState.alpha, VSMMDTransform,null, PSMMD, format);
-            PObjectMMD_DisneyBrdf.ReloadDrawing(deviceResources, rootSignature, BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format);
-            PObjectMMD_Toon1.ReloadDrawing(deviceResources, rootSignature, BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format);
-            PObjectMMDLoading.ReloadDrawing(deviceResources, rootSignature, BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format);
-            PObjectMMDError.ReloadDrawing(deviceResources, rootSignature, BlendState.alpha, VSMMDTransform, null, PSMMDError, format);
+            PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format);
+            PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format);
+            PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format);
+            PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format);
+            PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format);
+            uploadProcess.RS(PObjectMMD, 0);
+            uploadProcess.RS(PObjectMMD_DisneyBrdf, 0);
+            uploadProcess.RS(PObjectMMD_Toon1, 0);
+            uploadProcess.RS(PObjectMMDLoading, 0);
+            uploadProcess.RS(PObjectMMDError, 0);
 
-            PObjectSkyBox.Reload(deviceResources, rootSignature, PObjectType.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
-            PObjectMMDShadowDepth.ReloadDepthOnly(deviceResources, rootSignature, VSMMDTransform, PSMMDAlphaClip, 10000);
-            PObjectMMDDepth.ReloadDepthOnly(deviceResources, rootSignature, VSMMDTransform, PSMMDAlphaClip1, 0);
+            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
 
-            PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, PObjectType.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, backBufferFormat);
+            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 10000);
+            PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0);
+            uploadProcess.RS(PObjectMMDShadowDepth, 0);
+            uploadProcess.RS(PObjectMMDDepth, 0);
+
+            PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, backBufferFormat);
             Ready = true;
         }
         protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)
         {
-            pixelShader.Reload(await ReadAllBytes(uri));
+            pixelShader.Reload(await ReadFile(uri));
         }
         protected async Task ReloadVertexShader(VertexShader vertexShader, string uri)
         {
-            vertexShader.Reload(await ReadAllBytes(uri));
+            vertexShader.Reload(await ReadFile(uri));
         }
         protected async Task ReloadGeometryShader(GeometryShader geometryShader, string uri)
         {
-            geometryShader.Reload(await ReadAllBytes(uri));
+            geometryShader.Reload(await ReadFile(uri));
         }
-        protected async Task<byte[]> ReadAllBytes(string uri)
+        protected async Task<IBuffer> ReadFile(string uri)
         {
             StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
-            var stream = await file.OpenReadAsync();
-            DataReader dataReader = new DataReader(stream);
-            await dataReader.LoadAsync((uint)stream.Size);
-            byte[] data = new byte[stream.Size];
-            dataReader.ReadBytes(data);
-            stream.Dispose();
-            dataReader.Dispose();
-            return data;
+            return await FileIO.ReadBufferAsync(file);
         }
+
+        #region UploadProceess
+        public void _DealStep3(DeviceResources deviceResources, ProcessingList uploadProcess)
+        {
+            foreach (var a in uploadProcess.pobjectLists[0])
+            {
+                a.Upload(deviceResources, rootSignature);
+            }
+            foreach (var a in uploadProcess.computePObjectLists[0])
+            {
+                a.Upload(deviceResources, rootSignatureCompute);
+            }
+        }
+        #endregion
     }
 }

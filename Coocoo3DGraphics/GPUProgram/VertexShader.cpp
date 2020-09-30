@@ -3,8 +3,14 @@
 #include "DirectXHelper.h"
 using namespace Coocoo3DGraphics;
 
-bool VertexShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platform::String^ entryPoint, ShaderMacro macro)
+bool VertexShader::CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro)
 {
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* sourceCode = nullptr;
+	if (FAILED(bufferByteAccess->Buffer(&sourceCode)))return false;
+
+
 	const D3D_SHADER_MACRO* macros = nullptr;
 	if (macro == ShaderMacro::DEFINE_COO_SURFACE)macros = MACROS_DEFINE_COO_SURFACE;
 	else if (macro == ShaderMacro::DEFINE_COO_PARTICLE)macros = MACROS_DEFINE_COO_PARTICLE;
@@ -16,8 +22,8 @@ bool VertexShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platf
 	WideCharToMultiByte(CP_ACP, 0, wstr1, length1, entryPointStr, strlen1, NULL, NULL);
 	entryPointStr[strlen1] = 0;
 	HRESULT hr = D3DCompile(
-		sourceCode->begin(),
-		sourceCode->Length,
+		sourceCode,
+		file1->Length,
 		nullptr,
 		macros,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -35,19 +41,13 @@ bool VertexShader::CompileReload1(const Platform::Array<byte>^ sourceCode, Platf
 		return true;
 }
 
-VertexShader^ VertexShader::Load(const Platform::Array<byte>^ data)
+void VertexShader::Reload(IBuffer^ data)
 {
-	VertexShader^ vertexShader = ref new VertexShader();
-	vertexShader->Reload(data);
-	return vertexShader;
-}
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(data)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* pData = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pData));
 
-void VertexShader::Reload(const Platform::Array<byte>^ data)
-{
 	DX::ThrowIfFailed(D3DCreateBlob(data->Length, &byteCode));
-	memcpy(byteCode->GetBufferPointer(), data->begin(), data->Length);
-}
-
-VertexShader::~VertexShader()
-{
+	memcpy(byteCode->GetBufferPointer(), pData, data->Length);
 }

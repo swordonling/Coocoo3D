@@ -1,6 +1,5 @@
 #pragma once
 #include "ITexture.h"
-#include "WICFactory.h"
 #include "GraphicsObjectStatus.h"
 namespace Coocoo3DGraphics
 {
@@ -16,8 +15,8 @@ namespace Coocoo3DGraphics
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
 		void ReloadPure(int width, int height,Windows::Foundation::Numerics::float4 color);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
-		void ReloadFromImage1(WICFactory^ wicFactory, const Platform::Array<byte>^ data);
-		void ReloadFromImage(WICFactory^ wicFactory, IBuffer^ file1);
+		void ReloadFromImage1(const Platform::Array<byte>^ data);
+		void ReloadFromImage(IBuffer^ file1);
 		void Reload(Texture2D^ texture);
 		void Unload();
 

@@ -88,10 +88,7 @@ namespace Coocoo3D.Components
 
             for (int i = 0; i < bones.Count; i++)
             {
-                if (bones[i].IKTargetIndex != -1)
-                {
-                    IK(i, bones);
-                }
+                IK(i, bones);
             }
             UpdateAppendBones();
         }

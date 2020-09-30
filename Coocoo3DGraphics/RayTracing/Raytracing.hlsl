@@ -114,7 +114,7 @@ void MyRaygenShader()
 	ray2.TMin = 0.001;
 	ray2.TMax = 10000.0;
 	RayPayload payload = { float4(0, 0, 0, 0),ray.direction,0 };
-	TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, ray2, payload);
+	TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, ray2, payload);
 	g_renderTarget[DispatchRaysIndex().xy] = payload.color;
 }
 
@@ -163,7 +163,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 			{
 				ray2.Direction = -ray2.Direction;
 			}
-			ray2.TMin = 0.001;
+			ray2.TMin = 1e-3f;
 			ray2.TMax = c_AOMaxDist;
 			TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
 			TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
@@ -284,9 +284,9 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 		RayDesc rayX;
 		rayX.Origin = pos;
 		rayX.Direction = payloadX.direction;
-		rayX.TMin = 1e-6f;
+		rayX.TMin = 1e-3f;
 		rayX.TMax = 10000.0;
-		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayX, payloadX);
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadX);
 		indirect1.specular = payloadX.color.rgb;
 	}
 	else
@@ -300,10 +300,10 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 	RayDesc rayNext;
 	rayNext.Origin = pos;
 	rayNext.Direction = payload.direction;
-	rayNext.TMin = 1e-6f;
+	rayNext.TMin = 5e-4f;
 	rayNext.TMax = 10000.0;
-	if (payload.depth < 3 && payload.color.a < 1 - 1e-4f)
-		TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 2, 0, rayNext, payload);
+	if (payload.depth < 3 && payload.color.a < 1 - 1e-3f)
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayNext, payload);
 }
 
 [shader("miss")]

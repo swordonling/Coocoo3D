@@ -51,7 +51,7 @@ namespace Coocoo3D.RenderPipeline
         public GraphicsContext graphicsContext;
         public GraphicsContext[] graphicsContexts;
 
-        public Texture2D ui0Texture = new Texture2D();
+        //public Texture2D ui0Texture = new Texture2D();
         public Texture2D postProcessBackground = new Texture2D();
 
         public RenderPipelineDynamicContext renderPipelineDynamicContext = new RenderPipelineDynamicContext();
@@ -124,27 +124,15 @@ namespace Coocoo3D.RenderPipeline
             processingList.AddObject(ndcQuadMesh);
 
             processingList.AddObject(postProcessBackground);
-            await ReloadTexture2D(ui0Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_0.png");
+            //await ReloadTexture2D(ui0Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_0.png");
 
             //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
         private async Task ReloadTexture2D(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
         {
-            texture2D.ReloadFromImage1(wic, await ReadAllBytes(uri));
+            texture2D.ReloadFromImage(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))));
             processingList.AddObject(texture2D);
-        }
-        private async Task<byte[]> ReadAllBytes(string uri)
-        {
-            StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
-            var stream = await file.OpenReadAsync();
-            DataReader dataReader = new DataReader(stream);
-            await dataReader.LoadAsync((uint)stream.Size);
-            byte[] data = new byte[stream.Size];
-            dataReader.ReadBytes(data);
-            stream.Dispose();
-            dataReader.Dispose();
-            return data;
         }
     }
 }

@@ -84,8 +84,8 @@ namespace Coocoo3D.RenderPipeline
                 if (constantBuffers[i] == null) constantBuffers[i] = new ConstantBuffer();
                 constantBuffers[i].Reload(deviceResources, 512);
             }
-            IrradianceMap0.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
-            ClearIrradianceMap.Reload(deviceResources, rootSignature, await ReadAllBytes("ms-appx:///Coocoo3DGraphics/G_ClearIrradianceMap.cso"));
+            IrradianceMap0.Reload(deviceResources, rootSignature, await ReadFile("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
+            ClearIrradianceMap.Reload(deviceResources, rootSignature, await ReadFile("ms-appx:///Coocoo3DGraphics/G_ClearIrradianceMap.cso"));
 
             Ready = true;
         }
@@ -143,8 +143,6 @@ namespace Coocoo3D.RenderPipeline
                         context.graphicsContext.SetComputeUAVT(texture1, 2);
                         context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
                     }
-                    //context.graphicsContext.Dispatch((int)(texture1.m_width + 31) / 32, (int)(texture1.m_height + 31) / 32, 6);
-                    //context.graphicsContext.Copy(texture0, texture1);
                 }
             }
             context.graphicsContext.EndCommand();
@@ -160,17 +158,10 @@ namespace Coocoo3D.RenderPipeline
             public int Batch;
         }
 
-        protected async Task<byte[]> ReadAllBytes(string uri)
+        protected async Task<IBuffer> ReadFile(string uri)
         {
             StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));
-            var stream = await file.OpenReadAsync();
-            DataReader dataReader = new DataReader(stream);
-            await dataReader.LoadAsync((uint)stream.Size);
-            byte[] data = new byte[stream.Size];
-            dataReader.ReadBytes(data);
-            stream.Dispose();
-            dataReader.Dispose();
-            return data;
+            return await FileIO.ReadBufferAsync(file);
         }
     }
 }

@@ -372,14 +372,14 @@ namespace Coocoo3D.PropertiesPages
             }
         }
 
-        private void ShaderCacheReset_Click(object sender, RoutedEventArgs e)
+        private void ReloadTextures_Click(object sender, RoutedEventArgs e)
         {
-            appBody.mainCaches.ResetShaderCache();
+            appBody.mainCaches.ReloadTextures(appBody.ProcessingList, () => appBody.RequireRender());
         }
 
-        private void TextureCacheReset_Click(object sender, RoutedEventArgs e)
+        private void ReloadShaders_Click(object sender, RoutedEventArgs e)
         {
-            appBody.mainCaches.ResetTextureCache();
+            appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager, () => appBody.RequireRender());
         }
     }
 }

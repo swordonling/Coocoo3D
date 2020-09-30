@@ -10,6 +10,7 @@ using Coocoo3D.Present;
 using Coocoo3DGraphics;
 using Coocoo3D.Core;
 using System.ComponentModel;
+using Coocoo3D.RenderPipeline;
 
 namespace Coocoo3D.Present
 {
