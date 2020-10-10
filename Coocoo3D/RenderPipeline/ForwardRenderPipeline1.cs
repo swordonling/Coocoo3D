@@ -127,10 +127,10 @@ namespace Coocoo3D.RenderPipeline
                 pBufferData = p0;
                 if (mainLightIndex != -1)
                 {
-                    Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[mainLightIndex].rotateMatrix), pBufferData, true);
-                    Marshal.StructureToPtr((uint)lightings[mainLightIndex].LightingType, pBufferData + 12, true);
-                    Marshal.StructureToPtr(lightings[mainLightIndex].Color, pBufferData + 16, true);
-                    Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[mainLightIndex].vpMatrix), pBufferData + 32, true);
+                    LightingData data1 = lightings[mainLightIndex];
+                    data1.vpMatrix = Matrix4x4.Transpose(data1.vpMatrix);
+                    Marshal.StructureToPtr(data1, pBufferData, true);
+
                     lightCount++;
                     pBufferData += 96;
                 }
@@ -138,13 +138,10 @@ namespace Coocoo3D.RenderPipeline
                 {
                     if (j != mainLightIndex)
                     {
-                        if (lightings[j].LightingType == LightingType.Directional)
-                            Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[j].rotateMatrix), pBufferData, true);
-                        else
-                            Marshal.StructureToPtr(lightings[j].Rotation * 180 / MathF.PI, pBufferData, true);
-                        Marshal.StructureToPtr((uint)lightings[j].LightingType, pBufferData + 12, true);
-                        Marshal.StructureToPtr(lightings[j].Color, pBufferData + 16, true);
-                        Marshal.StructureToPtr(Matrix4x4.Transpose(lightings[j].vpMatrix), pBufferData + 32, true);
+                        LightingData data1 = lightings[j];
+                        data1.vpMatrix = Matrix4x4.Transpose(data1.vpMatrix);
+                        Marshal.StructureToPtr(data1, pBufferData, true);
+
                         lightCount++;
                         pBufferData += 96;
                         if (lightCount >= 4)
@@ -216,11 +213,11 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetSRVT(context.DSV0, 6);
             graphicsContext.SetSRVT(context.EnvCubeMap, 7);
             graphicsContext.SetSRVT(context.IrradianceMap, 8);
-            //渲染天空盒
+            #region Render Sky box
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectSkyBox, CullMode.back);
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
-
+            #endregion
             matIndex = 0;
             if (context.renderPipelineDynamicContext.settings.ZPrepass)
                 for (int i = 0; i < Entities.Count; i++)

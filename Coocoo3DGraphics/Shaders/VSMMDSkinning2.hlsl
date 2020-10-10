@@ -61,35 +61,44 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 	//Bone0
 	uint iBone = Input.Bones.x;
 	float fWeight = Input.Weights.x;
-	matrix m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	matrix m;
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone1
 	iBone = Input.Bones.y;
 	fWeight = Input.Weights.y;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone2
 	iBone = Input.Bones.z;
 	fWeight = Input.Weights.z;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone3
 	iBone = Input.Bones.w;
 	fWeight = Input.Weights.w;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	return Output;
 }
 

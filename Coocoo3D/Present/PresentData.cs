@@ -34,7 +34,7 @@ namespace Coocoo3D.Present
             wpMatrix = Matrix4x4.Transpose(lighting.vpMatrix);
             Matrix4x4.Invert(lighting.vpMatrix, out innerStruct.pwMatrix);
             pwMatrix = Matrix4x4.Transpose(pwMatrix);
-            CameraPosition = lighting.Rotation;
+            CameraPosition = lighting.RotationOrPosition;
             AspectRatio = 1;
         }
 

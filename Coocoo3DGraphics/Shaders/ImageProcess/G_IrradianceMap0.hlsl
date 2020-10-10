@@ -7,32 +7,32 @@ cbuffer cb0 : register(b0)
 }
 
 
-const static float4x4 _xproj=
+const static float4x4 _xproj =
 { 0,0,-1,0,
 0,-1,0,0,
 0,0,0,-100,
 1,0,0,100, };
-const static float4x4 _nxproj=
+const static float4x4 _nxproj =
 { 0,0,1,0,
 0,-1,0,0,
 0,0,0,-100,
 -1,0,0,100, };
-const static float4x4 _yproj=
+const static float4x4 _yproj =
 { 1,0,0,0,
 0,0,1,0,
 0,0,0,-100,
 0,1,0,100, };
-const static float4x4 _nyproj=
+const static float4x4 _nyproj =
 { 1,0,0,0,
 0,0,-1,0,
 0,0,0,-100,
 0,-1,0,100, };
-const static float4x4 _zproj=
+const static float4x4 _zproj =
 { 1,0,0,0,
 0,-1,0,0,
 0,0,0,-100,
 0,0,1,100, };
-const static float4x4 _nzproj=
+const static float4x4 _nzproj =
 { -1,0,0,0,
 0,-1,0,0,
 0,0,0,-100,
@@ -46,7 +46,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 {
 	float3 TexDir = float3(0, 0, 0);
 	float4 dir1 = float4(0, 0, 0, 0);
-	uint randomState = dtid.x + dtid.y * 2048 + dtid.z * 4194304 + batch * 67108864;
+	uint randomState = RNG::RandomSeed(dtid.x + dtid.y * 2048 + dtid.z * 4194304 + batch * 67108864);
 	float2 screenPos = ((float2)dtid.xy + 0.5f) / (float2)imageSize * 2 - 1;
 	if (dtid.x > imageSize.x || dtid.y > imageSize.y)
 	{
@@ -81,7 +81,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 	const int c_sampleCount = 1024;
 	for (int i = 0; i < c_sampleCount; i++)
 	{
-		float3 vec1 = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
+		float3 vec1 = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
 		float ndl = dot(vec1, TexDir);
 		if (ndl < 0)
 		{
@@ -90,7 +90,7 @@ void main(uint3 dtid : SV_DispatchThreadID)
 		}
 		col1 += Image.SampleLevel(s0, vec1, 0) * ndl / c_sampleCount / 3.14159265359f;
 	}
-	float qsp = 1.0f / (quality+ 1.0f);
+	float qsp = 1.0f / (quality + 1.0f);
 	IrradianceMap[dtid] = float4(col1 * qsp + IrradianceMap[dtid].rgb, 1);
 	//IrradianceMap[dtid] = float4(TexDir, 1);
 	//IrradianceMap[dtid] = float4(0.5,1,1,1);

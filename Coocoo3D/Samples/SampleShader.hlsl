@@ -1,10 +1,10 @@
-//VS¡¢GS¡¢VS1¡¢GS1¡¢PS1ÕâÎå¸öº¯ÊıÓÃÓÚäÖÈ¾
-//VSºÍGSÄÜÔÚ¹âÏß×·×ÙÖĞÊ¹ÓÃ
-//VSParticle¡¢GSParticle¡¢PSParticle¡¢CSParticleÕâËÄ¸öº¯ÊıÓÃÓÚÁ£×ÓÏµÍ³¡£
-//CSParticleÓÃÓÚ½øĞĞÁ£×Ó·¢ÉäºÍ¸üĞÂ¡£
-//Ëæ×Å°æ±¾¸üĞÂ£¬Õâ¸öÎÄ¼şµÄÄÚÈİĞèÒªÏàÓ¦¸Ä¶¯¡£registerÒ²¿ÉÄÜ»á¸Ä¶¯¡£²»ÄÜ±£Ö¤¼æÈİĞÔ¡£
-//Ê¹ÓÃshader model 5.0
-//¸ü¶àĞÅÏ¢ÇëÔÚCoocoo3DÔ´ÂëÖĞµÄShadersÎÄ¼ş¼ĞÀïÕÒ
+//VSã€GSã€VS1ã€GS1ã€PS1è¿™äº”ä¸ªå‡½æ•°ç”¨äºæ¸²æŸ“
+//VSå’ŒGSèƒ½åœ¨å…‰çº¿è¿½è¸ªä¸­ä½¿ç”¨
+//VSParticleã€GSParticleã€PSParticleã€CSParticleè¿™å››ä¸ªå‡½æ•°ç”¨äºç²’å­ç³»ç»Ÿã€‚
+//CSParticleç”¨äºè¿›è¡Œç²’å­å‘å°„å’Œæ›´æ–°ã€‚
+//éšç€ç‰ˆæœ¬æ›´æ–°ï¼Œè¿™ä¸ªæ–‡ä»¶çš„å†…å®¹éœ€è¦ç›¸åº”æ”¹åŠ¨ã€‚registerä¹Ÿå¯èƒ½ä¼šæ”¹åŠ¨ã€‚ä¸èƒ½ä¿è¯å…¼å®¹æ€§ã€‚
+//ä½¿ç”¨shader model 5.0
+//æ›´å¤šä¿¡æ¯è¯·åœ¨Coocoo3Dæºç ä¸­çš„Shadersæ–‡ä»¶å¤¹é‡Œæ‰¾
 #define MAX_BONE_MATRICES 1020
 
 struct LightInfo
@@ -464,35 +464,44 @@ SkinnedInfo SkinVert(VSSkinnedIn Input)
 	//Bone0
 	uint iBone = Input.Bones.x;
 	float fWeight = Input.Weights.x;
-	matrix m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	matrix m;
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone1
 	iBone = Input.Bones.y;
 	fWeight = Input.Weights.y;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone2
 	iBone = Input.Bones.z;
 	fWeight = Input.Weights.z;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	//Bone3
 	iBone = Input.Bones.w;
 	fWeight = Input.Weights.w;
-	m = FetchBoneTransform(iBone);
-	Output.Pos += fWeight * mul(Pos, m);
-	Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
-	Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
-
+	if (iBone < MAX_BONE_MATRICES)
+	{
+		m = FetchBoneTransform(iBone);
+		Output.Pos += fWeight * mul(Pos, m);
+		Output.Norm += fWeight * mul(float4(Norm, 0), m).xyz;
+		Output.Tan += fWeight * mul(float4(Tan, 0), m).xyz;
+	}
 	return Output;
 }
 
@@ -690,7 +699,7 @@ RWStructuredBuffer<ParticleDynamicData> particleDynamicData : register(u1);
 void CSParticle(uint3 dtid : SV_DispatchThreadID)
 {
 	uint index = dtid.x;
-	if (index >= g_indexCount / 3)return;//·ÀÖ¹ÄÚ´æ·ÃÎÊÒç³ö£¬Òç³ö»áÔì³ÉÑÏÖØºó¹û¡£
+	if (index >= g_indexCount / 3)return;//é˜²æ­¢å†…å­˜è®¿é—®æº¢å‡ºï¼Œæº¢å‡ºä¼šé€ æˆä¸¥é‡åæœã€‚
 	Triangle1 tri1 = sourcePrimitives[index];
 	if (particleDynamicData[index].life <= 0)
 	{

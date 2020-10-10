@@ -101,7 +101,7 @@ namespace Coocoo3DGraphics
 		void Copy(TextureCube^ source, RenderTextureCube^ dest);
 		void CopyBackBuffer(ReadBackTexture2D^ target, int index);
 		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
-		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMesh(DynamicMesh^ mesh);

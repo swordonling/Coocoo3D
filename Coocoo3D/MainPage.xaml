@@ -122,20 +122,20 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <MenuBar>
-            <MenuBarItem Title="文件">
-                <MenuFlyoutItem Text="打开文件夹" Click="OpenFolder_Click"/>
-                <MenuFlyoutItem Text="背景音乐" Click="OpenMedia_Click"/>
+            <MenuBarItem x:Uid="M_MenuBarItem_File">
+                <MenuFlyoutItem x:Uid="M_MenuBarItem_OpenFolder" Click="OpenFolder_Click"/>
+                <MenuFlyoutItem x:Uid="M_MenuBarItem_BackgroundMusic" Click="OpenMedia_Click"/>
             </MenuBarItem>
-            <MenuBarItem Title="视图">
-                <MenuFlyoutSubItem Text="布局">
+            <MenuBarItem x:Uid="M_MenuBarItem_View">
+                <MenuFlyoutSubItem x:Uid="M_MenuBarItem_Layout">
                     <muxc:RadioMenuFlyoutItem Text="1" GroupName="G1" IsChecked="True" Click="RadioMenuFlyoutItem1_Click"/>
                     <muxc:RadioMenuFlyoutItem Text="2" GroupName="G1" Click="RadioMenuFlyoutItem2_Click"/>
                     <muxc:RadioMenuFlyoutItem Text="3" GroupName="G1" Click="RadioMenuFlyoutItem3_Click"/>
                 </MenuFlyoutSubItem>
             </MenuBarItem>
-            <MenuBarItem Title="帮助">
-                <MenuFlyoutItem Text="关于软件" Click="About_Click"/>
-                <MenuFlyoutItem Text="示例着色器" Click="SampleShader_Click"/>
+            <MenuBarItem x:Uid="M_MenuBarItem_Help">
+                <MenuFlyoutItem x:Uid="M_MenuBarItem_AboutThisSoftware" Click="About_Click"/>
+                <MenuFlyoutItem x:Uid="M_MenuBarItem_ShaderFileSample" Click="SampleShader_Click"/>
             </MenuBarItem>
         </MenuBar>
         <Grid Grid.Row="1">

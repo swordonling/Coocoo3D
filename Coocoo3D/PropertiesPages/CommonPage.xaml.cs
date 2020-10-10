@@ -18,6 +18,7 @@ using Coocoo3D.Core;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Coocoo3D.FileFormat;
+using Windows.UI.Popups;
 
 // https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
 
@@ -48,9 +49,14 @@ namespace Coocoo3D.PropertiesPages
                 _cacheRot = appBody.camera.Angle;
                 _cacheFOV = appBody.camera.Fov;
                 _cacheDistance = appBody.camera.Distance;
+                var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                 if (appBody.deviceResources.IsRayTracingSupport())
                 {
-                    VRayTracingSupport.Text = "使用的显卡支持光线追踪";
+                    VRayTracingSupport.Text = resourceLoader.GetString("Message_GPUSupportRayTracing");
+                }
+                else
+                {
+                    VRayTracingSupport.Text = resourceLoader.GetString("Message_GPUNotSupportRayTracing");
                 }
                 for (int i = 0; i < comboBox1Values.Length; i++)
                 {
@@ -60,7 +66,7 @@ namespace Coocoo3D.PropertiesPages
             }
             else
             {
-                Frame.Navigate(typeof(ErrorPropertiesPage), "显示属性错误");
+                Frame.Navigate(typeof(ErrorPropertiesPage), "error");
             }
         }
 
@@ -109,7 +115,7 @@ namespace Coocoo3D.PropertiesPages
             DateTime Now = DateTime.Now;
             if (Now - PrevUpdateTime > TimeSpan.FromSeconds(1))
             {
-                ViewFrameRate.Text = string.Format("帧率：{0}", (TimeSpan.FromSeconds(1) / (Now - PrevUpdateTime) * (appBody.RenderCount - prevRenderCount)).ToString(".0"));
+                ViewFrameRate.Text = string.Format("FPS: {0}", (TimeSpan.FromSeconds(1) / (Now - PrevUpdateTime) * (appBody.RenderCount - prevRenderCount)).ToString(".0"));
                 PrevUpdateTime = Now;
                 prevRenderCount = appBody.RenderCount;
             }
@@ -334,7 +340,7 @@ namespace Coocoo3D.PropertiesPages
         {
             return a.Equals(b, StringComparison.CurrentCultureIgnoreCase);
         }
-        private bool IsImageExtName(string extName)
+        private bool IsMotionExtName(string extName)
         {
             return StrEq(".vmd", extName);
         }
@@ -344,7 +350,7 @@ namespace Coocoo3D.PropertiesPages
             if (e.DataView.Properties.TryGetValue("ExtName", out object object1))
             {
                 string extName = object1 as string;
-                if (extName != null && IsImageExtName(extName))
+                if (extName != null && IsMotionExtName(extName))
                 {
                     e.AcceptedOperation = DataPackageOperation.Copy;
                 }
@@ -361,13 +367,23 @@ namespace Coocoo3D.PropertiesPages
                 StorageFile storageFile = object2 as StorageFile;
                 e.DataView.Properties.TryGetValue("Folder", out object object3);
                 StorageFolder storageFolder = object3 as StorageFolder;
+
+                var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                 if (StrEq(".vmd", extName))
                 {
-                    VMDFormat motionFile = new VMDFormat();
-                    motionFile.Reload(new BinaryReader(await storageFile.OpenStreamForReadAsync()));
-                    appBody.camera.cameraMotion.cameraKeyFrames = motionFile.CameraKeyFrames;
-                    vCameraMotionOn.IsEnabled = true;
-                    appBody.camera.CameraMotionOn = true;
+                    try
+                    {
+                        VMDFormat motionFile = new VMDFormat();
+                        motionFile.Reload(new BinaryReader(await storageFile.OpenStreamForReadAsync()));
+                        appBody.camera.cameraMotion.cameraKeyFrames = motionFile.CameraKeyFrames;
+                        vCameraMotionOn.IsEnabled = true;
+                        appBody.camera.CameraMotionOn = true;
+                    }
+                    catch (Exception exception)
+                    {
+                        MessageDialog dialog = new MessageDialog(string.Format(resourceLoader.GetString("Error_Message_VMDError"), exception));
+                        await dialog.ShowAsync();
+                    }
                 }
             }
         }

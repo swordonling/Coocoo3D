@@ -19,6 +19,14 @@ namespace Coocoo3D.RenderPipeline
         const int c_argumentsSizeInBytes = 64;
         const int c_presentDataSize = 512;
 
+        static readonly RayTracingSceneSettings c_rayTracingSceneSettings = new RayTracingSceneSettings()
+        {
+            payloadSize = 32,
+            attributeSize = 8,
+            maxRecursionDepth = 5,
+            rayTypeCount = 2,
+        };
+
         byte[] rcDataUploadBuffer = new byte[c_tempDataSize];
         public GCHandle gch_rcDataUploadBuffer;
         RayTracingScene RayTracingScene = new RayTracingScene();
@@ -49,24 +57,23 @@ namespace Coocoo3D.RenderPipeline
         }
 
         #region graphics assets
+        static readonly string[] c_rayGenShaderNames = { "MyRaygenShader" };
+        static readonly string[] c_missShaderNames = { "MissShaderSurface", "MissShaderTest", };
+        static readonly string[] c_hitGroupNames = new string[] { "HitGroupSurface", "HitGroupTest", };
+        HitGroupDesc[] hitGroupDescs = new HitGroupDesc[]
+        {
+            new HitGroupDesc { HitGroupName = "HitGroupSurface", AnyHitName = "AnyHitShaderSurface", ClosestHitName = "ClosestHitShaderSurface" },
+            new HitGroupDesc { HitGroupName = "HitGroupTest", AnyHitName = "AnyHitShaderTest", ClosestHitName = "ClosestHitShaderTest" },
+        };
+
         public async Task ReloadAssets(DeviceResources deviceResources)
         {
-
-            RayTracingScene.ReloadPipelineStatesStep0();
-            RayTracingScene.ReloadPipelineStatesStep1(await ReadAllBytes("ms-appx:///Coocoo3DGraphics/Raytracing.cso"), new string[] { "MyRaygenShader", "ClosestHitShaderColor", "ClosestHitShaderTest", "MissShaderColor", "MissShaderTest"/*, "MyAnyHitShader"*/, });
-            RayTracingScene.ReloadPipelineStatesStep2(deviceResources, hitGroupDescs, 32, 8, 5);
+            RayTracingScene.ReloadLibrary(await ReadFile("ms-appx:///Coocoo3DGraphics/Raytracing.cso"), new string[] { "MyRaygenShader", "ClosestHitShaderSurface", "ClosestHitShaderTest", "MissShaderSurface", "MissShaderTest", "AnyHitShaderSurface", "AnyHitShaderTest", });
+            RayTracingScene.ReloadPipelineStates(deviceResources, hitGroupDescs, c_rayTracingSceneSettings);
             RayTracingScene.ReloadAllocScratchAndInstance(deviceResources, 1024 * 1024 * 64, 1024);
             Ready = true;
         }
         #endregion
-        string[] rayGenShaderNames = { "MyRaygenShader" };
-        string[] missShaderNames = { "MissShaderColor", "MissShaderTest", };
-        string[] hitGroupNames = new string[] { "HitGroupColor", "HitGroupTest", };
-        HitGroupDesc[] hitGroupDescs = new HitGroupDesc[]
-        {
-            new HitGroupDesc { HitGroupName = "HitGroupColor"/*,AnyHitName="MyAnyHitShader"*/, ClosestHitName = "ClosestHitShaderColor" },
-            new HitGroupDesc { HitGroupName = "HitGroupTest", ClosestHitName="ClosestHitShaderTest" },
-        };
 
 
         public override void TimeChange(double time, double deltaTime)
@@ -145,21 +152,21 @@ namespace Coocoo3D.RenderPipeline
                     BuildEntityBAS(context, entities[i].rendererComponent, ref matIndex);
                 }
                 graphicsContext.BuildTopAccelerationStructures(RayTracingScene);
-                RayTracingScene.BuildShaderTableStep1(context.deviceResources, rayGenShaderNames, missShaderNames, c_argumentsSizeInBytes);
-                RayTracingScene.BuildShaderTableStep2(context.deviceResources, hitGroupNames, c_argumentsSizeInBytes, matIndex);
+                RayTracingScene.BuildShaderTableStep1(context.deviceResources, c_rayGenShaderNames, c_missShaderNames, c_argumentsSizeInBytes);
+                RayTracingScene.BuildShaderTableStep2(context.deviceResources, c_hitGroupNames, c_argumentsSizeInBytes, matIndex);
             }
 
             int cameraIndex = 0;
-            context.graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
-            context.graphicsContext.SetComputeUAVT(context.outputRTV, 0);
-            context.graphicsContext.SetComputeSRVT(context.EnvCubeMap, 3);
-            context.graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
+            graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
+            graphicsContext.SetComputeUAVT(context.outputRTV, 0);
+            graphicsContext.SetComputeSRVT(context.EnvCubeMap, 3);
+            graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
 
-            context.graphicsContext.SetComputeCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
+            graphicsContext.SetComputeCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
 
             if (entities.Count > 0)
             {
-                context.graphicsContext.DoRayTracing(RayTracingScene, 1);
+                graphicsContext.DoRayTracing(RayTracingScene, 1);
             }
         }
 
@@ -202,7 +209,7 @@ namespace Coocoo3D.RenderPipeline
                     tex1 = texs[Materials[i].texIndex];
                 tex1 = TextureStatusSelect(tex1, textureLoading, textureError, textureError);
 
-                graphicsContext.BuildBASAndParam(RayTracingScene, rendererComponent.mesh, 0x1, indexStartLocation, Materials[i].indexCount, 2, tex1, materialBuffers[matIndex]);
+                graphicsContext.BuildBASAndParam(RayTracingScene, rendererComponent.mesh, 0x1, indexStartLocation, Materials[i].indexCount, tex1, materialBuffers[matIndex]);
                 matIndex++;
 
                 indexStartLocation += Materials[i].indexCount;
@@ -214,10 +221,7 @@ namespace Coocoo3D.RenderPipeline
             int lightCount = 0;
             for (int j = 0; j < lightings.Count; j++)
             {
-                if (lightings[j].LightingType == LightingType.Directional)
-                    Marshal.StructureToPtr(Vector3.Transform(-Vector3.UnitZ, lightings[j].rotateMatrix), pBufferData, true);
-                else
-                    Marshal.StructureToPtr(lightings[j].Rotation * 180 / MathF.PI, pBufferData, true);
+                Marshal.StructureToPtr(lightings[j].RotationOrPosition, pBufferData, true);
                 Marshal.StructureToPtr((uint)lightings[j].LightingType, pBufferData + 12, true);
                 Marshal.StructureToPtr(lightings[j].Color, pBufferData + 16, true);
                 lightCount++;

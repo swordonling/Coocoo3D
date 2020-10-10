@@ -91,12 +91,17 @@ namespace Coocoo3D.FileFormat
                 if (skinningType == (int)WeightDeformType.BDEF1)
                 {
                     vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId[1] = -1;
+                    vertex.boneId[2] = -1;
+                    vertex.boneId[3] = -1;
                     vertex.weight[0] = 1;
                 }
                 else if (skinningType == (int)WeightDeformType.BDEF2)
                 {
                     vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
                     vertex.boneId[1] = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId[2] = -1;
+                    vertex.boneId[3] = -1;
                     vertex.weight[0] = reader.ReadSingle();
                     vertex.weight[1] = 1.0f - vertex.weight[0];
                 }
@@ -116,6 +121,8 @@ namespace Coocoo3D.FileFormat
 
                     vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
                     vertex.boneId[1] = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId[2] = -1;
+                    vertex.boneId[3] = -1;
                     vertex.weight[0] = reader.ReadSingle();
                     vertex.weight[1] = 1.0f - vertex.weight[0];
                     ReadVector3(reader);

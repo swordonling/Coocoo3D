@@ -58,6 +58,18 @@ namespace Coocoo3D.MMDSupport
         }
     }
 
+    public struct LightKeyFrame : IComparable<LightKeyFrame>
+    {
+        public int Frame;
+        public Vector3 Color;
+        public Vector3 Position;
+
+        public int CompareTo(LightKeyFrame other)
+        {
+            return Frame.CompareTo(other.Frame);
+        }
+    }
+
     public struct Interpolator
     {
         public float ax;

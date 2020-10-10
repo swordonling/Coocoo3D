@@ -18,6 +18,11 @@ namespace Util
 		return physx::PxTransform(f.x, f.y, f.z, physx::PxQuat(q.x, q.y, q.z, q.w));
 	}
 
+	inline physx::PxTransform GetPxTransform(Windows::Foundation::Numerics::float4x4 mat)
+	{
+		return physx::PxTransform((const physx::PxMat44&)mat);
+	}
+
 	inline btQuaternion GetbtQuaternion(Windows::Foundation::Numerics::quaternion q)
 	{
 		return btQuaternion(q.x, q.y, q.z, q.w);

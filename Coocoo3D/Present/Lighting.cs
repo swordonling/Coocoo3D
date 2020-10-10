@@ -17,20 +17,12 @@ namespace Coocoo3D.Present
     }
     public struct LightingData
     {
+        public Vector3 RotationOrPosition;
         public LightingType LightingType;
-        public Vector3 Rotation;
         public Vector4 Color;
         public Matrix4x4 vpMatrix;
-        public Matrix4x4 rotateMatrix;
     }
-    public struct LightingData2
-    {
-        public LightingType LightingType;
-        public Vector3 Rotation;
-        public Vector4 Color;
-        public Matrix4x4 vpMatrix;
-        public Matrix4x4 rotateMatrix;
-    }
+
     public class Lighting : ISceneObject, INotifyPropertyChanged
     {
         public string Name = "";
@@ -60,8 +52,8 @@ namespace Coocoo3D.Present
                 bool extendY = ((camera.Angle.X + MathF.PI / 4) % MathF.PI + MathF.PI) % MathF.PI < MathF.PI / 2;
 
 
-                rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, camera.Angle.Z);
-                var pos = Vector3.Transform(-Vector3.UnitZ * 128, rotateMatrix);
+                rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Rotation.Y, Rotation.X, Rotation.Z);
+                var pos = Vector3.Transform(-Vector3.UnitZ * 512, rotateMatrix);
                 var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
                 Matrix4x4 vMatrix = Matrix4x4.CreateLookAt(pos + lookat, lookat, up);
                 Matrix4x4 pMatrix;
@@ -72,10 +64,10 @@ namespace Coocoo3D.Present
                 if (extendY)
                     lookat += Vector3.Normalize((camera.LookAtPoint - camera.Pos) * new Vector3(1, 0, 1)) * ExtendRange * 3 * a;
                 if (!extendY)
-                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange, dist + ExtendRange, 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange, dist + ExtendRange, 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
                 else
                 {
-                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (4 * a + 1), dist + ExtendRange * (4 * a + 1), 0.0f, 512) * Matrix4x4.CreateScale(-1, 1, 1);
+                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (4 * a + 1), dist + ExtendRange * (4 * a + 1), 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
                 }
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 
@@ -91,8 +83,7 @@ namespace Coocoo3D.Present
             {
                 Color = Color,
                 LightingType = LightingType,
-                rotateMatrix = rotateMatrix,
-                Rotation = Rotation,
+                RotationOrPosition = LightingType == LightingType.Directional ? Vector3.Transform(-Vector3.UnitZ, rotateMatrix) : Rotation * 180 / MathF.PI,
                 vpMatrix = vpMatrix,
             };
         }

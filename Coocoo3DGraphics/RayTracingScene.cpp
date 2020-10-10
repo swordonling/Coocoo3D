@@ -5,7 +5,7 @@
 using namespace Coocoo3DGraphics;
 using namespace DX;
 
-void RayTracingScene::SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitGroupSubobject, LPCWSTR hitGroupName, LPCWSTR anyHitShaderName, LPCWSTR closestHitShaderName)
+inline void RayTracingScene::SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitGroupSubobject, LPCWSTR hitGroupName, LPCWSTR anyHitShaderName, LPCWSTR closestHitShaderName)
 {
 	hitGroupSubobject->SetAnyHitShaderImport(anyHitShaderName);
 	hitGroupSubobject->SetClosestHitShaderImport(closestHitShaderName);
@@ -13,15 +13,17 @@ void RayTracingScene::SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitGroupSub
 	hitGroupSubobject->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 }
 
-void RayTracingScene::ReloadPipelineStatesStep0()
+void RayTracingScene::ReloadLibrary(IBuffer^ rtShader, const Platform::Array<Platform::String^>^ exportNames)
 {
-	raytracingPipeline = { D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
-}
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(rtShader)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* data = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&data));
 
-void RayTracingScene::ReloadPipelineStatesStep1(const Platform::Array<byte>^ data, const Platform::Array<Platform::String^>^ exportNames)
-{
-	D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE(data->begin(), data->Length);
-	auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+
+	m_raytracingPipeline = { D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+	D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE(data, rtShader->Length);
+	auto lib = m_raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 	lib->SetDXILLibrary(&libdxil);
 	for (int i = 0; i < exportNames->Length; i++)
 	{
@@ -29,9 +31,9 @@ void RayTracingScene::ReloadPipelineStatesStep1(const Platform::Array<byte>^ dat
 	}
 }
 
-void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth)
+void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, RayTracingSceneSettings settings)
 {
-
+	m_rayTypeCount = settings.rayTypeCount;
 	{
 		D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
 		staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -66,11 +68,9 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 
 		DX::ThrowIfFailed(D3D12SerializeRootSignature(&globalRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
 		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[0])));
-
 	}
 
 	{
-
 		CD3DX12_ROOT_PARAMETER rootParameters[8];
 		CD3DX12_DESCRIPTOR_RANGE range[6];
 		for (int i = 0; i < 6; i++)
@@ -95,39 +95,38 @@ void RayTracingScene::ReloadPipelineStatesStep2(DeviceResources^ deviceResources
 
 		DX::ThrowIfFailed(D3D12SerializeRootSignature(&localRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &blob, &error));
 		DX::ThrowIfFailed(device->CreateRootSignature(1, blob->GetBufferPointer(), blob->GetBufferSize(), IID_PPV_ARGS(&m_rootSignatures[1])));
-
 	}
 
 
 	for (int i = 0; i < hitGroups->Length; i++)
 	{
-		SubobjectHitGroup(raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(),
+		SubobjectHitGroup(m_raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(),
 			hitGroups[i]->HitGroupName->Begin(),
 			hitGroups[i]->AnyHitName->Begin() != hitGroups[i]->AnyHitName->End() ? hitGroups[i]->AnyHitName->Begin() : nullptr,
 			hitGroups[i]->ClosestHitName->Begin() != hitGroups[i]->ClosestHitName->End() ? hitGroups[i]->ClosestHitName->Begin() : nullptr);
 	}
 
 
-	auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+	auto localRootSignature = m_raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
 	localRootSignature->SetRootSignature(m_rootSignatures[1].Get());
 	// Shader association
-	auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+	auto rootSignatureAssociation = m_raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 	rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
 	for (int i = 0; i < hitGroups->Length; i++)
 	{
 		rootSignatureAssociation->AddExport(hitGroups[i]->HitGroupName->Begin());
 	}
 
-	raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()->SetRootSignature(m_rootSignatures[0].Get());
+	m_raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()->SetRootSignature(m_rootSignatures[0].Get());
 
-	auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-	shaderConfig->Config(payloadSize, attributeSize);
+	auto shaderConfig = m_raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+	shaderConfig->Config(settings.payloadSize, settings.attributeSize);
 
-	auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-	pipelineConfig->Config(maxRecursionDepth);
+	auto pipelineConfig = m_raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+	pipelineConfig->Config(settings.maxRecursionDepth);
 
 	auto device = deviceResources->GetD3DDevice5();
-	DX::ThrowIfFailed(device->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
+	DX::ThrowIfFailed(device->CreateStateObject(m_raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 }
 
 void RayTracingScene::ReloadAllocScratchAndInstance(DeviceResources^ deviceResources, UINT scratchSize, UINT instanceCount)
@@ -213,7 +212,6 @@ void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, co
 
 void RayTracingScene::BuildShaderTableStep2(DeviceResources^ deviceResources, const Platform::Array <Platform::String^>^ hitGroupNames, int argumentSize, int instances)
 {
-
 	auto device = deviceResources->GetD3DDevice5();
 	UINT shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> stateObjectProperties;

@@ -24,6 +24,7 @@ namespace Coocoo3D.FileFormat
             var uName = reader.ReadBytes(20);
             var jpEncoding = CodePagesEncodingProvider.Instance.GetEncoding("shift_jis");
             Name = jpEncoding.GetString(uName);
+            var stream = reader.BaseStream;
 
             int numOfBone = reader.ReadInt32();
             for (int i = 0; i < numOfBone; i++)
@@ -51,6 +52,8 @@ namespace Coocoo3D.FileFormat
 
                 keyFrames.Add(keyFrame);
             }
+            if (stream.Length - stream.Position == 0)
+                goto endlabel;
 
             int numOfMorph = reader.ReadInt32();
             for (int i = 0; i < numOfMorph; i++)
@@ -73,6 +76,8 @@ namespace Coocoo3D.FileFormat
 
                 keyFrames.Add(keyFrame);
             }
+            if (stream.Length - stream.Position == 0)
+                goto endlabel;
 
             int numOfCam = reader.ReadInt32();
             for (int i = 0; i < numOfCam; i++)
@@ -93,7 +98,23 @@ namespace Coocoo3D.FileFormat
 
                 CameraKeyFrames.Add(keyFrame);
             }
+            if (stream.Length - stream.Position == 0)
+                goto endlabel;
 
+            int numOfLight = reader.ReadInt32();
+            for (int i = 0; i < numOfLight; i++)
+            {
+                LightKeyFrame lightKeyFrame = new LightKeyFrame();
+                lightKeyFrame.Frame = reader.ReadInt32();
+                lightKeyFrame.Color = ReadVector3(reader);
+                lightKeyFrame.Position = ReadVector3(reader);
+
+                LightKeyFrames.Add(lightKeyFrame);
+            }
+            if (stream.Length - stream.Position == 0)
+                goto endlabel;
+
+        endlabel:
             foreach (var keyframes in BoneKeyFrameSet.Values)
             {
                 keyframes.Sort();
@@ -103,6 +124,7 @@ namespace Coocoo3D.FileFormat
                 keyframes.Sort();
             }
             CameraKeyFrames.Sort();
+            LightKeyFrames.Sort();
         }
 
         public void SaveToFile(BinaryWriter writer)
@@ -177,19 +199,21 @@ namespace Coocoo3D.FileFormat
                 writer.Write(Convert.ToByte(keyframe.orthographic));
             }
 
-        }
-
-        public VMDFormat GetCopy()
-        {
-            VMDFormat vmd = new VMDFormat();
-
-            return vmd;
+            int numOfLight = LightKeyFrames.Count;
+            writer.Write(numOfLight);
+            foreach (var keyframe in LightKeyFrames)
+            {
+                writer.Write(keyframe.Frame);
+                WriteVector3(writer, keyframe.Color);
+                WriteVector3(writer, keyframe.Position);
+            }
         }
         public byte[] headerChars;
         public string Name;
         public Dictionary<string, List<BoneKeyFrame>> BoneKeyFrameSet { get; set; } = new Dictionary<string, List<BoneKeyFrame>>();
         public Dictionary<string, List<MorphKeyFrame>> MorphKeyFrameSet { get; set; } = new Dictionary<string, List<MorphKeyFrame>>();
         public List<CameraKeyFrame> CameraKeyFrames { get; set; } = new List<CameraKeyFrame>();
+        public List<LightKeyFrame> LightKeyFrames { get; set; } = new List<LightKeyFrame>();
 
         private Interpolator ReadBoneInterpolator(BinaryReader reader)
         {

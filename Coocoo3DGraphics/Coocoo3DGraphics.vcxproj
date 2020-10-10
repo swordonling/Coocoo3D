@@ -303,6 +303,7 @@
     <ClInclude Include="StaticBuffer.h" />
     <ClInclude Include="Texture2D.h" />
     <ClInclude Include="TextureCube.h" />
+    <ClInclude Include="TextUtil.h" />
     <ClInclude Include="TwinBuffer.h" />
     <ClInclude Include="WICFactory.h" />
   </ItemGroup>

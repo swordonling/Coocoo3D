@@ -228,6 +228,9 @@
     <ClInclude Include="Extension\CooGExtension.h">
       <Filter>Extension</Filter>
     </ClInclude>
+    <ClInclude Include="TextUtil.h">
+      <Filter>Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">

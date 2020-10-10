@@ -459,7 +459,6 @@ void GraphicsContext::Dispatch(int x, int y, int z)
 
 void GraphicsContext::DoRayTracing(RayTracingScene^ rayTracingScene, int asIndex)
 {
-	//m_commandList->SetComputeRootSignature(rayTracingScene->m_rootSignatures[0].Get());
 	m_commandList->SetComputeRootShaderResourceView(asIndex, rayTracingScene->m_topLevelAccelerationStructure[rayTracingScene->asLastUpdateIndex]->GetGPUVirtualAddress());
 
 	int lastUpdateIndexRtpso = rayTracingScene->stLastUpdateIndex;
@@ -1088,7 +1087,7 @@ void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTrac
 	D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
 	geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 	geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-	geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+	geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
 	geometryDesc.Triangles.VertexBuffer.StrideInBytes = MMDMesh::c_skinnedVerticeStride;
 	geometryDesc.Triangles.VertexCount = vertexCount;
 	geometryDesc.Triangles.VertexBuffer.StartAddress = mesh->m_skinnedVertice->GetGPUVirtualAddress() + vertexBegin * MMDMesh::c_skinnedVerticeStride;
@@ -1126,7 +1125,7 @@ void GraphicsContext::BuildBottomAccelerationStructures(RayTracingScene^ rayTrac
 	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(asStruct.Get()));
 }
 
-void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, int rayTypeCount, Texture2D^ diff, ConstantBufferStatic^ mat)
+void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -1145,7 +1144,7 @@ void GraphicsContext::BuildBASAndParam(RayTracingScene^ rayTracingAccelerationSt
 	instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
 	instanceDesc.InstanceMask = instanceMask;
 	instanceDesc.InstanceID = index1;
-	instanceDesc.InstanceContributionToHitGroupIndex = index1 * rayTypeCount;
+	instanceDesc.InstanceContributionToHitGroupIndex = index1 * rayTracingAccelerationStructure->m_rayTypeCount;
 	instanceDesc.AccelerationStructure = rayTracingAccelerationStructure->m_bottomLevelASs[rayTracingAccelerationStructure->asLastUpdateIndex][index1]->GetGPUVirtualAddress();
 	rayTracingAccelerationStructure->m_instanceDescs.push_back(instanceDesc);
 }

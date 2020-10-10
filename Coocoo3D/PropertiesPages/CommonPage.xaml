@@ -27,7 +27,7 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.ColumnSpan="3" Text="摄像机"/>
+                    <TextBlock x:Uid="Page_Common_Text_Camera" Grid.ColumnSpan="3"/>
                     <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="X" Value="{x:Bind VPX,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VPY,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VPZ,Mode=TwoWay}" AcceptsExpression="True"/>
@@ -35,36 +35,36 @@
                     <mu:NumberBox Grid.Row="2" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="2" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" AcceptsExpression="True" Minimum="0.1" Maximum="179.9"/>
-                    <mu:NumberBox Grid.Row="3" Grid.Column="1" Header="距离" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="3" Grid.Column="1" x:Uid="Page_Common_TextBox_Distance" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="设置">
+                    <Button x:Uid="Page_Common_Button_Settings">
                         <Button.Flyout>
                             <Flyout Placement="RightEdgeAlignedTop">
                                 <StackPanel>
                                     <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
-                                    <ToggleSwitch Header="节省CPU" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="多线程渲染" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="超高分辨率阴影（仅forward）" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="Z-Prepass（仅forward）" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="环境光遮蔽（仅光线追踪）" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="阴影" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
-                                    <ComboBox x:Name="vQuality" Header="渲染质量" SelectionChanged="VQuality_SelectionChanged" SelectedIndex="0"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_SaveCPUPower" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_MultiThreadRendering" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_HighResolutionShadow" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_ZPrePass" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_AO" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_Shadow" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
+                                    <ComboBox x:Uid="Page_Common_ComboBox_RenderQuality" x:Name="vQuality" SelectionChanged="VQuality_SelectionChanged" SelectedIndex="0"/>
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
                     </Button>
-                    <Button Content="重置物理" Click="PhysicsReset_Click"/>
+                    <Button x:Uid="Page_Common_Button_ResetPhysics" Click="PhysicsReset_Click"/>
                 </StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="100"/>
                         <ColumnDefinition Width="100"/>
                     </Grid.ColumnDefinitions>
-                    <mu:NumberBox Grid.Column="0" Header="FPS限制" Value="{x:Bind VSetFps,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Column="0" x:Uid="Page_Common_TextBox_FPSLimit" Value="{x:Bind VSetFps,Mode=TwoWay}" AcceptsExpression="True"/>
                     <TextBlock x:Name="ViewFrameRate" Grid.Column="1"/>
                 </Grid>
-                <ComboBox Header="渲染管线" SelectedIndex="0" SelectionChanged="VRenderPipeline_SelectionChanged">
+                <ComboBox x:Uid="Page_Common_ComboBox_RenderPipeline" SelectedIndex="0" SelectionChanged="VRenderPipeline_SelectionChanged">
                     <ComboBoxItem Content="forward"/>
                     <ComboBoxItem Content="光线追踪1"/>
                 </ComboBox>
@@ -72,18 +72,18 @@
                     <ComboBoxItem Content="写实"/>
                     <ComboBoxItem Content="卡通1"/>
                 </ComboBox>-->
-                <TextBlock x:Name="VRayTracingSupport" Text="使用的显卡不支持光线追踪"/>
+                <TextBlock x:Name="VRayTracingSupport" TextWrapping="Wrap"/>
                 <TextBlock TextWrapping="Wrap">
                     <Hyperlink NavigateUri="ms-settings:display-advancedgraphics">点击这里更改使用的显卡。</Hyperlink>重启应用后生效。
                 </TextBlock>
-                <ToggleSwitch x:Name="vCameraMotionOn" Header="镜头动作" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
-                <TextBlock Text="将VMD文件拖到至此应用镜头" TextWrapping="Wrap"/>
-                <Button Content="刷新缓存">
+                <ToggleSwitch x:Uid="Page_Common_Switch_CameraMotionData" x:Name="vCameraMotionOn" IsOn="{x:Bind VCameraMotionOn,Mode=TwoWay}" IsEnabled="False"/>
+                <TextBlock x:Uid="Page_Common_Text_VMD" TextWrapping="Wrap"/>
+                <Button x:Uid="Page_Common_Button_RefreshCache">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel>
-                                <Button Content="刷新着色器" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
-                                <Button Content="刷新纹理" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
+                                <Button x:Uid="Page_Common_Button_RefreshShaderCaches" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
+                                <Button x:Uid="Page_Common_Button_RefreshTextureCaches" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

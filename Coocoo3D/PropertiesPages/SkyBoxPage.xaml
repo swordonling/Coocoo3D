@@ -48,12 +48,11 @@
                     <Image x:Name="_img5" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="5" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <TextBlock x:Name="showInfo"/>
-                <mu:NumberBox x:Name="vSkyBoxMultiple" Header="天空盒亮度倍数" Value="{x:Bind VSkyBoxMultiple,Mode=TwoWay}"/>
+                <mu:NumberBox x:Uid="Page_SkyBox_TextBox_SkyBoxLightMultiple" Value="{x:Bind VSkyBoxMultiple,Mode=TwoWay}"/>
             </StackPanel>
         </ScrollViewer>
         <StackPanel Grid.Row="1" Orientation="Horizontal">
-            <Button Content="应用" Click="Apply_Click"/>
-            <Button Content="应用(高质量)" Click="Apply1_Click"/>
+            <Button x:Uid="Page_SkyBox_Button_Apply" Click="Apply_Click"/>
         </StackPanel>
     </Grid>
 </Page>

@@ -88,20 +88,21 @@ namespace Coocoo3D
 
         private void Page_Loaded(object sender, RoutedEventArgs e)
         {
-
-            AddPage(tabViewL1, "通常", typeof(PropertiesPages.CommonPage), appBody);
-            AddPage(tabViewL1, "天空盒", typeof(PropertiesPages.SkyBoxPage), appBody);
-            AddPage(tabViewL1, "录制", typeof(PropertiesPages.RecordPage), appBody);
-            AddPage(tabViewR1, "场景", typeof(PropertiesPages.ScenePage), appBody);
-            AddPage(tabViewR1, "后处理", typeof(PropertiesPages.PostProcessPage), appBody);
-            AddPage(tabViewB1, "资源", typeof(PropertiesPages.ResourcesPage), appBody);
+            var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
+            ;
+            AddPage(tabViewL1, resourceLoader.GetString("Tab_Title_Common"), typeof(PropertiesPages.CommonPage), appBody);
+            AddPage(tabViewL1, resourceLoader.GetString("Tab_Title_SkyBox"), typeof(PropertiesPages.SkyBoxPage), appBody);
+            AddPage(tabViewL1, resourceLoader.GetString("Tab_Title_Record"), typeof(PropertiesPages.RecordPage), appBody);
+            AddPage(tabViewR1, resourceLoader.GetString("Tab_Title_Scene"), typeof(PropertiesPages.ScenePage), appBody);
+            AddPage(tabViewR1, resourceLoader.GetString("Tab_Title_PostProcess"), typeof(PropertiesPages.PostProcessPage), appBody);
+            AddPage(tabViewB1, resourceLoader.GetString("Tab_Title_Resources"), typeof(PropertiesPages.ResourcesPage), appBody);
 
             Frame frame1 = new Frame();
             frame1.Navigate(typeof(PropertiesPages.EmptyPropertiesPage));
             appBody.frameViewProperties = frame1;
             tabViewR2.TabItems.Add(new TabViewItem()
             {
-                Header = "细节",
+                Header = resourceLoader.GetString("Tab_Title_Detail"),
                 Content = frame1,
             });
         }
@@ -163,6 +164,7 @@ namespace Coocoo3D
                 appBody.Recording = false;
             }
             appBody.GameDriverContext.PlayTime = 0;
+            appBody.GameDriverContext.RequireResetPhysics = true;
             appBody.RequireRender(true);
         }
         private void Rear_Click(object sender, RoutedEventArgs e)
@@ -173,6 +175,7 @@ namespace Coocoo3D
                 appBody.Recording = false;
             }
             appBody.GameDriverContext.PlayTime = 9999;
+            appBody.GameDriverContext.RequireResetPhysics = true;
             appBody.RequireRender(true);
         }
         private async void Record_Click(object sender, RoutedEventArgs e)

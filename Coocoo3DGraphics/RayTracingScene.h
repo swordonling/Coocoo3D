@@ -4,6 +4,7 @@
 #include "MMDMesh.h"
 namespace Coocoo3DGraphics
 {
+	using namespace Windows::Storage::Streams;
 	public ref class HitGroupDesc sealed
 	{
 	public:
@@ -11,12 +12,18 @@ namespace Coocoo3DGraphics
 		property Platform::String^ AnyHitName;
 		property Platform::String^ ClosestHitName;
 	};
+	public value struct RayTracingSceneSettings
+	{
+		UINT payloadSize;
+		UINT attributeSize;
+		UINT maxRecursionDepth;
+		UINT rayTypeCount;
+	};
 	public ref class RayTracingScene sealed
 	{
 	public:
-		void ReloadPipelineStatesStep0();
-		void ReloadPipelineStatesStep1(const Platform::Array<byte>^ data, const Platform::Array<Platform::String^>^ exportNames);
-		void ReloadPipelineStatesStep2(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, UINT payloadSize, UINT attributeSize, UINT maxRecursionDepth);
+		void ReloadLibrary(IBuffer^ rtShader, const Platform::Array<Platform::String^>^ exportNames);
+		void ReloadPipelineStates(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, RayTracingSceneSettings settings);
 		void ReloadAllocScratchAndInstance(DeviceResources^ deviceResources, UINT scratchSize, UINT instanceCount);
 		void NextASIndex(int meshCount);
 		void NextSTIndex();
@@ -37,6 +44,7 @@ namespace Coocoo3DGraphics
 		UINT m_hitGroupShaderTableStrideInBytes;
 		UINT m_missShaderTableStrideInBytes;
 
+		UINT m_rayTypeCount = 2;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_topLevelAccelerationStructure[c_frameCount];
 		UINT m_topLevelAccelerationStructureSize[c_frameCount] = {};
@@ -48,7 +56,7 @@ namespace Coocoo3DGraphics
 
 		std::vector <D3D12_RAYTRACING_INSTANCE_DESC> m_instanceDescs;
 
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline;
+		CD3DX12_STATE_OBJECT_DESC m_raytracingPipeline;
 		void* pArgumentCache = nullptr;
 	private:
 		void SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitGroupSubobject, LPCWSTR hitGroupName, LPCWSTR anyHitShaderName, LPCWSTR closestHitShaderName);

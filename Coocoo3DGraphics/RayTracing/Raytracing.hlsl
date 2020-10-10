@@ -5,7 +5,7 @@
 #include "../Shaders/CameraDataDefine.hlsli"
 #include "../Shaders/RandomNumberGenerator.hlsli"
 
-typedef BuiltInTriangleIntersectionAttributes MyAttributes;
+typedef BuiltInTriangleIntersectionAttributes TriAttributes;
 struct RayPayload
 {
 	float4 color;
@@ -27,7 +27,7 @@ struct LightInfo
 	float4 LightColor;
 };
 
-struct PSSkinnedIn
+struct VertexSkinned
 {
 	float3 Pos;
 	float3 Norm;
@@ -52,7 +52,7 @@ cbuffer cb0 : register(b0)
 	CAMERA_DATA_DEFINE//is a macro
 };
 //local
-StructuredBuffer<PSSkinnedIn> Vertices : register(t1, space1);
+StructuredBuffer<VertexSkinned> Vertices : register(t1, space1);
 Texture2D diffuseMap :register(t2, space1);
 SamplerState s0 : register(s0);
 //
@@ -118,11 +118,29 @@ void MyRaygenShader()
 	g_renderTarget[DispatchRaysIndex().xy] = payload.color;
 }
 
+[shader("anyhit")]
+void AnyHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
+{
+	VertexSkinned triVert[3];
+	triVert[0] = Vertices[PrimitiveIndex() * 3];
+	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
+	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+
+	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Tex * (attr.barycentrics.x) +
+		triVert[2].Tex * (attr.barycentrics.y);
+	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
+	if (diffuseColor.a < 0.01)
+	{
+		IgnoreHit();
+	}
+}
+
 [shader("closesthit")]
-void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
+void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 {
 	payload.depth++;
-	PSSkinnedIn triVert[3];
+	VertexSkinned triVert[3];
 	triVert[0] = Vertices[PrimitiveIndex() * 3];
 	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
 	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
@@ -143,7 +161,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 	float3 specCol = clamp(_SpecularColor.rgb, 0.0001, 1);
 
 	normal = normalize(normal);
-	uint randomState = DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue;
+	uint randomState = RNG::RandomSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue);
 	float3 AOFactor = 1.0f;
 	if (payload.depth == 1 && g_enableAO != 0)
 	{
@@ -158,7 +176,7 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 				startPosOffsetN = max(dot(triVert[j].Pos - pos, normal), startPosOffsetN);
 			}
 			ray2.Origin = pos + normal * startPosOffsetN;
-			ray2.Direction = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
+			ray2.Direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
 			if (dot(ray2.Direction, normal) < 0)
 			{
 				ray2.Direction = -ray2.Direction;
@@ -307,13 +325,32 @@ void ClosestHitShaderColor(inout RayPayload payload, in MyAttributes attr)
 }
 
 [shader("miss")]
-void MissShaderColor(inout RayPayload payload)
+void MissShaderSurface(inout RayPayload payload)
 {
 	payload.color += EnvCube.SampleLevel(s0, payload.direction, payload.depth) * g_skyBoxMultiple;
 }
 
+
+[shader("anyhit")]
+void AnyHitShaderTest(inout TestRayPayload payload, in TriAttributes attr)
+{
+	VertexSkinned triVert[3];
+	triVert[0] = Vertices[PrimitiveIndex() * 3];
+	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
+	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+
+	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Tex * (attr.barycentrics.x) +
+		triVert[2].Tex * (attr.barycentrics.y);
+	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
+	if (diffuseColor.a < 0.5)
+	{
+		IgnoreHit();
+	}
+}
+
 [shader("closesthit")]
-void ClosestHitShaderTest(inout TestRayPayload payload, in MyAttributes attr)
+void ClosestHitShaderTest(inout TestRayPayload payload, in TriAttributes attr)
 {
 	payload.miss = false;
 	float3 pos = (Vertices[PrimitiveIndex() * 3].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +

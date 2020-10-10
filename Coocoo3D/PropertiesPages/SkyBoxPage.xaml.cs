@@ -11,6 +11,7 @@ using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.Storage;
 using Windows.Storage.Streams;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -44,17 +45,30 @@ namespace Coocoo3D.PropertiesPages
             }
             else
             {
-                Frame.Navigate(typeof(ErrorPropertiesPage), "显示属性错误");
+                Frame.Navigate(typeof(ErrorPropertiesPage), "error");
             }
         }
-        private bool StrEq(string a, string b)
-        {
-            return a.Equals(b, StringComparison.CurrentCultureIgnoreCase);
-        }
+
         private bool IsImageExtName(string extName)
         {
-            return StrEq(".jpg", extName) || StrEq(".jpeg", extName) || StrEq(".png", extName) || StrEq(".bmp", extName) || StrEq(".tif", extName) || StrEq(".tiff", extName) || StrEq(".gif", extName);
+            string lower = extName.ToLower();
+            switch (lower)
+            {
+                case ".jpg":
+                case ".jpeg":
+                case ".png":
+                case ".bmp":
+                case ".tif":
+                case ".tiff":
+                case ".gif":
+                    //case ".tga":
+                    //case ".hdr":
+                    return true;
+                default:
+                    return false;
+            }
         }
+
         private void _img0_DragOver(object sender, DragEventArgs e)
         {
             Image image = sender as Image;
@@ -75,8 +89,9 @@ namespace Coocoo3D.PropertiesPages
             public int y;
         }
         int prevRenderFrame = 0;
-        private async Task Task1(RenderPipeline.MiscProcessType miscProcessType)
+        private async Task ApplySkyBoxTask(RenderPipeline.MiscProcessType miscProcessType)
         {
+            var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
             for (int i = 0; i < 6; i++)
             {
                 if (files[i] == null)
@@ -85,7 +100,7 @@ namespace Coocoo3D.PropertiesPages
                     return;
                 }
             }
-            showInfo.Text = "正在处理";
+            showInfo.Text = resourceLoader.GetString("Message_Operating");
             appBody.renderPipelineContext.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
                 await FileIO.ReadBufferAsync(files[0]),
                 await FileIO.ReadBufferAsync(files[1]),
@@ -102,16 +117,11 @@ namespace Coocoo3D.PropertiesPages
             appBody.ProcessingList.AddObject(appBody.renderPipelineContext.EnvCubeMap);
             appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.renderPipelineContext.EnvCubeMap, appBody.renderPipelineContext.IrradianceMap, miscProcessType));
             appBody.RequireRender();
-            showInfo.Text = "操作完成";
+            showInfo.Text = resourceLoader.GetString("Message_Done");
         }
         private async void Apply_Click(object sender, RoutedEventArgs e)
         {
-            await Task1(RenderPipeline.MiscProcessType.GenerateIrradianceMap);
-        }
-
-        private async void Apply1_Click(object sender, RoutedEventArgs e)
-        {
-            await Task1(RenderPipeline.MiscProcessType.GenerateIrradianceMapQ1);
+            await ApplySkyBoxTask(RenderPipeline.MiscProcessType.GenerateIrradianceMapQ1);
         }
 
         private async void _img0_Drop(object sender, DragEventArgs e)
@@ -126,16 +136,25 @@ namespace Coocoo3D.PropertiesPages
                     StorageFile storageFile = object2 as StorageFile;
                     e.DataView.Properties.TryGetValue("Folder", out object object3);
                     StorageFolder storageFolder = object3 as StorageFolder;
+                    var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                     if (IsImageExtName(extName))
                     {
-                        var bitmap = new BitmapImage();
-                        await bitmap.SetSourceAsync(await storageFile.OpenReadAsync());
-                        image.Source = bitmap;
-                        if (int.TryParse(image.Tag as string, out int i))
+                        try
                         {
-                            files[i] = storageFile;
-                            imgSize[i].x = bitmap.PixelWidth;
-                            imgSize[i].y = bitmap.PixelHeight;
+                            var bitmap = new BitmapImage();
+                            await bitmap.SetSourceAsync(await storageFile.OpenReadAsync());
+                            image.Source = bitmap;
+                            if (int.TryParse(image.Tag as string, out int i))
+                            {
+                                files[i] = storageFile;
+                                imgSize[i].x = bitmap.PixelWidth;
+                                imgSize[i].y = bitmap.PixelHeight;
+                            }
+                        }
+                        catch (Exception exception)
+                        {
+                            MessageDialog dialog = new MessageDialog(string.Format(resourceLoader.GetString("Error_Message_ImageError"), exception));
+                            await dialog.ShowAsync();
                         }
                     }
                 }

@@ -19,6 +19,7 @@ using Coocoo3D.Core;
 using Windows.Storage;
 using Windows.ApplicationModel.DataTransfer;
 using Coocoo3D.Components;
+using Windows.UI.Popups;
 
 // https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
 
@@ -166,7 +167,8 @@ namespace Coocoo3D.PropertiesPages
         {
             get
             {
-                return string.Format("顶点数：{0}\n三角形数：{1}\n骨骼数：{2}\n",
+                var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
+                return string.Format(resourceLoader.GetString("Message_ModelInfo"),
                     mmd3dEntity.rendererComponent.mesh.m_vertexCount, mmd3dEntity.rendererComponent.mesh.m_indexCount / 3, mmd3dEntity.boneComponent.bones.Count);
             }
         }
@@ -225,9 +227,18 @@ namespace Coocoo3D.PropertiesPages
                     StorageFile storageFile = object2 as StorageFile;
                     e.DataView.Properties.TryGetValue("Folder", out object object3);
                     StorageFolder storageFolder = object3 as StorageFolder;
+                    var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                     if (".vmd".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        await UI.UISharedCode.LoadVMD(appBody, storageFile, mmd3dEntity);
+                        try
+                        {
+                            await UI.UISharedCode.LoadVMD(appBody, storageFile, mmd3dEntity);
+                        }
+                        catch (Exception exception)
+                        {
+                            MessageDialog dialog = new MessageDialog(string.Format(resourceLoader.GetString("Error_Message_VMDError"), exception));
+                            await dialog.ShowAsync();
+                        }
                     }
                     if (".hlsl".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
                     {

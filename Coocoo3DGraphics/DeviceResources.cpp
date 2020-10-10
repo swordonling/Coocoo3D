@@ -250,6 +250,7 @@ void DeviceResources::CreateDeviceResources()
 
 	m_isRayTracingSupport = IsDirectXRaytracingSupported(adapter.Get());
 
+	m_d3dDevice->QueryInterface(IID_PPV_ARGS(&m_d3dDevice2));
 	m_d3dDevice->QueryInterface(IID_PPV_ARGS(&m_d3dDevice5));
 
 	// 创建命令队列。

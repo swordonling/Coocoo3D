@@ -29,6 +29,7 @@ namespace Coocoo3D.UI
             }
             appBody.GameDriverContext.Playing = false;
             appBody.GameDriverContext.PlayTime = 0;
+            appBody.GameDriverContext.RequireResetPhysics = true;
             appBody.RequireRender(true);
         }
         public static void Rewind(Coocoo3DMain appBody)
@@ -50,6 +51,28 @@ namespace Coocoo3D.UI
             }
             appBody.GameDriverContext.Playing = true;
             appBody.GameDriverContext.PlaySpeed = 2.0f;
+        }
+        public static void Front(Coocoo3DMain appBody)
+        {
+            if (appBody.Recording)
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
+            appBody.GameDriverContext.PlayTime = 0;
+            appBody.GameDriverContext.RequireResetPhysics = true;
+            appBody.RequireRender(true);
+        }
+        public static void Rear(Coocoo3DMain appBody)
+        {
+            if (appBody.Recording)
+            {
+                appBody.GameDriver = appBody._GeneralGameDriver;
+                appBody.Recording = false;
+            }
+            appBody.GameDriverContext.PlayTime = 9999;
+            appBody.GameDriverContext.RequireResetPhysics = true;
+            appBody.RequireRender(true);
         }
     }
 }

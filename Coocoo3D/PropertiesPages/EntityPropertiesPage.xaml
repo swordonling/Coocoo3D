@@ -121,15 +121,15 @@
                 <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
             </Grid>
             <Pivot>
-                <PivotItem Header="描述">
+                <PivotItem x:Uid="Page_Entity_PivotItem_Description">
                     <ScrollViewer Height="300" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
                         <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
                     </ScrollViewer>
-                    
+
                 </PivotItem>
-                <PivotItem Header="材质">
+                <PivotItem x:Uid="Page_Entity_PivotItem_Materials">
                     <ListView Height="300" x:Name="ViewMaterials" SelectionMode="Single" ItemTemplate="{StaticResource itemMaterial}">
-                        
+
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -138,15 +138,9 @@
                             </Style>
                         </ListView.ItemContainerStyle>
                     </ListView>
-                    
+
                 </PivotItem>
             </Pivot>
-            <!--<mu:TabView>
-                <mu:TabViewItem Header="描述">
-                </mu:TabViewItem>
-                <mu:TabViewItem Header="材质">
-                </mu:TabViewItem>
-            </mu:TabView>-->
             <ScrollViewer Height="150">
                 <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
             </ScrollViewer>

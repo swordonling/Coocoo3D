@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GeometryShader.h"
 #include "DirectXHelper.h"
+#include "TextUtil.h"
 using namespace Coocoo3DGraphics;
 
 bool GeometryShader::CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro)
@@ -14,15 +15,12 @@ bool GeometryShader::CompileReload1(IBuffer^ file1, Platform::String^ entryPoint
 	if (macro == ShaderMacro::DEFINE_COO_SURFACE)macros = MACROS_DEFINE_COO_SURFACE;
 	else if (macro == ShaderMacro::DEFINE_COO_PARTICLE)macros = MACROS_DEFINE_COO_PARTICLE;
 
-	const wchar_t* wstr1 = entryPoint->Begin();
-	UINT length1 = wcslen(wstr1);
-	UINT strlen1 = WideCharToMultiByte(CP_ACP, 0, wstr1, length1, NULL, 0, NULL, NULL);
-	char* entryPointStr = (char*)malloc(strlen1 + 1);
-	WideCharToMultiByte(CP_ACP, 0, wstr1, length1, entryPointStr, strlen1, NULL, NULL);
-	entryPointStr[strlen1] = 0;
+
+	int bomOffset = CooBomTest(sourceCode);
+	char* entryPointStr = CooGetMStr(entryPoint->Begin());
 	HRESULT hr = D3DCompile(
-		sourceCode,
-		file1->Length,
+		sourceCode + bomOffset,
+		file1->Length - bomOffset,
 		nullptr,
 		macros,
 		D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -33,7 +31,7 @@ bool GeometryShader::CompileReload1(IBuffer^ file1, Platform::String^ entryPoint
 		&byteCode,
 		nullptr
 	);
-	free(entryPointStr);
+	CooFreeMStr(entryPointStr);
 	if (FAILED(hr))
 		return false;
 	else

@@ -158,6 +158,7 @@ namespace Coocoo3DGraphics
 
 		// D3D 访问器。
 		ID3D12Device*				GetD3DDevice() const { return m_d3dDevice.Get(); }
+		ID3D12Device2*				GetD3DDevice2() const { return m_d3dDevice2.Get(); }
 		ID3D12Device5*				GetD3DDevice5() const { return m_d3dDevice5.Get(); }
 		IDXGISwapChain3*			GetSwapChain() const { return m_swapChain.Get(); }
 		ID3D12Resource*				GetRenderTarget() const { return m_renderTargets[m_currentFrame].Get(); }
@@ -199,6 +200,7 @@ namespace Coocoo3DGraphics
 
 		// Direct3D 对象。
 		Microsoft::WRL::ComPtr<ID3D12Device>			m_d3dDevice;
+		Microsoft::WRL::ComPtr<ID3D12Device2>			m_d3dDevice2;
 		Microsoft::WRL::ComPtr<ID3D12Device5>			m_d3dDevice5;
 		Microsoft::WRL::ComPtr<IDXGIFactory4>			m_dxgiFactory;
 		Microsoft::WRL::ComPtr<IDXGISwapChain3>			m_swapChain;
