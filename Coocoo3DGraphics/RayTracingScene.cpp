@@ -5,6 +5,15 @@
 using namespace Coocoo3DGraphics;
 using namespace DX;
 
+void RayTracingScene::ReloadLibrary(IBuffer^ rtShader)
+{
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(rtShader)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* data = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&data));
+	m_byteCode = CD3DX12_SHADER_BYTECODE(data, rtShader->Length);
+}
+
 inline void RayTracingScene::SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitGroupSubobject, LPCWSTR hitGroupName, LPCWSTR anyHitShaderName, LPCWSTR closestHitShaderName)
 {
 	hitGroupSubobject->SetAnyHitShaderImport(anyHitShaderName);
@@ -13,27 +22,21 @@ inline void RayTracingScene::SubobjectHitGroup(CD3DX12_HIT_GROUP_SUBOBJECT* hitG
 	hitGroupSubobject->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 }
 
-void RayTracingScene::ReloadLibrary(IBuffer^ rtShader, const Platform::Array<Platform::String^>^ exportNames)
+void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ exportNames, const Platform::Array<HitGroupDesc^>^ hitGroups, RayTracingSceneSettings settings)
 {
-	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
-	reinterpret_cast<IInspectable*>(rtShader)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
-	byte* data = nullptr;
-	DX::ThrowIfFailed(bufferByteAccess->Buffer(&data));
+	CD3DX12_STATE_OBJECT_DESC raytracingStateObjectDesc;
 
+	raytracingStateObjectDesc = { D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
-	m_raytracingPipeline = { D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
-	D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE(data, rtShader->Length);
-	auto lib = m_raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-	lib->SetDXILLibrary(&libdxil);
+	auto lib = raytracingStateObjectDesc.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+	lib->SetDXILLibrary(&m_byteCode);
 	for (int i = 0; i < exportNames->Length; i++)
 	{
 		lib->DefineExport(exportNames[i]->Begin());
 	}
-}
 
-void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, const Platform::Array<HitGroupDesc^>^ hitGroups, RayTracingSceneSettings settings)
-{
 	m_rayTypeCount = settings.rayTypeCount;
+	auto device = deviceResources->GetD3DDevice5();
 	{
 		D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
 		staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -49,20 +52,35 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 		staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		staticSamplerDesc.RegisterSpace = 0;
 
+		D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = { staticSamplerDesc,staticSamplerDesc,staticSamplerDesc };
+
+		staticSamplerDescs[0].ShaderRegister = 0;
+		staticSamplerDescs[1].ShaderRegister = 1;
+		staticSamplerDescs[1].MaxAnisotropy = 16;
+		staticSamplerDescs[1].Filter = D3D12_FILTER_ANISOTROPIC;
+
+
+		staticSamplerDescs[2].ShaderRegister = 2;
+		staticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
+		staticSamplerDescs[2].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+
 		CD3DX12_DESCRIPTOR_RANGE UAVDescriptor;
 		UAVDescriptor.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);
-		CD3DX12_DESCRIPTOR_RANGE SRVDescriptors[2];
+		CD3DX12_DESCRIPTOR_RANGE SRVDescriptors[4];
 		SRVDescriptors[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1);
 		SRVDescriptors[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
-		CD3DX12_ROOT_PARAMETER rootParameters[5];
+		SRVDescriptors[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
+		SRVDescriptors[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
+		CD3DX12_ROOT_PARAMETER rootParameters[7];
 		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
 		rootParameters[1].InitAsShaderResourceView(0);
 		rootParameters[2].InitAsConstantBufferView(0);
 		rootParameters[3].InitAsDescriptorTable(1, &SRVDescriptors[0]);
 		rootParameters[4].InitAsDescriptorTable(1, &SRVDescriptors[1]);
-		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, 1, &staticSamplerDesc);
+		rootParameters[5].InitAsDescriptorTable(1, &SRVDescriptors[2]);
+		rootParameters[6].InitAsDescriptorTable(1, &SRVDescriptors[3]);
+		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, _countof(staticSamplerDescs), staticSamplerDescs);
 
-		auto device = deviceResources->GetD3DDevice();
 		Microsoft::WRL::ComPtr<ID3DBlob> blob;
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
 
@@ -89,7 +107,6 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 
 		CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
 		localRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
-		auto device = deviceResources->GetD3DDevice();
 		Microsoft::WRL::ComPtr<ID3DBlob> blob;
 		Microsoft::WRL::ComPtr<ID3DBlob> error;
 
@@ -100,42 +117,40 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 
 	for (int i = 0; i < hitGroups->Length; i++)
 	{
-		SubobjectHitGroup(m_raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(),
+		SubobjectHitGroup(raytracingStateObjectDesc.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>(),
 			hitGroups[i]->HitGroupName->Begin(),
 			hitGroups[i]->AnyHitName->Begin() != hitGroups[i]->AnyHitName->End() ? hitGroups[i]->AnyHitName->Begin() : nullptr,
 			hitGroups[i]->ClosestHitName->Begin() != hitGroups[i]->ClosestHitName->End() ? hitGroups[i]->ClosestHitName->Begin() : nullptr);
 	}
 
-
-	auto localRootSignature = m_raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+	auto localRootSignature = raytracingStateObjectDesc.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
 	localRootSignature->SetRootSignature(m_rootSignatures[1].Get());
 	// Shader association
-	auto rootSignatureAssociation = m_raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+	auto rootSignatureAssociation = raytracingStateObjectDesc.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 	rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
 	for (int i = 0; i < hitGroups->Length; i++)
 	{
 		rootSignatureAssociation->AddExport(hitGroups[i]->HitGroupName->Begin());
 	}
 
-	m_raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()->SetRootSignature(m_rootSignatures[0].Get());
+	raytracingStateObjectDesc.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>()->SetRootSignature(m_rootSignatures[0].Get());
 
-	auto shaderConfig = m_raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+	auto shaderConfig = raytracingStateObjectDesc.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
 	shaderConfig->Config(settings.payloadSize, settings.attributeSize);
 
-	auto pipelineConfig = m_raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+	auto pipelineConfig = raytracingStateObjectDesc.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
 	pipelineConfig->Config(settings.maxRecursionDepth);
 
-	auto device = deviceResources->GetD3DDevice5();
-	DX::ThrowIfFailed(device->CreateStateObject(m_raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
+
+	DX::ThrowIfFailed(device->CreateStateObject(raytracingStateObjectDesc, IID_PPV_ARGS(&m_dxrStateObject)));
 }
 
-void RayTracingScene::ReloadAllocScratchAndInstance(DeviceResources^ deviceResources, UINT scratchSize, UINT instanceCount)
+void RayTracingScene::ReloadAllocScratchAndInstance(DeviceResources^ deviceResources, UINT scratchSize, UINT maxIinstanceCount)
 {
 	asLastUpdateIndex = 0;
 	auto device = deviceResources->GetD3DDevice();
-	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
-	CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
 
+	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
 	for (int i = 0; i < c_frameCount; i++)
 	{
 		DX::ThrowIfFailed(device->CreateCommittedResource(
@@ -147,10 +162,15 @@ void RayTracingScene::ReloadAllocScratchAndInstance(DeviceResources^ deviceResou
 			IID_PPV_ARGS(&m_scratchResource[i])));
 		NAME_D3D12_OBJECT(m_scratchResource[i]);
 
+	}
+
+	CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+	for (int i = 0; i < c_frameCount; i++)
+	{
 		DX::ThrowIfFailed(device->CreateCommittedResource(
 			&uploadHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * instanceCount),
+			&CD3DX12_RESOURCE_DESC::Buffer(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * maxIinstanceCount),
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
 			IID_PPV_ARGS(&instanceDescs[i])));
@@ -158,8 +178,8 @@ void RayTracingScene::ReloadAllocScratchAndInstance(DeviceResources^ deviceResou
 	}
 	if (pArgumentCache)
 		free(pArgumentCache);
-	pArgumentCache = malloc(instanceCount * c_argumentCacheStride);
-	ZeroMemory(pArgumentCache, instanceCount * c_argumentCacheStride);
+	pArgumentCache = malloc(maxIinstanceCount * c_argumentCacheStride);
+	ZeroMemory(pArgumentCache, maxIinstanceCount * c_argumentCacheStride);
 }
 
 void RayTracingScene::NextASIndex(int meshCount)
@@ -175,7 +195,7 @@ void RayTracingScene::NextSTIndex()
 	stLastUpdateIndex = (stLastUpdateIndex + 1) % c_frameCount;
 }
 
-void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ raygenShaderNames, const Platform::Array<Platform::String^>^ missShaderNames, int argumentSize)
+void RayTracingScene::BuildShaderTable(DeviceResources^ deviceResources, const Platform::Array<Platform::String^>^ raygenShaderNames, const Platform::Array<Platform::String^>^ missShaderNames, const Platform::Array <Platform::String^>^ hitGroupNames, int instances)
 {
 	auto device = deviceResources->GetD3DDevice5();
 
@@ -183,6 +203,7 @@ void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, co
 	DX::ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
 
 	UINT shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+	UINT argumentSize = sizeof(CooRayTracingParamLocal1);
 
 	// Ray gen shader table
 	{
@@ -194,6 +215,7 @@ void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, co
 			rayGenShaderTable.push_back(ShaderRecord(stateObjectProperties->GetShaderIdentifier(raygenShaderNames[i]->Begin()), shaderIdentifierSize));
 		}
 		m_rayGenShaderTable[stLastUpdateIndex] = rayGenShaderTable.GetResource();
+		m_rayGenerateShaderTableStrideInBytes = rayGenShaderTable.GetShaderRecordSize();
 	}
 
 	// Miss shader table
@@ -208,14 +230,7 @@ void RayTracingScene::BuildShaderTableStep1(DeviceResources^ deviceResources, co
 		m_missShaderTable[stLastUpdateIndex] = missShaderTable.GetResource();
 		m_missShaderTableStrideInBytes = missShaderTable.GetShaderRecordSize();
 	}
-}
 
-void RayTracingScene::BuildShaderTableStep2(DeviceResources^ deviceResources, const Platform::Array <Platform::String^>^ hitGroupNames, int argumentSize, int instances)
-{
-	auto device = deviceResources->GetD3DDevice5();
-	UINT shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-	DX::ThrowIfFailed(m_dxrStateObject.As(&stateObjectProperties));
 	// Hit group shader table
 	{
 		UINT numShaderRecords = instances * hitGroupNames->Length;

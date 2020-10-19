@@ -14,9 +14,6 @@
     <Filter Include="Utility">
       <UniqueIdentifier>{ece6b498-c945-4ae4-8551-a6ddc34e9dee}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Shaders\FromUnity">
-      <UniqueIdentifier>{63953ed0-9148-49e5-8fb2-a95b27a02911}</UniqueIdentifier>
-    </Filter>
     <Filter Include="RayTracing">
       <UniqueIdentifier>{33d80bae-d791-47c2-adf9-087c0e11f84b}</UniqueIdentifier>
     </Filter>
@@ -37,6 +34,9 @@
     </Filter>
     <Filter Include="Extension">
       <UniqueIdentifier>{dc8429a7-4a7a-406e-bb38-df7e5d3df773}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\BRDF">
+      <UniqueIdentifier>{557263b2-fe8d-401e-84ec-177365b89a57}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -305,11 +305,11 @@
     <FxCompile Include="Shaders\PSMMDAlphaClip1.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\ImageProcess\G_PreFilterEnv.hlsl">
+      <Filter>Shaders\ImageProcess</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\FromUnity\UnityStandardBRDF.hlsli">
-      <Filter>Shaders\FromUnity</Filter>
-    </None>
     <None Include="Shaders\CameraDataDefine.hlsli">
       <Filter>Shaders</Filter>
     </None>
@@ -321,6 +321,9 @@
     </None>
     <None Include="DirectXTex\DirectXTex.inl">
       <Filter>DirectXTex</Filter>
+    </None>
+    <None Include="Shaders\BRDF\PBR.hlsli">
+      <Filter>Shaders\BRDF</Filter>
     </None>
   </ItemGroup>
 </Project>

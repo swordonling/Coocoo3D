@@ -7,35 +7,23 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Coocoo3D.Present
+namespace Coocoo3D.RenderPipeline
 {
     public class PresentData
     {
-        public Matrix4x4 wpMatrix { get => innerStruct.wpMatrix; set => innerStruct.wpMatrix = value; }
-        public Matrix4x4 pwMatrix { get => innerStruct.pwMatrix; set => innerStruct.pwMatrix = value; }
-        public Vector3 CameraPosition { get => innerStruct.CameraPosition; set => innerStruct.CameraPosition = value; }
-        public float AspectRatio { get => innerStruct.AspectRatio; set => innerStruct.AspectRatio = value; }
         public float PlayTime { get => innerStruct.PlayTime; set => innerStruct.PlayTime = value; }
         public float DeltaTime { get => innerStruct.DeltaTime; set => innerStruct.DeltaTime = value; }
         public InnerStruct innerStruct;
         public ConstantBuffer DataBuffer = new ConstantBuffer();
 
 
-        public void UpdateCameraData(CameraData camera)
+        public void UpdateCameraData(Present.CameraData camera)
         {
-            wpMatrix = Matrix4x4.Transpose(camera.vpMatrix);
+            innerStruct.wpMatrix = Matrix4x4.Transpose(camera.vpMatrix);
             Matrix4x4.Invert(camera.vpMatrix, out innerStruct.pwMatrix);
-            pwMatrix = Matrix4x4.Transpose(pwMatrix);
-            CameraPosition = camera.Pos;
-            AspectRatio = camera.AspectRatio;
-        }
-        public void UpdateCameraData(LightingData lighting)
-        {
-            wpMatrix = Matrix4x4.Transpose(lighting.vpMatrix);
-            Matrix4x4.Invert(lighting.vpMatrix, out innerStruct.pwMatrix);
-            pwMatrix = Matrix4x4.Transpose(pwMatrix);
-            CameraPosition = lighting.RotationOrPosition;
-            AspectRatio = 1;
+            innerStruct.pwMatrix = Matrix4x4.Transpose(innerStruct.pwMatrix);
+            innerStruct.CameraPosition = camera.Pos;
+            innerStruct.AspectRatio = camera.AspectRatio;
         }
 
         public void Reload(DeviceResources deviceResources, int presentDataSize)
@@ -56,6 +44,7 @@ namespace Coocoo3D.Present
             public float DeltaTime;
             public int RandomValue1;
             public int RandomValue2;
+            public InShaderSettings inShaderSettings;
         }
     }
 }

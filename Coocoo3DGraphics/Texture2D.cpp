@@ -54,7 +54,7 @@ inline void _Fun1(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::Scrat
 	tex->m_mipLevels = max(CountMips(tex->m_width, tex->m_height) - 6, 1);
 	if (tex->m_mipLevels > 1)
 	{
-		DX::ThrowIfFailed(DirectX::GenerateMipMaps(*scratchImage.GetImage(0, 0, 0), DirectX::TEX_FILTER_LINEAR | DirectX::TEX_FILTER_MIRROR| DirectX::TEX_FILTER_SEPARATE_ALPHA, tex->m_mipLevels, generatedMips));
+		DX::ThrowIfFailed(DirectX::GenerateMipMaps(*scratchImage.GetImage(0, 0, 0), DirectX::TEX_FILTER_LINEAR | DirectX::TEX_FILTER_MIRROR | DirectX::TEX_FILTER_SEPARATE_ALPHA, tex->m_mipLevels, generatedMips));
 		tex->m_textureData = ref new Platform::Array<byte, 1>(generatedMips.GetPixelsSize());
 
 		tex->m_imageMipsData.clear();
@@ -75,34 +75,18 @@ inline void _Fun1(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::Scrat
 	}
 }
 
-void Texture2D::ReloadFromImage1(const Platform::Array<byte>^ data)
+inline void _Fun2(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::ScratchImage& scratchImage, DirectX::ScratchImage& generatedMips)
 {
-	DirectX::TexMetadata metaData;
-	DirectX::ScratchImage scratchImage;
-	DirectX::ScratchImage generatedMips;
-	HRESULT hr1 = DirectX::GetMetadataFromTGAMemory(data->begin(), data->Length, metaData);
-	if (SUCCEEDED(hr1))
-	{
-		DX::ThrowIfFailed(DirectX::LoadFromTGAMemory(data->begin(), data->Length, &metaData, scratchImage));
-		_Fun1(this, metaData, scratchImage, generatedMips);
-		return;
-	}
+	tex->m_format = DirectX::MakeSRGB(metaData.format);
+	tex->m_width = metaData.width;
+	tex->m_height = metaData.height;
 
-	HRESULT hr2 = DirectX::GetMetadataFromHDRMemory(data->begin(), data->Length, metaData);
-	if (SUCCEEDED(hr2))
-	{
-		DX::ThrowIfFailed(DirectX::LoadFromHDRMemory(data->begin(), data->Length, &metaData, scratchImage));
-		_Fun1(this, metaData, scratchImage, generatedMips);
-		return;
-	}
+	tex->m_mipLevels = 1;
 
-	HRESULT hr3 = DirectX::GetMetadataFromWICMemory(data->begin(), data->Length, DirectX::WIC_FLAGS_NONE, metaData);
-	if (SUCCEEDED(hr3))
-	{
-		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(data->begin(), data->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
-		_Fun1(this, metaData, scratchImage, generatedMips);
-		return;
-	}
+	tex->m_textureData = ref new Platform::Array<byte, 1>(scratchImage.GetPixelsSize());
+	tex->m_imageMipsData.clear();
+	tex->m_imageMipsData.emplace_back(ImageMipsData{ tex->m_width, tex->m_height });
+	memcpy(tex->m_textureData->begin(), scratchImage.GetPixels(), scratchImage.GetPixelsSize());
 }
 
 void Texture2D::ReloadFromImage(IBuffer^ file1)
@@ -136,6 +120,41 @@ void Texture2D::ReloadFromImage(IBuffer^ file1)
 	{
 		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
 		_Fun1(this, metaData, scratchImage, generatedMips);
+		return;
+	}
+}
+
+void Texture2D::ReloadFromImageNoMip(IBuffer^ file1)
+{
+	ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* pixels = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pixels));
+
+	DirectX::TexMetadata metaData;
+	DirectX::ScratchImage scratchImage;
+	DirectX::ScratchImage generatedMips;
+	HRESULT hr1 = DirectX::GetMetadataFromTGAMemory(pixels, file1->Length, metaData);
+	if (SUCCEEDED(hr1))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromTGAMemory(pixels, file1->Length, &metaData, scratchImage));
+		_Fun2(this, metaData, scratchImage, generatedMips);
+		return;
+	}
+
+	HRESULT hr2 = DirectX::GetMetadataFromHDRMemory(pixels, file1->Length, metaData);
+	if (SUCCEEDED(hr2))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromHDRMemory(pixels, file1->Length, &metaData, scratchImage));
+		_Fun2(this, metaData, scratchImage, generatedMips);
+		return;
+	}
+
+	HRESULT hr3 = DirectX::GetMetadataFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, metaData);
+	if (SUCCEEDED(hr3))
+	{
+		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
+		_Fun2(this, metaData, scratchImage, generatedMips);
 		return;
 	}
 }

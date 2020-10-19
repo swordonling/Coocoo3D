@@ -88,10 +88,8 @@ void main(uint3 dtid : SV_DispatchThreadID)
 			vec1 = -vec1;
 			ndl = -ndl;
 		}
-		col1 += Image.SampleLevel(s0, vec1, 0) * ndl / c_sampleCount / 3.14159265359f;
+		col1 += Image.SampleLevel(s0, vec1, 2) * ndl / c_sampleCount / 3.14159265359f;
 	}
 	float qsp = 1.0f / (quality + 1.0f);
 	IrradianceMap[dtid] = float4(col1 * qsp + IrradianceMap[dtid].rgb, 1);
-	//IrradianceMap[dtid] = float4(TexDir, 1);
-	//IrradianceMap[dtid] = float4(0.5,1,1,1);
 }

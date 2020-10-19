@@ -1,4 +1,3 @@
-#include "CameraDataDefine.hlsli"
 #define MAX_BONE_MATRICES 1020
 cbuffer cbAnimMatrices : register(b0)
 {
@@ -8,10 +7,6 @@ cbuffer cbAnimMatrices : register(b0)
 	float4 g_bonePreserved3[3];
 	float4x4 g_bonePreserved2[2];
 	float4x4 g_mConstBoneWorld[MAX_BONE_MATRICES];
-};
-cbuffer cb2 : register(b2)
-{
-	CAMERA_DATA_DEFINE//is a macro
 };
 
 struct VSSkinnedIn

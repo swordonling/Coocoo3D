@@ -14,6 +14,7 @@ namespace Coocoo3D.RenderPipeline
     public class RPAssetsManager
     {
         public GraphicsSignature rootSignature = new GraphicsSignature();
+        public GraphicsSignature rootSignatureLit = new GraphicsSignature();
         public GraphicsSignature rootSignaturePostProcess = new GraphicsSignature();
         public GraphicsSignature rootSignatureCompute = new GraphicsSignature();
         public VertexShader VSMMDSkinning2 = new VertexShader();
@@ -44,6 +45,7 @@ namespace Coocoo3D.RenderPipeline
         public void Reload(DeviceResources deviceResources)
         {
             rootSignature.ReloadMMD(deviceResources);
+            rootSignatureLit.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.SRVTable });
             rootSignaturePostProcess.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.SRVTable, GSD.SRVTable });
             rootSignatureCompute.ReloadCompute(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.CBV, GSD.SRV, GSD.UAV, GSD.UAV });
         }
@@ -116,6 +118,10 @@ namespace Coocoo3D.RenderPipeline
             foreach (var a in uploadProcess.pobjectLists[0])
             {
                 a.Upload(deviceResources, rootSignature);
+            }
+            foreach (var a in uploadProcess.pobjectLists[1])
+            {
+                a.Upload(deviceResources, rootSignatureLit);
             }
             foreach (var a in uploadProcess.computePObjectLists[0])
             {

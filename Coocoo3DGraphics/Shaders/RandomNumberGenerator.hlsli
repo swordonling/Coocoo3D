@@ -48,4 +48,11 @@ namespace RNG
 		float theta = 2 * 3.141592653589793238 * Random01(state);
 		return R * cos(theta);
 	}
+
+	float2 Hammersley(uint Index, uint NumSamples, uint2 Random)
+	{
+		float E1 = frac((float)Index / NumSamples + float(Random.x & 0xffff) / (1 << 16));
+		float E2 = float(reversebits(Index) ^ Random.y) * 2.3283064365386963e-10;
+		return float2(E1, E2);
+	}
 }

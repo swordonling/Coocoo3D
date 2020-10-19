@@ -51,9 +51,10 @@ namespace Coocoo3D.UI
         public static void NewLighting(Coocoo3DMain appBody)
         {
             Lighting lighting = new Lighting();
-            lighting.Name = "光源";
-            lighting.Color = new Vector4(1, 1, 1, 1);
-            lighting.Rotation = new Vector3(1.570796326794f, 0, 0);
+            var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
+            lighting.Name = resourceLoader.GetString("Object_Name_Lighting");
+            lighting.Color = new Vector4(3, 3, 3, 1);
+            lighting.Rotation = Quaternion.CreateFromYawPitchRoll(0, 1.570796326794f, 0);
             appBody.CurrentScene.AddSceneObject(lighting);
             appBody.RequireRender();
         }

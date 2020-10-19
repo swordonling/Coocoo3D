@@ -84,6 +84,8 @@
                             <StackPanel>
                                 <Button x:Uid="Page_Common_Button_RefreshShaderCaches" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
                                 <Button x:Uid="Page_Common_Button_RefreshTextureCaches" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
+                                <CheckBox IsChecked="{x:Bind VAutoReloadShader}" Checked="ReloadShaders_Click" Content="自动重新加载着色器"/>
+                                <CheckBox IsChecked="{x:Bind VAutoReloadTexture}" Checked="ReloadTextures_Click" Content="自动重新加载纹理"/>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

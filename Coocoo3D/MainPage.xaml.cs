@@ -105,6 +105,16 @@ namespace Coocoo3D
                 Header = resourceLoader.GetString("Tab_Title_Detail"),
                 Content = frame1,
             });
+            Window.Current.Activated += Current_Activated;
+        }
+
+        private void Current_Activated(object sender, Windows.UI.Core.WindowActivatedEventArgs e)
+        {
+            if (appBody.Recording) return;
+            if (appBody.performaceSettings.AutoReloadShaders)
+                appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager, () => appBody.RequireRender());
+            if (appBody.performaceSettings.AutoReloadTextures)
+                appBody.mainCaches.ReloadTextures(appBody.ProcessingList, () => appBody.RequireRender());
         }
 
         private async void OpenFolder_Click(object sender, RoutedEventArgs e)

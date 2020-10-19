@@ -10,8 +10,8 @@
 	float g_time;\
 	float g_deltaTime;\
 	uint2 g_camera_randomValue;\
-	float4 g_camera_preserved2[6];\
 	float g_skyBoxMultiple;\
 	uint g_enableAO;\
 	uint g_enableShadow;\
-	uint g_quality;
+	uint g_quality;\
+	float4 g_camera_preserved2[5]

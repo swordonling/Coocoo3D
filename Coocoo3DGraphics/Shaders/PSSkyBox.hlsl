@@ -7,7 +7,7 @@ struct PSIn
 };
 cbuffer cb2 : register(b2)
 {
-	CAMERA_DATA_DEFINE//is a macro
+	CAMERA_DATA_DEFINE;//is a macro
 };
 TextureCube EnvCube : register (t3);
 SamplerState s0 : register(s0);

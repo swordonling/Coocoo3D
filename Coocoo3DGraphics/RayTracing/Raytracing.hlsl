@@ -1,7 +1,6 @@
 #ifndef RAYTRACING_HLSL
 #define RAYTRACING_HLSL
-#define UNITY_BRDF_GGX 1
-#include "../Shaders/FromUnity/UnityStandardBRDF.hlsli"
+#include "../Shaders/BRDF/PBR.hlsli"
 #include "../Shaders/CameraDataDefine.hlsli"
 #include "../Shaders/RandomNumberGenerator.hlsli"
 
@@ -22,7 +21,7 @@ struct TestRayPayload
 
 struct LightInfo
 {
-	float3 dir;
+	float3 LightDir;
 	uint LightType;
 	float4 LightColor;
 };
@@ -46,15 +45,20 @@ struct Ray
 RaytracingAccelerationStructure Scene : register(t0);
 TextureCube EnvCube : register (t1);
 TextureCube IrradianceCube : register (t2);
+Texture2D BRDFLut : register(t3);
+Texture2D ShadowMap0 : register(t4);
 RWTexture2D<float4> g_renderTarget : register(u0);
 cbuffer cb0 : register(b0)
 {
-	CAMERA_DATA_DEFINE//is a macro
+	CAMERA_DATA_DEFINE;//is a macro
+	float4x4 LightSpaceMatrices[1];
 };
 //local
 StructuredBuffer<VertexSkinned> Vertices : register(t1, space1);
 Texture2D diffuseMap :register(t2, space1);
 SamplerState s0 : register(s0);
+SamplerState s1 : register(s1);
+SamplerComparisonState sampleShadowMap0 : register(s2);
 //
 cbuffer cb3 : register(b3)
 {
@@ -79,8 +83,9 @@ cbuffer cb3 : register(b3)
 	float _SheenTint;
 	float _Clearcoat;
 	float _ClearcoatGloss;
-	float4 preserved1[6];
-	LightInfo _LightInfo[8];
+	float3 preserved0;
+	float4 preserved1[5];
+	LightInfo Lightings[8];
 };
 
 inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToWorld)
@@ -135,7 +140,16 @@ void AnyHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 		IgnoreHit();
 	}
 }
-
+float3 RandomVecImp(inout uint randomState, float3 N, out float weight)
+{
+	float3 randomVec = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
+	if (dot(randomVec, N) < 0)
+	{
+		randomVec = -randomVec;
+	}
+	weight = 1;
+	return randomVec;
+}
 [shader("closesthit")]
 void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 {
@@ -156,96 +170,144 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 		triVert[2].Norm * (attr.barycentrics.y);
 
 	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
-	float3 diffMulA = diffuseColor.rgb * diffuseColor.a;
-	float3 viewDir = payload.direction;
-	float3 specCol = clamp(_SpecularColor.rgb, 0.0001, 1);
 
 	normal = normalize(normal);
+
+
+	float3 V = -payload.direction;
+	float3 N = normalize(normal);
+	if (dot(normal, V) < 0)
+	{
+		N = -N;
+	}
+	float NdotV = saturate(dot(N, V));
+
+	// Burley roughness bias
+	float alpha = _Roughness * _Roughness;
+
+	float roughness = _Roughness;
+	float3 albedo = diffuseColor.rgb;
+	float xxx = (_Specular * 0.08f + _Metallic * (1 - _Specular * 0.08f));
+
+	float3 c_diffuse = lerp(albedo * (1 - _Specular * 0.08f), 0, _Metallic);
+	float3 c_specular = lerp(_Specular * 0.08f, albedo, _Metallic);
+
+	float3 outputColor = float3(0, 0, 0);
+
 	uint randomState = RNG::RandomSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue);
 	float3 AOFactor = 1.0f;
-	if (payload.depth == 1 && g_enableAO != 0)
-	{
-		static const float c_AOMaxDist = 32;
-		int aoSampleCount = pow(2, g_quality) * 8;
-		for (int i = 0; i < aoSampleCount; i++)
-		{
-			RayDesc ray2;
-			float startPosOffsetN = 0;
-			for (int j = 0; j < 3; j++)
-			{
-				startPosOffsetN = max(dot(triVert[j].Pos - pos, normal), startPosOffsetN);
-			}
-			ray2.Origin = pos + normal * startPosOffsetN;
-			ray2.Direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-			if (dot(ray2.Direction, normal) < 0)
-			{
-				ray2.Direction = -ray2.Direction;
-			}
-			ray2.TMin = 1e-3f;
-			ray2.TMax = c_AOMaxDist;
-			TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-			TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-			if (!payload2.miss)
-			{
-				AOFactor -= (c_AOMaxDist - distance(payload2.hitPos, pos)) * (1 - payload2.color * 0.3) / c_AOMaxDist / aoSampleCount;
-			}
-		}
-	}
+	//if (payload.depth == 1 && g_enableAO != 0)
+	//{
+	//	static const float c_AOMaxDist = 32;
+	//	int aoSampleCount = pow(2, g_quality) * 8;
+	//	for (int i = 0; i < aoSampleCount; i++)
+	//	{
+	//		RayDesc ray2;
+	//		float startPosOffsetN = 0;
+	//		for (int j = 0; j < 3; j++)
+	//		{
+	//			startPosOffsetN = max(dot(triVert[j].Pos - pos, normal), startPosOffsetN);
+	//		}
+	//		ray2.Origin = pos + normal * startPosOffsetN;
+	//		ray2.Direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
+	//		if (dot(ray2.Direction, normal) < 0)
+	//		{
+	//			ray2.Direction = -ray2.Direction;
+	//		}
+	//		ray2.TMin = 1e-3f;
+	//		ray2.TMax = c_AOMaxDist;
+	//		TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
+	//		TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+	//		if (!payload2.miss)
+	//		{
+	//			AOFactor -= (c_AOMaxDist - distance(payload2.hitPos, pos)) * (1 - payload2.color * 0.3) / c_AOMaxDist / aoSampleCount;
+	//		}
+	//	}
+	//}
 	if (g_enableShadow != 0)
 	{
 		[loop]
 		for (int i = 0; i < 8; i++)
 		{
-			if (_LightInfo[i].LightColor.r > 0 || _LightInfo[i].LightColor.g > 0 || _LightInfo[i].LightColor.b > 0)
+			if (Lightings[i].LightColor.r > 0 || Lightings[i].LightColor.g > 0 || Lightings[i].LightColor.b > 0)
 			{
-				if (_LightInfo[i].LightType == 0)
+				float inShadow = 1.0f;
+				float3 lightStrength;
+				float3 L;
+				if (Lightings[i].LightType == 0)
 				{
+					lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a, 0);
+					if (payload.depth > 1 && i == 0)
+					{
+						float4 sPos = mul(float4(pos, 1), LightSpaceMatrices[0]);
+						float2 shadowTexCoords;
+						shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
+						shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
+						if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0 && g_enableShadow != 0)
+							inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords, sPos.z / sPos.w).r;
+						else
+						{
+							RayDesc ray2;
+							ray2.Origin = pos;
+							ray2.Direction = Lightings[i].LightDir;
+							ray2.TMin = 0.001;
+							ray2.TMax = 10000.0;
+							TestRayPayload payload2 = { false, float3(0,0,0), float4(0,0,0,0) };
+							if (payload.depth < 4 && dot(lightStrength, lightStrength)>1e-3)
+								TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+							else
+								continue;
+							if (!payload2.miss)
+								inShadow = 0;
+						}
+					}
+					else
+					{
+						RayDesc ray2;
+						ray2.Origin = pos;
+						ray2.Direction = Lightings[i].LightDir;
+						ray2.TMin = 0.001;
+						ray2.TMax = 10000.0;
+						TestRayPayload payload2 = { false, float3(0,0,0), float4(0,0,0,0) };
+						if (payload.depth < 4 && dot(lightStrength, lightStrength)>1e-3)
+							TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
+						else
+							continue;
+						if (!payload2.miss)
+							inShadow = 0;
+					}
 
-					RayDesc ray2;
-					ray2.Origin = pos;
-					ray2.Direction = _LightInfo[i].dir;
-					ray2.TMin = 0.0001;
-					ray2.TMax = 10000.0;
-					TestRayPayload payload2 = { false, float3(0,0,0), float4(0,0,0,0) };
-					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
-					if (payload.depth < 3 && dot(lightStrength, lightStrength)>1e-6)
-						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-					float inShadow = 1.0f;
-					if (!payload2.miss)
-						inShadow = 0;
-
-					UnityLight unitylight;
-					unitylight.color = lightStrength * inShadow;
-					unitylight.dir = _LightInfo[i].dir;
-					UnityIndirect unityindirect;
-					unityindirect.diffuse = lightStrength * 0.001f * AOFactor;
-					unityindirect.specular = lightStrength * 0.001f * AOFactor;
-					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, unitylight, unityindirect).xyz, 0);
+					L = normalize(Lightings[i].LightDir);
 				}
-				else if (_LightInfo[i].LightType == 1)
+				else if (Lightings[i].LightType == 1)
 				{
+					lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, pos), 2);
 					RayDesc ray2;
 					ray2.Origin = pos;
-					ray2.Direction = normalize(_LightInfo[i].dir - pos);
-					ray2.TMin = 0.0001;
-					ray2.TMax = distance(_LightInfo[i].dir, pos);
+					ray2.Direction = normalize(Lightings[i].LightDir - pos);
+					ray2.TMin = 0.001;
+					ray2.TMax = distance(Lightings[i].LightDir, pos);
 					TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
-					if (payload.depth < 3 && dot(lightStrength, lightStrength)>1e-6)
+					if (payload.depth < 4 && dot(lightStrength, lightStrength)>1e-3)
 						TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-					float inShadow = 1.0f;
+					else
+						continue;
+
 					if (!payload2.miss)
 						inShadow = 0.0f;
 
-					float3 lightDir = normalize(_LightInfo[i].dir - pos);
-					UnityLight light;
-					light.color = lightStrength * inShadow;
-					light.dir = lightDir;
-					UnityIndirect indirect;
-					indirect.diffuse = 0;
-					indirect.specular = 0;
-					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, light, indirect).rgb, 0);
+					L = normalize(Lightings[i].LightDir - pos);
+
 				}
+				float3 H = normalize(L + V);
+				float3 NdotL = saturate(dot(N, L));
+				float3 LdotH = saturate(dot(L, H));
+				float3 NdotH = saturate(dot(N, H));
+
+				float diffuse_factor = Diffuse_Lambert(NdotL, NdotV, LdotH, _Roughness);
+				float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
+
+				outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
 			}
 		}
 	}
@@ -254,73 +316,111 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 		[loop]
 		for (int i = 0; i < 8; i++)
 		{
-			if (_LightInfo[i].LightColor.r > 0 || _LightInfo[i].LightColor.g > 0 || _LightInfo[i].LightColor.b > 0)
+			if (Lightings[i].LightColor.r > 0 || Lightings[i].LightColor.g > 0 || Lightings[i].LightColor.b > 0)
 			{
-				if (_LightInfo[i].LightType == 0)
+				float inShadow = 1.0f;
+				float3 lightStrength;
+				float3 L;
+				if (Lightings[i].LightType == 0)
 				{
-					float inShadow = 1.0f;
+					lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a, 0);
 
-					float3 lightStrength = max(_LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a, 0);
-					UnityLight unitylight;
-					unitylight.color = lightStrength * inShadow;
-					unitylight.dir = _LightInfo[i].dir;
-					UnityIndirect unityindirect;
-					unityindirect.diffuse = lightStrength * 0.001f * AOFactor;
-					unityindirect.specular = lightStrength * 0.001f * AOFactor;
-					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, unitylight, unityindirect).xyz, 0);
+					L = normalize(Lightings[i].LightDir);
 				}
-				else if (_LightInfo[i].LightType == 1)
+				else if (Lightings[i].LightType == 1)
 				{
-					float inShadow = 1.0f;
+					lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, pos), 2);
 
-					float3 lightDir = normalize(_LightInfo[i].dir - pos);
-					float3 lightStrength = _LightInfo[i].LightColor.rgb * _LightInfo[i].LightColor.a / pow(distance(_LightInfo[i].dir, pos), 2);
-					UnityLight light;
-					light.color = lightStrength * inShadow;
-					light.dir = lightDir;
-					UnityIndirect indirect;
-					indirect.diffuse = 0;
-					indirect.specular = 0;
-					payload.color += float4(BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, light, indirect).rgb, 0);
+					L = normalize(Lightings[i].LightDir - pos);
 				}
+				float3 H = normalize(L + V);
+				float3 NdotL = saturate(dot(N, L));
+				float3 LdotH = saturate(dot(L, H));
+				float3 NdotH = saturate(dot(N, H));
+
+				float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, _Roughness);
+				float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
+
+				outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
 			}
 		}
 	}
-	UnityLight lightx;
-	lightx.color = float4(0, 0, 0, 1);
-	lightx.dir = float3(0, 1, 0);
-	UnityIndirect indirect1;
-	indirect1.diffuse = IrradianceCube.SampleLevel(s0, normal, 0).rgb * g_skyBoxMultiple * AOFactor;
 
 
-	if (payload.depth < 3)
+	float surfaceReduction = 1.0f / (roughness * roughness + 1.0f);
+	float grazingTerm = saturate(1 - sqrt(roughness) + xxx);
+	float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, roughness), 0).rg;
+
+	if (payload.depth < 2 && g_enableAO != 0 && (c_diffuse.r > 0.02f || c_diffuse.g > 0.02f || c_diffuse.b > 0.02f))
 	{
-		RayPayload payloadX;
-		payloadX.direction = reflect(viewDir, normal);
-		payloadX.color = float4(0, 0, 0, 0);
-		payloadX.depth = payload.depth;
-		RayDesc rayX;
-		rayX.Origin = pos;
-		rayX.Direction = payloadX.direction;
-		rayX.TMin = 1e-3f;
-		rayX.TMax = 10000.0;
-		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadX);
-		indirect1.specular = payloadX.color.rgb;
+		int giSampleCount = pow(2, g_quality) * 8;
+		float3 gi = 0;
+		for (int i = 0; i < giSampleCount; i++)
+		{
+			RayPayload payloadGI;
+			payloadGI.direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
+			if (dot(payloadGI.direction, N) < 0)
+			{
+				payloadGI.direction = -payloadGI.direction;
+			}
+			payloadGI.color = float4(0, 0, 0, 0);
+			payloadGI.depth = 2;
+			RayDesc rayX;
+			rayX.Origin = pos;
+			rayX.Direction = payloadGI.direction;
+			rayX.TMin = 1e-3f;
+			rayX.TMax = 10000.0;
+			TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadGI);
+
+			float3 L = payloadGI.direction;
+			float3 H = normalize(L + V);
+			float3 NdotL = saturate(dot(N, L));
+			float3 LdotH = saturate(dot(L, H));
+			float3 NdotH = saturate(dot(N, H));
+
+			float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, _Roughness);
+			float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
+
+			//gi += payloadGI.color.rgb * dot(payloadGI.direction, N);
+			gi += NdotL * payloadGI.color.rgb * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor));
+		}
+		outputColor += gi / giSampleCount;
 	}
 	else
 	{
-		indirect1.specular = EnvCube.SampleLevel(s0, reflect(-viewDir, normal), 0).rgb * g_skyBoxMultiple;
+		outputColor += IrradianceCube.SampleLevel(s0, N, 0) * g_skyBoxMultiple * c_diffuse;
 	}
-	float3 ambientColor = BRDF1_Unity_PBS(diffMulA, specCol, _Metallic, 1 - _Roughness, normal, viewDir, lightx, indirect1).rgb;
 
-	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * ambientColor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
+	if (payload.depth < 3)
+	{
+		RayPayload payloadReflect;
+		payloadReflect.direction = reflect(-V, N);
+		payloadReflect.color = float4(0, 0, 0, 0);
+		payloadReflect.depth = payload.depth;
+		RayDesc rayX;
+		rayX.Origin = pos;
+		rayX.Direction = payloadReflect.direction;
+		rayX.TMin = 1e-3f;
+		rayX.TMax = 10000.0;
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadReflect);
+
+		outputColor += payloadReflect.color * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+	}
+	else
+	{
+		outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), _Roughness * 6) * g_skyBoxMultiple * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+	}
+	outputColor *= AOFactor;
+	outputColor += _Emission * _AmbientColor;
+
+	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * outputColor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
 
 	RayDesc rayNext;
 	rayNext.Origin = pos;
 	rayNext.Direction = payload.direction;
 	rayNext.TMin = 5e-4f;
 	rayNext.TMax = 10000.0;
-	if (payload.depth < 3 && payload.color.a < 1 - 1e-3f)
+	if (payload.depth < 2 && payload.color.a < 1 - 1e-3f)
 		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayNext, payload);
 }
 

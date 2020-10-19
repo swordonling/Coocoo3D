@@ -5,9 +5,31 @@
 using namespace Coocoo3DGraphics;
 #define SizeOfInUint32(obj) ((sizeof(obj) - 1) / sizeof(UINT32) + 1)
 
+#define STATIC_SAMPLER_CODE_FRAG \
+	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};\
+	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;\
+	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;\
+	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;\
+	staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;\
+	staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;\
+	staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;\
+	staticSamplerDesc.MipLODBias = 0;\
+	staticSamplerDesc.MaxAnisotropy = 0;\
+	staticSamplerDesc.MinLOD = 0;\
+	staticSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;\
+	staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;\
+	staticSamplerDesc.RegisterSpace = 0;\
+	D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = { staticSamplerDesc,staticSamplerDesc,staticSamplerDesc };\
+	staticSamplerDescs[0].ShaderRegister = 0;\
+	staticSamplerDescs[1].ShaderRegister = 1;\
+	staticSamplerDescs[1].MaxAnisotropy = 16;\
+	staticSamplerDescs[1].Filter = D3D12_FILTER_ANISOTROPIC;\
+	staticSamplerDescs[2].ShaderRegister = 2;\
+	staticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;\
+	staticSamplerDescs[2].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR
+
 void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 {
-
 	CD3DX12_ROOT_PARAMETER1 parameter[10];
 	CD3DX12_DESCRIPTOR_RANGE1 range[6];
 	range[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
@@ -27,31 +49,14 @@ void GraphicsSignature::ReloadMMD(DeviceResources^ deviceResources)
 	parameter[8].InitAsDescriptorTable(1, &range[4]);
 	parameter[9].InitAsDescriptorTable(1, &range[5]);
 
-	D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = {};
-	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
-	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-	staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	staticSamplerDesc.MipLODBias = 0;
-	staticSamplerDesc.MaxAnisotropy = 0;
-	staticSamplerDesc.MinLOD = 0;
-	staticSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-	staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-	staticSamplerDesc.RegisterSpace = 0;
-	staticSamplerDescs[0] = staticSamplerDesc;
-	staticSamplerDescs[1] = staticSamplerDesc;
-	staticSamplerDescs[2] = staticSamplerDesc;
-	staticSamplerDescs[0].ShaderRegister = 0;
-	staticSamplerDescs[1].ShaderRegister = 1;
-	staticSamplerDescs[2].ShaderRegister = 2;
-	//staticSamplerDescs[2].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
+	STATIC_SAMPLER_CODE_FRAG;
+	staticSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	staticSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	staticSamplerDescs[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init_1_1(_countof(parameter), parameter, 3, staticSamplerDescs, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT);
+	rootSignatureDesc.Init_1_1(_countof(parameter), parameter, _countof(staticSamplerDescs), staticSamplerDescs, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;
@@ -107,29 +112,10 @@ void Sign1(DeviceResources^ deviceResources, const Platform::Array<GraphicSignat
 		}
 	}
 
-	D3D12_STATIC_SAMPLER_DESC staticSamplerDescs[3] = {};
-	D3D12_STATIC_SAMPLER_DESC staticSamplerDesc = {};
-	staticSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	staticSamplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
-	staticSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-	staticSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	staticSamplerDesc.MipLODBias = 0;
-	staticSamplerDesc.MaxAnisotropy = 0;
-	staticSamplerDesc.MinLOD = 0;
-	staticSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-	staticSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-	staticSamplerDesc.RegisterSpace = 0;
-	staticSamplerDescs[0] = staticSamplerDesc;
-	staticSamplerDescs[1] = staticSamplerDesc;
-	staticSamplerDescs[2] = staticSamplerDesc;
-	staticSamplerDescs[0].ShaderRegister = 0;
-	staticSamplerDescs[1].ShaderRegister = 1;
-	staticSamplerDescs[2].ShaderRegister = 2;
+	STATIC_SAMPLER_CODE_FRAG;
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-	rootSignatureDesc.Init_1_1(descCount, parameters, 3, staticSamplerDescs, flags);
+	rootSignatureDesc.Init_1_1(descCount, parameters, _countof(staticSamplerDescs), staticSamplerDescs, flags);
 
 	Microsoft::WRL::ComPtr<ID3DBlob> signature;
 	Microsoft::WRL::ComPtr<ID3DBlob> error;

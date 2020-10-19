@@ -21,6 +21,11 @@ namespace Coocoo3D.RenderPipeline
         public List<LightingData> lightings = new List<LightingData>();
         public List<CameraData> cameras = new List<CameraData>();
 
+        public void Preprocess()
+        {
+            lightings.Sort();
+        }
+
         public void ClearCollections()
         {
             entities.Clear();
@@ -52,6 +57,7 @@ namespace Coocoo3D.RenderPipeline
         public GraphicsContext[] graphicsContexts;
 
         //public Texture2D ui0Texture = new Texture2D();
+        public Texture2D BRDFLut = new Texture2D();
         public Texture2D postProcessBackground = new Texture2D();
 
         public RenderPipelineDynamicContext renderPipelineDynamicContext = new RenderPipelineDynamicContext();
@@ -112,7 +118,7 @@ namespace Coocoo3D.RenderPipeline
             TextureLoading.ReloadPure(1, 1, new Vector4(0, 1, 1, 1));
             TextureError.ReloadPure(1, 1, new Vector4(1, 0, 1, 1));
             EnvCubeMap.ReloadPure(64, 64, new Vector4[] { new Vector4(0.1f, 0.08f, 0.08f, 1), new Vector4(0.08f, 0.1f, 0.08f, 1), new Vector4(0.5f, 0.5f, 0.5f, 1), new Vector4(0.08f, 0.1f, 0.1f, 1), new Vector4(0.1f, 0.1f, 0.08f, 1), new Vector4(0.08f, 0.08f, 0.1f, 1) });
-            IrradianceMap.ReloadRTVUAV(32, 32, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
+            IrradianceMap.ReloadAsRTVUAV(32, 32, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
             postProcessBackground.ReloadPure(64, 64, new Vector4(1, 1, 1, 0));
             miscProcessContext.Add(new MiscProcessPair<TextureCube, RenderTextureCube>(EnvCubeMap, IrradianceMap, MiscProcessType.GenerateIrradianceMap));
             processingList.AddObject(TextureLoading);
@@ -124,6 +130,8 @@ namespace Coocoo3D.RenderPipeline
             processingList.AddObject(ndcQuadMesh);
 
             processingList.AddObject(postProcessBackground);
+
+            await ReloadTexture2DNoMip(BRDFLut, wic, processingList, "ms-appx:///Assets/Textures/brdflut.png");
             //await ReloadTexture2D(ui0Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_0.png");
 
             //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
@@ -132,6 +140,11 @@ namespace Coocoo3D.RenderPipeline
         private async Task ReloadTexture2D(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
         {
             texture2D.ReloadFromImage(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))));
+            processingList.AddObject(texture2D);
+        }
+        private async Task ReloadTexture2DNoMip(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
+        {
+            texture2D.ReloadFromImageNoMip(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))));
             processingList.AddObject(texture2D);
         }
     }

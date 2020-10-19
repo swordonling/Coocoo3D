@@ -2,10 +2,11 @@
 #include "RenderTextureCube.h"
 using namespace Coocoo3DGraphics;
 
-void RenderTextureCube::ReloadRTVUAV(int width, int height, DxgiFormat format)
+void RenderTextureCube::ReloadAsRTVUAV(int width, int height, DxgiFormat format)
 {
 	m_width = width;
 	m_height = height;
+	m_mipLevels = 1;
 	m_format = (DXGI_FORMAT)format;
 	m_dsvFormat = DXGI_FORMAT_UNKNOWN;
 	m_rtvFormat = (DXGI_FORMAT)format;

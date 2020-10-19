@@ -1,7 +1,7 @@
 #include "CameraDataDefine.hlsli"
 cbuffer cb2 : register(b2)
 {
-	CAMERA_DATA_DEFINE//is a macro
+	CAMERA_DATA_DEFINE;//is a macro
 };
 
 struct VSSkinnedIn

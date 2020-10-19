@@ -167,6 +167,9 @@
   <data name="M_MenuBarItem_View.Title" xml:space="preserve">
     <value>ビュー</value>
   </data>
+  <data name="Object_Name_Lighting" xml:space="preserve">
+    <value>光源</value>
+  </data>
   <data name="Page_Common_Button_RefreshCache.Content" xml:space="preserve">
     <value>キャッシュを更新する</value>
   </data>
@@ -195,7 +198,7 @@
     <value>カメラの動きデータ</value>
   </data>
   <data name="Page_Common_Switch_HighResolutionShadow.Header" xml:space="preserve">
-    <value>高解像度影(Forward Only)</value>
+    <value>高解像度影</value>
   </data>
   <data name="Page_Common_Switch_MultiThreadRendering.Header" xml:space="preserve">
     <value>マルチスレッドレンダリング</value>
@@ -229,6 +232,45 @@
   </data>
   <data name="Page_Entity_PivotItem_Materials.Header" xml:space="preserve">
     <value>材質</value>
+  </data>
+  <data name="Page_Entity_Slider_Anisotropic.Header" xml:space="preserve">
+    <value>Anisotropic</value>
+  </data>
+  <data name="Page_Entity_Slider_Clearcoat.Header" xml:space="preserve">
+    <value>クリアコート</value>
+  </data>
+  <data name="Page_Entity_Slider_ClearcoatGloss.Header" xml:space="preserve">
+    <value>クリアコート 光沢</value>
+  </data>
+  <data name="Page_Entity_Slider_Emission.Header" xml:space="preserve">
+    <value>Emission</value>
+  </data>
+  <data name="Page_Entity_Slider_Metallic.Header" xml:space="preserve">
+    <value>金属性の</value>
+  </data>
+  <data name="Page_Entity_Slider_Roughness.Header" xml:space="preserve">
+    <value>粗さ</value>
+  </data>
+  <data name="Page_Entity_Slider_Sheen.Header" xml:space="preserve">
+    <value>光沢</value>
+  </data>
+  <data name="Page_Entity_Slider_SheenTint.Header" xml:space="preserve">
+    <value>Sheen Tint</value>
+  </data>
+  <data name="Page_Entity_Slider_Specular.Header" xml:space="preserve">
+    <value>鏡面 反射</value>
+  </data>
+  <data name="Page_Entity_Slider_SpecularTint.Header" xml:space="preserve">
+    <value>Specular Tint</value>
+  </data>
+  <data name="Page_Entity_Slider_Subsurface.Header" xml:space="preserve">
+    <value>Subsurface</value>
+  </data>
+  <data name="Page_Entity_Text_MaterialInfo.Text" xml:space="preserve">
+    <value>材質情報</value>
+  </data>
+  <data name="Page_Entity_Text_Others.Text" xml:space="preserve">
+    <value>その他</value>
   </data>
   <data name="Page_SkyBox_Button_Apply.Content" xml:space="preserve">
     <value>適用</value>

@@ -6,9 +6,10 @@ namespace Coocoo3DGraphics
 	public ref class RenderTextureCube sealed :public IRenderTexture
 	{
 	public:
-		void ReloadRTVUAV(int width, int height, DxgiFormat format);
+		void ReloadAsRTVUAV(int width, int height, DxgiFormat format);
 		property UINT m_width;
 		property UINT m_height;
+		property UINT m_mipLevels;
 	internal:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_texture;
 		UINT m_srvRefIndex;

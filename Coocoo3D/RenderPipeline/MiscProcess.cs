@@ -58,7 +58,7 @@ namespace Coocoo3D.RenderPipeline
         public ComputePO ClearIrradianceMap = new ComputePO();
         GraphicsSignature rootSignature = new GraphicsSignature();
         public bool Ready = false;
-        public const int c_maxIteration = 16;
+        public const int c_maxIteration = 32;
         public ConstantBuffer[] constantBuffers = new ConstantBuffer[c_maxIteration];
         XYZData _XyzData;
         public byte[] cpuBuffer1 = new byte[512];
@@ -110,15 +110,15 @@ namespace Coocoo3D.RenderPipeline
                     _XyzData.x1 = (int)texture1.m_width;
                     _XyzData.y1 = (int)texture1.m_height;
                     _XyzData.Quality = ((int)context.miscProcessPairs[i].Type - 65536) * (c_maxIteration - 1);
-                    _XyzData.Batch = 0;
-                    UpdateGPUBuffer(0);
+                    int itCount = 1;
                     if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMapQ1)
                     {
-                        for (int j = 1; j < c_maxIteration; j++)
-                        {
-                            _XyzData.Batch = j;
-                            UpdateGPUBuffer(j);
-                        }
+                        itCount = c_maxIteration;
+                    }
+                    for (int j = 0; j < itCount; j++)
+                    {
+                        _XyzData.Batch = j;
+                        UpdateGPUBuffer(j);
                     }
 
                     context.graphicsContext.SetRootSignatureCompute(rootSignature);
@@ -143,6 +143,10 @@ namespace Coocoo3D.RenderPipeline
                         context.graphicsContext.SetComputeUAVT(texture1, 2);
                         context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
                     }
+                }
+                else if (context.miscProcessPairs[i].Type.HasFlag(MiscProcessType.GenerateIrradianceMap))
+                {
+
                 }
             }
             context.graphicsContext.EndCommand();

@@ -294,6 +294,16 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
+        public bool VAutoReloadShader
+        {
+            get => appBody.performaceSettings.AutoReloadShaders;
+            set=>appBody.performaceSettings.AutoReloadShaders = value;
+        }
+        public bool VAutoReloadTexture
+        {
+            get => appBody.performaceSettings.AutoReloadTextures;
+            set=>appBody.performaceSettings.AutoReloadTextures = value;
+        }
         bool _cacheCameraMotionOn;
         #endregion
 

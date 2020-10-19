@@ -27,7 +27,7 @@ namespace Coocoo3D.RenderPipeline
             {
                 cameraPresentDatas[i].Reload(deviceResources, c_presentDataSize);
             }
-            lightingCameraPresentData.Reload(deviceResources, c_presentDataSize);
+            LightCameraDataBuffer.Reload(deviceResources, c_presentDataSize);
             Ready = true;
         }
         #region graphics assets
@@ -37,14 +37,14 @@ namespace Coocoo3D.RenderPipeline
             {
                 cameraPresentDatas[i].Unload();
             }
-            lightingCameraPresentData.Unload();
+            LightCameraDataBuffer.Unload();
         }
         #endregion
 
         Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
-        public PresentData lightingCameraPresentData = new PresentData();
+        public ConstantBuffer LightCameraDataBuffer = new ConstantBuffer();
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
         byte[] rcDataUploadBuffer = new byte[c_lightingDataSize + c_materialDataSize + c_presentDataSize];
@@ -70,11 +70,9 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].PlayTime = (float)time;
                 cameraPresentDatas[i].DeltaTime = (float)deltaTime;
             }
-            lightingCameraPresentData.PlayTime = (float)time;
-            lightingCameraPresentData.DeltaTime = (float)deltaTime;
         }
 
-        int mainLightIndex;
+        bool HasMainLight;
         PObject currentDrawPObject;
         PObject currentSkinningPObject;
         public override void PrepareRenderData(RenderPipelineContext context)
@@ -102,57 +100,46 @@ namespace Coocoo3D.RenderPipeline
             }
             DesireEntityBuffers(deviceResources, Entities.Count);
             DesireMaterialBuffers(deviceResources, countMaterials);
-            mainLightIndex = -1;
+            var camera = context.renderPipelineDynamicContext.cameras[0];
+            Matrix4x4 lightCameraMatrix = Matrix4x4.Identity;
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
-            for (int i = 0; i < lightings.Count; i++)
+            HasMainLight = false;
+            if (lightings.Count > 0 && lightings[0].LightingType == LightingType.Directional)
             {
-                if (lightings[i].LightingType == LightingType.Directional)
-                {
-                    lightingCameraPresentData.UpdateCameraData(lightings[i]); ;
-                    Marshal.StructureToPtr(lightingCameraPresentData.innerStruct, pBufferData, true);
-                    graphicsContext.UpdateResource(lightingCameraPresentData.DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
-                    mainLightIndex = i;
-                    break;
-                }
+                lightCameraMatrix = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Angle, camera.Distance));
+                Marshal.StructureToPtr(lightCameraMatrix, pBufferData, true);
+                graphicsContext.UpdateResource(LightCameraDataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
+                HasMainLight = true;
             }
             #region Update Entities Data
             IntPtr p0 = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetLightingData);
             pBufferData = p0;
+
+            #region Lighting
+            Array.Clear(rcDataUploadBuffer, c_offsetLightingData, c_lightingDataSize);
+            int lightCount = 0;
+            pBufferData = p0 + 64;
+            Marshal.StructureToPtr(lightCameraMatrix, p0, true);
+            for (int j = 0; j < lightings.Count; j++)
+            {
+                LightingData data1 = lightings[j];
+                Marshal.StructureToPtr(data1.GetPositionOrDirection(), pBufferData, true);
+                Marshal.StructureToPtr((uint)data1.LightingType, pBufferData + 12, true);
+                Marshal.StructureToPtr(data1.Color, pBufferData + 16, true);
+
+                lightCount++;
+                pBufferData += 32;
+                if (lightCount >= 4)
+                    break;
+            }
+            #endregion
+
             for (int i = 0; i < Entities.Count; i++)
             {
-                MMD3DEntity entity = Entities[i];
-                #region Lighting
-                Array.Clear(rcDataUploadBuffer, c_offsetLightingData, c_lightingDataSize);
-                int lightCount = 0;
-                pBufferData = p0;
-                if (mainLightIndex != -1)
-                {
-                    LightingData data1 = lightings[mainLightIndex];
-                    data1.vpMatrix = Matrix4x4.Transpose(data1.vpMatrix);
-                    Marshal.StructureToPtr(data1, pBufferData, true);
-
-                    lightCount++;
-                    pBufferData += 96;
-                }
-                for (int j = 0; j < lightings.Count; j++)
-                {
-                    if (j != mainLightIndex)
-                    {
-                        LightingData data1 = lightings[j];
-                        data1.vpMatrix = Matrix4x4.Transpose(data1.vpMatrix);
-                        Marshal.StructureToPtr(data1, pBufferData, true);
-
-                        lightCount++;
-                        pBufferData += 96;
-                        if (lightCount >= 4)
-                            break;
-                    }
-                }
-                #endregion
-
                 graphicsContext.UpdateResource(entityDataBuffers[i], rcDataUploadBuffer, c_lightingDataSize, c_offsetLightingData);
             }
             #endregion
+
             #region Update material data
             int matIndex = 0;
             pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetMaterialData);
@@ -174,8 +161,8 @@ namespace Coocoo3D.RenderPipeline
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
+                cameraPresentDatas[i].innerStruct.inShaderSettings = inShaderSettings;
                 Marshal.StructureToPtr(cameraPresentDatas[i].innerStruct, pBufferData, true);
-                Marshal.StructureToPtr(inShaderSettings, pBufferData + 256, true);
                 graphicsContext.UpdateResource(cameraPresentDatas[i].DataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
             }
 
@@ -195,10 +182,10 @@ namespace Coocoo3D.RenderPipeline
                 EntitySkinning(context, Entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i]);
             graphicsContext.SetSOMesh(null);
             int matIndex = 0;
-            if (mainLightIndex != -1 && inShaderSettings.EnableShadow)
+            if (HasMainLight && inShaderSettings.EnableShadow)
             {
                 for (int i = 0; i < Entities.Count; i++)
-                    RenderEntityShadow(context, Entities[i].rendererComponent, lightingCameraPresentData.DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref matIndex);
+                    RenderEntityShadow(context, Entities[i].rendererComponent, LightCameraDataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref matIndex);
             }
             graphicsContext.SetRootSignatureCompute(context.RPAssetsManager.rootSignatureCompute);
             for (int i = 0; i < Entities.Count; i++)
@@ -213,6 +200,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetSRVT(context.DSV0, 6);
             graphicsContext.SetSRVT(context.EnvCubeMap, 7);
             graphicsContext.SetSRVT(context.IrradianceMap, 8);
+            graphicsContext.SetSRVT(context.BRDFLut, 9);
             #region Render Sky box
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectSkyBox, CullMode.back);
             graphicsContext.SetMesh(context.ndcQuadMesh);

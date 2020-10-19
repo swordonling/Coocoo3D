@@ -76,7 +76,7 @@ namespace Coocoo3D.Core
         {
             viewSelectedEntityBone = true,
             backgroundColor = new Vector4(0, 0.3f, 0.3f, 0.0f),
-            ExtendShadowMapRange = 48,
+            ExtendShadowMapRange = 64,
             ZPrepass = false,
         };
         public InShaderSettings inShaderSettings = new InShaderSettings()
@@ -92,6 +92,8 @@ namespace Coocoo3D.Core
             MultiThreadRendering = true,
             SaveCpuPower = true,
             HighResolutionShadow = false,
+            AutoReloadShaders = true,
+            AutoReloadTextures = true,
         };
 
         public bool HighResolutionShadowNow = false;
@@ -246,8 +248,8 @@ namespace Coocoo3D.Core
                     renderPipelineContext.renderPipelineDynamicContext1.entities.AddRange(CurrentScene.Entities);
                     for (int i = 0; i < CurrentScene.Lightings.Count; i++)
                     {
-                        CurrentScene.Lightings[i].UpdateLightingData(settings.ExtendShadowMapRange, camera);
                         renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
+                        //renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Distance));
                     }
                 }
 
@@ -271,6 +273,7 @@ namespace Coocoo3D.Core
                 renderPipelineContext.renderPipelineDynamicContext1.cameras.Add(camera.GetCameraData());
                 renderPipelineContext.renderPipelineDynamicContext1.settings = settings;
                 renderPipelineContext.renderPipelineDynamicContext1.inShaderSettings = inShaderSettings;
+                renderPipelineContext.renderPipelineDynamicContext1.Preprocess();
 
 
                 bool needUpdateEntities = NeedUpdateEntities;
@@ -532,6 +535,8 @@ namespace Coocoo3D.Core
         public bool MultiThreadRendering;
         public bool SaveCpuPower;
         public bool HighResolutionShadow;
+        public bool AutoReloadShaders;
+        public bool AutoReloadTextures;
     }
 
     public struct Settings

@@ -46,7 +46,8 @@ namespace Coocoo3D.PropertiesPages
                 mmd3dEntity = _appBody.SelectedEntities[0];
                 appBody.FrameUpdated += FrameUpdated;
                 _cacheP = mmd3dEntity.PositionNextFrame;
-                _cacheR = QuaternionToEularYXZ(mmd3dEntity.RotationNextFrame);
+                _cacheR = QuaternionToEularYXZ(mmd3dEntity.RotationNextFrame) * 180 / MathF.PI;
+                _cacheRQ = mmd3dEntity.RotationNextFrame;
                 ViewMaterials.ItemsSource = mmd3dEntity.rendererComponent.Materials;
             }
             else

@@ -290,6 +290,7 @@ namespace Coocoo3D.FileFormat
                         EdgeColor = mmdMat.EdgeColor,
                         AmbientColor = new Vector3(MathF.Pow(mmdMat.AmbientColor.X, 2.2f), MathF.Pow(mmdMat.AmbientColor.Y, 2.2f), MathF.Pow(mmdMat.AmbientColor.Z, 2.2f)),
                         Roughness = 0.5f,
+                        Specular = 0.5f,
                     },
                     DrawFlags = mmdMat.DrawFlags,
                     toonIndex = mmdMat.ToonIndex,

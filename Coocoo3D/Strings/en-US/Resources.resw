@@ -167,6 +167,9 @@ Bone count: {2}</value>
   <data name="M_MenuBarItem_View.Title" xml:space="preserve">
     <value>View</value>
   </data>
+  <data name="Object_Name_Lighting" xml:space="preserve">
+    <value>Lighting</value>
+  </data>
   <data name="Page_Common_Button_RefreshCache.Content" xml:space="preserve">
     <value>Refresh Cache</value>
   </data>
@@ -195,7 +198,7 @@ Bone count: {2}</value>
     <value>Camera Motion Data</value>
   </data>
   <data name="Page_Common_Switch_HighResolutionShadow.Header" xml:space="preserve">
-    <value>High Resolution Shadow (Forward Only)</value>
+    <value>High Resolution Shadow</value>
   </data>
   <data name="Page_Common_Switch_MultiThreadRendering.Header" xml:space="preserve">
     <value>Multi Thread Rendering</value>
@@ -229,6 +232,45 @@ Bone count: {2}</value>
   </data>
   <data name="Page_Entity_PivotItem_Materials.Header" xml:space="preserve">
     <value>Materials</value>
+  </data>
+  <data name="Page_Entity_Slider_Anisotropic.Header" xml:space="preserve">
+    <value>Anisotropic</value>
+  </data>
+  <data name="Page_Entity_Slider_Clearcoat.Header" xml:space="preserve">
+    <value>Clearcoat</value>
+  </data>
+  <data name="Page_Entity_Slider_ClearcoatGloss.Header" xml:space="preserve">
+    <value>Clearcoat Gloss</value>
+  </data>
+  <data name="Page_Entity_Slider_Emission.Header" xml:space="preserve">
+    <value>Emission</value>
+  </data>
+  <data name="Page_Entity_Slider_Metallic.Header" xml:space="preserve">
+    <value>Metallic</value>
+  </data>
+  <data name="Page_Entity_Slider_Roughness.Header" xml:space="preserve">
+    <value>Roughness</value>
+  </data>
+  <data name="Page_Entity_Slider_Sheen.Header" xml:space="preserve">
+    <value>Sheen</value>
+  </data>
+  <data name="Page_Entity_Slider_SheenTint.Header" xml:space="preserve">
+    <value>Sheen Tint</value>
+  </data>
+  <data name="Page_Entity_Slider_Specular.Header" xml:space="preserve">
+    <value>Specular</value>
+  </data>
+  <data name="Page_Entity_Slider_SpecularTint.Header" xml:space="preserve">
+    <value>Specular Tint</value>
+  </data>
+  <data name="Page_Entity_Slider_Subsurface.Header" xml:space="preserve">
+    <value>Subsurface</value>
+  </data>
+  <data name="Page_Entity_Text_MaterialInfo.Text" xml:space="preserve">
+    <value>Material Infomation</value>
+  </data>
+  <data name="Page_Entity_Text_Others.Text" xml:space="preserve">
+    <value>Others</value>
   </data>
   <data name="Page_SkyBox_Button_Apply.Content" xml:space="preserve">
     <value>Apply</value>
