@@ -15,7 +15,7 @@
 #include "ReadBackTexture2D.h"
 #include "StaticBuffer.h"
 #include "TwinBuffer.h"
-#include "DynamicMesh.h"
+#include "MeshBuffer.h"
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -69,7 +69,6 @@ namespace Coocoo3DGraphics
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
 		void UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
-		void SetSRVRSkinnedMesh(MMDMesh^ mesh, int index);
 		void SetSRVR(StaticBuffer^ buffer, int index);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(TextureCube^ texture, int index);
@@ -82,14 +81,14 @@ namespace Coocoo3DGraphics
 		void SetComputeSRVT(TextureCube^ texture, int index);
 		void SetComputeSRVT(RenderTexture2D^ texture, int index);
 		void SetComputeSRVT(RenderTextureCube^ texture, int index);
-		void SetComputeSRVRSkinnedMesh(MMDMesh^ mesh, int index);
+		void SetComputeSRVR(MeshBuffer^ mesh,int startLocation, int index);
 		void SetComputeCBVR(ConstantBuffer^ buffer, int index);
 		void SetComputeCBVR(ConstantBufferStatic^ buffer, int index);
-		void SetComputeUAVR(DynamicMesh^ mesh, int index);
+		void SetComputeUAVR(MeshBuffer^ mesh, int startLocation, int index);
 		void SetComputeUAVR(TwinBuffer^ buffer, int bufIndex, int index);
 		void SetComputeUAVT(RenderTexture2D^ texture, int index);
 		void SetComputeUAVT(RenderTextureCube^ texture, int index);
-		void SetSOMesh(MMDMesh^ mesh);
+		void SetSOMesh(MeshBuffer^ mesh);
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
 		void Dispatch(int x, int y, int z);
@@ -99,16 +98,14 @@ namespace Coocoo3DGraphics
 		void UploadBuffer(StaticBuffer^ buffer);
 		void UpdateRenderTexture(IRenderTexture^ texture);
 		void UpdateReadBackTexture(ReadBackTexture2D^ texture);
-
 		void Copy(TextureCube^ source, RenderTextureCube^ dest);
 		void CopyBackBuffer(ReadBackTexture2D^ target, int index);
-		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, int vertexCount);
-		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
-		void BuildInstance(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, UINT instanceMask, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, int vertexBegin, int vertexCount);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
+		//void BuildInstance(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, UINT instanceMask, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
-		void SetMesh(DynamicMesh^ mesh);
-		void SetMeshSkinned(MMDMesh^ mesh);
+		void SetMesh(MeshBuffer^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);
 		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);

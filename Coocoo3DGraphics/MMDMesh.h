@@ -67,7 +67,6 @@ namespace Coocoo3DGraphics
 		UINT m_vertexStride;
 		UINT m_indexStride;
 		UINT m_vertexStride2;
-		UINT m_vertexOffset = 0;
 		D3D_PRIMITIVE_TOPOLOGY m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
@@ -79,19 +78,12 @@ namespace Coocoo3DGraphics
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_skinnedVertice;
-		D3D12_VERTEX_BUFFER_VIEW m_skinnedVerticeVertexBufferView;
-		D3D12_STREAM_OUTPUT_BUFFER_VIEW m_skinnedVerticeStreamOutputBufferView;
-		D3D12_RESOURCE_STATES prevStateSkinnedVertice;
-
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload0[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload1[c_frameCount];
+		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUpload;
 		int lastUpdateIndex0 = 0;
 		int lastUpdateIndex1 = 0;
-
-		static const UINT c_skinnedVerticeStride = 64u;
 	};
 }
 

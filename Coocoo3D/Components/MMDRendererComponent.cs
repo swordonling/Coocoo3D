@@ -22,8 +22,10 @@ namespace Coocoo3D.Components
     public class MMDRendererComponent
     {
         public MMDMesh mesh;
+        public int meshVertexCount;
+        public int meshIndexCount;
+
         public TwinBuffer meshParticleBuffer = new TwinBuffer();
-        public DynamicMesh dynamicMesh = new DynamicMesh();
         public List<MMDMatLit> Materials = new List<MMDMatLit>();
         public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
         public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
@@ -258,11 +260,11 @@ namespace Coocoo3D.FileFormat
         {
             rendererComponent.Materials.Clear();
             rendererComponent.mesh = modelResource.GetMesh();
+            rendererComponent.meshVertexCount = rendererComponent.mesh.m_vertexCount;
+            rendererComponent.meshIndexCount = rendererComponent.mesh.m_indexCount;
             processingList.AddObject(rendererComponent.mesh);
             rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_indexCount / 3 * 128);
-            rendererComponent.dynamicMesh.Reload(rendererComponent.mesh.m_indexCount * 64, 64);
             processingList.AddObject(rendererComponent.meshParticleBuffer);
-            processingList.AddObject(rendererComponent.dynamicMesh);
             rendererComponent.POSkinning = new PObject();
             rendererComponent.PODraw = new PObject();
             rendererComponent.ParticleCompute = null;

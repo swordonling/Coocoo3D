@@ -61,7 +61,7 @@ namespace Coocoo3D.RenderPipeline
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignaturePostProcess);
-            graphicsContext.SetRenderTargetScreenAndClear(context.renderPipelineDynamicContext.settings.backgroundColor);
+            graphicsContext.SetRenderTargetScreenAndClear(context.dynamicContext.settings.backgroundColor);
             graphicsContext.SetCBVR(postProcessDataBuffer, 0);
             graphicsContext.SetSRVT(context.outputRTV, 1);
             graphicsContext.SetSRVT(context.postProcessBackground, 2);

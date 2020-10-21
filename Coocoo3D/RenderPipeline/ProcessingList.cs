@@ -26,7 +26,6 @@ namespace Coocoo3D.RenderPipeline
         public List<StaticBuffer> staticBufferList = new List<StaticBuffer>();
         public List<ReadBackTexture2D> readBackTextureList = new List<ReadBackTexture2D>();
         public List<TwinBuffer> twinBufferList = new List<TwinBuffer>();
-        public List<DynamicMesh> dynamicMeshList = new List<DynamicMesh>();
         public List<PObject>[] pobjectLists = new List<PObject>[] { new List<PObject>(), new List<PObject>(), new List<PObject>(), };
         public List<ComputePO>[] computePObjectLists = new List<ComputePO>[] { new List<ComputePO>(),};
 
@@ -72,13 +71,6 @@ namespace Coocoo3D.RenderPipeline
                 twinBufferList.Add(buffer);
             }
         }
-        public void AddObject(DynamicMesh buffer)
-        {
-            lock (dynamicMeshList)
-            {
-                dynamicMeshList.Add(buffer);
-            }
-        }
         /// <summary>无法用语言描述的函数 </summary>
         public void RS(PObject pObject, int slot)
         {
@@ -103,7 +95,6 @@ namespace Coocoo3D.RenderPipeline
             Move1(readBackTextureList, another.readBackTextureList);
             Move1(staticBufferList, another.staticBufferList);
             Move1(twinBufferList, another.twinBufferList);
-            Move1(dynamicMeshList, another.dynamicMeshList);
             for (int i = 0; i < pobjectLists.Length; i++)
                 Move1(pobjectLists[i], another.pobjectLists[i]);
             for (int i = 0; i < computePObjectLists.Length; i++)
@@ -118,7 +109,6 @@ namespace Coocoo3D.RenderPipeline
             readBackTextureList.Clear();
             staticBufferList.Clear();
             twinBufferList.Clear();
-            dynamicMeshList.Clear();
             for (int i = 0; i < pobjectLists.Length; i++)
                 pobjectLists[i].Clear();
             for (int i = 0; i < computePObjectLists.Length; i++)
@@ -185,8 +175,6 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.UpdateReadBackTexture(readBackTextureList[i]);
             for (int i = 0; i < twinBufferList.Count; i++)
                 twinBufferList[i].Initilize(deviceResources);
-            for (int i = 0; i < dynamicMeshList.Count; i++)
-                dynamicMeshList[i].Initilize(deviceResources);
         }
     }
 }

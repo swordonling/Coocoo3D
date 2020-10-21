@@ -20,6 +20,18 @@ namespace Coocoo3D.RenderPipeline
         public List<MMD3DEntity> entities = new List<MMD3DEntity>();
         public List<LightingData> lightings = new List<LightingData>();
         public List<CameraData> cameras = new List<CameraData>();
+        public int IndexCount;
+
+        public int GetSceneObjectIndexCount()
+        {
+            int count = 0;
+            for (int i = 0; i < entities.Count; i++)
+            {
+                count += entities[i].rendererComponent.meshIndexCount;
+            }
+            IndexCount = count;
+            return count;
+        }
 
         public void Preprocess()
         {
@@ -50,6 +62,8 @@ namespace Coocoo3D.RenderPipeline
         public RenderTextureCube IrradianceMap = new RenderTextureCube();
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
+        public MeshBuffer SkinningMeshBuffer = new MeshBuffer();
+        public int SkinningMeshBufferSize;
 
         public RPAssetsManager RPAssetsManager;
         public DeviceResources deviceResources;
@@ -60,8 +74,8 @@ namespace Coocoo3D.RenderPipeline
         public Texture2D BRDFLut = new Texture2D();
         public Texture2D postProcessBackground = new Texture2D();
 
-        public RenderPipelineDynamicContext renderPipelineDynamicContext = new RenderPipelineDynamicContext();
-        public RenderPipelineDynamicContext renderPipelineDynamicContext1 = new RenderPipelineDynamicContext();
+        public RenderPipelineDynamicContext dynamicContext = new RenderPipelineDynamicContext();
+        public RenderPipelineDynamicContext dynamicContext1 = new RenderPipelineDynamicContext();
 
         public List<ConstantBuffer> CBs_Bone = new List<ConstantBuffer>();
 
@@ -85,7 +99,7 @@ namespace Coocoo3D.RenderPipeline
         public void UpdateGPUResource()
         {
             #region Update bone data
-            int count = renderPipelineDynamicContext.entities.Count;
+            int count = dynamicContext.entities.Count;
             while (CBs_Bone.Count < count)
             {
                 ConstantBuffer constantBuffer = new ConstantBuffer();
@@ -94,16 +108,16 @@ namespace Coocoo3D.RenderPipeline
             }
             for (int i = 0; i < count; i++)
             {
-                var entity = renderPipelineDynamicContext.entities[i];
+                var entity = dynamicContext.entities[i];
                 IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(bigBuffer, 0);
                 Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(world), ptr1, true);
                 Marshal.StructureToPtr(entity.rendererComponent.amountAB, ptr1 + 64, true);
-                Marshal.StructureToPtr(entity.rendererComponent.mesh.m_vertexCount, ptr1 + 68, true);
-                Marshal.StructureToPtr(entity.rendererComponent.mesh.m_indexCount, ptr1 + 72, true);
+                Marshal.StructureToPtr(entity.rendererComponent.meshVertexCount, ptr1 + 68, true);
+                Marshal.StructureToPtr(entity.rendererComponent.meshIndexCount, ptr1 + 72, true);
 
                 graphicsContext.UpdateResource(CBs_Bone[i], bigBuffer, 256, 0);
-                graphicsContext.UpdateResourceRegion(CBs_Bone[i], 256, renderPipelineDynamicContext.entities[i].boneComponent.boneMatricesData, 65280, 0);
+                graphicsContext.UpdateResourceRegion(CBs_Bone[i], 256, dynamicContext.entities[i].boneComponent.boneMatricesData, 65280, 0);
             }
             #endregion
         }

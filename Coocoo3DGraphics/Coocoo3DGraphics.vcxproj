@@ -280,7 +280,6 @@
     <ClInclude Include="DirectXTex\DirectXTexP.h" />
     <ClInclude Include="DirectXTex\Filters.h" />
     <ClInclude Include="DirectXTex\scoped.h" />
-    <ClInclude Include="DynamicMesh.h" />
     <ClInclude Include="Extension\CooGExtension.h" />
     <ClInclude Include="GPUProgram\ComputePO.h" />
     <ClInclude Include="GPUProgram\GeometryShader.h" />
@@ -293,6 +292,7 @@
     <ClInclude Include="GraphicsSignature.h" />
     <ClInclude Include="ITexture.h" />
     <ClInclude Include="Material.h" />
+    <ClInclude Include="MeshBuffer.h" />
     <ClInclude Include="MMDMesh.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="RayTracingScene.h" />
@@ -332,7 +332,6 @@
     <ClCompile Include="DirectXTex\DirectXTexTGA.cpp" />
     <ClCompile Include="DirectXTex\DirectXTexUtil.cpp" />
     <ClCompile Include="DirectXTex\DirectXTexWIC.cpp" />
-    <ClCompile Include="DynamicMesh.cpp" />
     <ClCompile Include="Extension\CooGExtension.cpp" />
     <ClCompile Include="GPUProgram\ComputePO.cpp" />
     <ClCompile Include="GPUProgram\GeometryShader.cpp" />
@@ -342,6 +341,7 @@
     <ClCompile Include="GraphicsContext.cpp" />
     <ClCompile Include="GraphicsSignature.cpp" />
     <ClCompile Include="Material.cpp" />
+    <ClCompile Include="MeshBuffer.cpp" />
     <ClCompile Include="MMDMesh.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

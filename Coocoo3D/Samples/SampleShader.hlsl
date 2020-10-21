@@ -1,6 +1,5 @@
 //VS、GS、VS1、GS1、PS1这五个函数用于渲染
 //VS和GS能在光线追踪中使用
-//VSParticle、GSParticle、PSParticle、CSParticle这四个函数用于粒子系统。
 //CSParticle用于进行粒子发射和更新。
 //随着版本更新，这个文件的内容需要相应改动。register也可能会改动。不能保证兼容性。
 //使用shader model 5.0
@@ -430,10 +429,6 @@ float4 PS1(PSIn input) : SV_TARGET
 	return float4(outputColor * float3(0.5,0.5,1), texColor.a);
 	 return float4(float3(0.5,1,1), 1);
 }
-float4 PSParticle(PSIn input) : SV_TARGET
-{
-	return float4(1,1,1,0.1f);
-}
 #endif //COO_SURFACE
 #ifdef COO_PARTICLE
 
@@ -458,7 +453,7 @@ struct ParticleDynamicData
 	float life;
 };
 
-StructuredBuffer<Triangle1> sourcePrimitives : register(t0);
+//StructuredBuffer<Triangle1> sourcePrimitives : register(t0);
 RWStructuredBuffer<Triangle1> targetPrimitives : register(u0);
 RWStructuredBuffer<ParticleDynamicData> particleDynamicData : register(u1);
 
@@ -467,7 +462,7 @@ void CSParticle(uint3 dtid : SV_DispatchThreadID)
 {
 	uint index = dtid.x;
 	if (index >= g_indexCount / 3)return;//防止内存访问溢出，溢出会造成严重后果。
-	Triangle1 tri1 = sourcePrimitives[index];
+	Triangle1 tri1 = targetPrimitives[index];
 	if (particleDynamicData[index].life <= 0)
 	{
 		uint seed = SeedThread(index + g_camera_randomValue);

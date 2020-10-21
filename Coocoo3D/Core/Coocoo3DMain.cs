@@ -114,6 +114,7 @@ namespace Coocoo3D.Core
                 RPAssetsManager.Reload(deviceResources);
                 forwardRenderPipeline1.Reload(deviceResources);
                 postProcess.Reload(deviceResources);
+                renderPipelineContext.SkinningMeshBuffer.Reload(deviceResources, 0);
                 if (deviceResources.IsRayTracingSupport())
                     rayTracingRenderPipeline1.Reload(deviceResources);
                 await renderPipelineContext.ReloadDefalutResources(wicFactory, ProcessingList, miscProcessContext);
@@ -241,19 +242,18 @@ namespace Coocoo3D.Core
                 #region Render Preparing
 
                 stopwatch1.Restart();
-                renderPipelineContext.renderPipelineDynamicContext1.ClearCollections();
+                renderPipelineContext.dynamicContext1.ClearCollections();
                 CurrentScene.DealProcessList(physics3DScene);
                 lock (CurrentScene)
                 {
-                    renderPipelineContext.renderPipelineDynamicContext1.entities.AddRange(CurrentScene.Entities);
+                    renderPipelineContext.dynamicContext1.entities.AddRange(CurrentScene.Entities);
                     for (int i = 0; i < CurrentScene.Lightings.Count; i++)
                     {
-                        renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
-                        //renderPipelineContext.renderPipelineDynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Distance));
+                        renderPipelineContext.dynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
                     }
                 }
 
-                var entities = renderPipelineContext.renderPipelineDynamicContext1.entities;
+                var entities = renderPipelineContext.dynamicContext1.entities;
                 for (int i = 0; i < entities.Count; i++)
                 {
                     var entity = entities[i];
@@ -270,10 +270,10 @@ namespace Coocoo3D.Core
                 if (camera.CameraMotionOn) camera.SetCameraMotion((float)GameDriverContext.PlayTime);
                 camera.AspectRatio = GameDriverContext.AspectRatio;
                 camera.Update();
-                renderPipelineContext.renderPipelineDynamicContext1.cameras.Add(camera.GetCameraData());
-                renderPipelineContext.renderPipelineDynamicContext1.settings = settings;
-                renderPipelineContext.renderPipelineDynamicContext1.inShaderSettings = inShaderSettings;
-                renderPipelineContext.renderPipelineDynamicContext1.Preprocess();
+                renderPipelineContext.dynamicContext1.cameras.Add(camera.GetCameraData());
+                renderPipelineContext.dynamicContext1.settings = settings;
+                renderPipelineContext.dynamicContext1.inShaderSettings = inShaderSettings;
+                renderPipelineContext.dynamicContext1.Preprocess();
 
 
                 bool needUpdateEntities = NeedUpdateEntities;
@@ -350,13 +350,14 @@ namespace Coocoo3D.Core
 
                 if (RenderTask1 != null && RenderTask1.Status != TaskStatus.RanToCompletion) RenderTask1.Wait();
                 #region Render preparing
-                var temp1 = renderPipelineContext.renderPipelineDynamicContext1;
-                renderPipelineContext.renderPipelineDynamicContext1 = renderPipelineContext.renderPipelineDynamicContext;
-                renderPipelineContext.renderPipelineDynamicContext = temp1;
+                var temp1 = renderPipelineContext.dynamicContext1;
+                renderPipelineContext.dynamicContext1 = renderPipelineContext.dynamicContext;
+                renderPipelineContext.dynamicContext = temp1;
 
 
                 ProcessingList.MoveToAnother(_processingList);
-                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender)
+                int SceneObjectIndexCount = renderPipelineContext.dynamicContext.GetSceneObjectIndexCount();
+                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender || SceneObjectIndexCount > renderPipelineContext.SkinningMeshBufferSize)
                 {
                     GameDriverContext.RequireInterruptRender = false;
                     GraphicsContext.BeginAlloctor(deviceResources);
@@ -396,6 +397,11 @@ namespace Coocoo3D.Core
                     _processingList._DealStep2(graphicsContext, deviceResources);
                     RPAssetsManager._DealStep3(deviceResources, _processingList);
                     _processingList.Clear();
+                    if (SceneObjectIndexCount > renderPipelineContext.SkinningMeshBufferSize)
+                    {
+                        renderPipelineContext.SkinningMeshBuffer.Reload(deviceResources, SceneObjectIndexCount);
+                        renderPipelineContext.SkinningMeshBufferSize = SceneObjectIndexCount;
+                    }
                 }
                 #endregion
 
@@ -426,7 +432,7 @@ namespace Coocoo3D.Core
                         currentRenderPipeline.TimeChange(GameDriverContext.PlayTime, 0);
 
 
-                    var entities1 = renderPipelineContext.renderPipelineDynamicContext.entities;
+                    var entities1 = renderPipelineContext.dynamicContext.entities;
                     for (int i = 0; i < entities1.Count; i++)
                     {
                         entities1[i].UpdateGpuResources(graphicsContext);

@@ -30,10 +30,10 @@
             <StackPanel>
                 <TextBlock Text="从资源窗口中拖拽图片来放置"/>
                 <Border>
-                    <Image x:Name="_img0" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="0" Source="ms-appx:///Assets/Textures/UI_0.png"/>
+                    <Image x:Name="_img1" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="1" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <Border>
-                    <Image x:Name="_img1" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="1" Source="ms-appx:///Assets/Textures/UI_0.png"/>
+                    <Image x:Name="_img0" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="0" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <Border>
                     <Image x:Name="_img2" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="2" Source="ms-appx:///Assets/Textures/UI_0.png"/>
@@ -42,10 +42,10 @@
                     <Image x:Name="_img3" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="3" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <Border>
-                    <Image x:Name="_img4" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="4" Source="ms-appx:///Assets/Textures/UI_0.png"/>
+                    <Image x:Name="_img5" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="5" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <Border>
-                    <Image x:Name="_img5" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="5" Source="ms-appx:///Assets/Textures/UI_0.png"/>
+                    <Image x:Name="_img4" AllowDrop="True" DragOver="_img0_DragOver" Drop="_img0_Drop" Tag="4" Source="ms-appx:///Assets/Textures/UI_0.png"/>
                 </Border>
                 <TextBlock x:Name="showInfo"/>
                 <mu:NumberBox x:Uid="Page_SkyBox_TextBox_SkyBoxLightMultiple" Value="{x:Bind VSkyBoxMultiple,Mode=TwoWay}"/>
