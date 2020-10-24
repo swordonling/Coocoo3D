@@ -4,6 +4,23 @@
 #include "../Shaders/CameraDataDefine.hlsli"
 #include "../Shaders/RandomNumberGenerator.hlsli"
 
+float3x3 GetTangentBasis(float3 TangentZ)
+{
+	const float Sign = TangentZ.z >= 0 ? 1 : -1;
+	const float a = -rcp(Sign + TangentZ.z);
+	const float b = TangentZ.x * TangentZ.y * a;
+
+	float3 TangentX = { 1 + Sign * a * pow2(TangentZ.x), Sign * b, -Sign * TangentZ.x };
+	float3 TangentY = { b,  Sign + a * pow2(TangentZ.y), -TangentZ.y };
+
+	return float3x3(TangentX, TangentY, TangentZ);
+}
+
+float3 TangentToWorld(float3 Vec, float3 TangentZ)
+{
+	return mul(Vec, GetTangentBasis(TangentZ));
+}
+
 typedef BuiltInTriangleIntersectionAttributes TriAttributes;
 struct RayPayload
 {
@@ -42,6 +59,10 @@ struct Ray
 	float3 direction;
 };
 
+StructuredBuffer<VertexSkinned> VerticesX : register(t1, space2);
+RWStructuredBuffer<float4>SceneLightWrite : register(u0, space2);
+StructuredBuffer<float4>SceneLightRead : register(t0, space2);
+
 RaytracingAccelerationStructure Scene : register(t0);
 TextureCube EnvCube : register (t1);
 TextureCube IrradianceCube : register (t2);
@@ -54,7 +75,8 @@ cbuffer cb0 : register(b0)
 	float4x4 LightSpaceMatrices[1];
 };
 //local
-StructuredBuffer<VertexSkinned> Vertices : register(t1, space1);
+StructuredBuffer<VertexSkinned> Vertices : register(t0, space1);
+StructuredBuffer<uint> MeshIndexs : register(t1, space1);
 Texture2D diffuseMap :register(t2, space1);
 SamplerState s0 : register(s0);
 SamplerState s1 : register(s1);
@@ -84,7 +106,9 @@ cbuffer cb3 : register(b3)
 	float _Clearcoat;
 	float _ClearcoatGloss;
 	float3 preserved0;
-	float4 preserved1[5];
+	float4 preserved1[4];
+	uint _VertexBegin;
+	uint3 preserved2;
 	LightInfo Lightings[8];
 };
 
@@ -123,13 +147,69 @@ void MyRaygenShader()
 	g_renderTarget[DispatchRaysIndex().xy] = payload.color;
 }
 
+[shader("raygeneration")]
+void MyRaygenShader1()
+{
+	uint3 dtid = DispatchRaysIndex();
+	uint randomState = RNG::RandomSeed(dtid.x + dtid.y * 8192 + g_camera_randomValue);
+	int giSampleCount = g_quality * 16 + 64;
+	float3 N = VerticesX[dtid.x].Norm;
+	float3 V = N;
+	float3 pos = VerticesX[dtid.x].Pos;
+	float3 gi = float3(0, 0, 0);
+
+	float4 cPos = mul(float4(pos, 1), g_mWorldToProj);
+	float3 cPos2 = cPos.xyz / cPos.w;
+	bool InCamera = (cPos2.x > -1 && cPos2.x<1 && cPos2.y>-1 && cPos2.y < 1 && cPos2.z>0 && cPos2.z < 0.5);
+	bool isFront = dot(g_vCamPos - pos, N) > 0;
+	if (!InCamera || !isFront)
+		giSampleCount = (giSampleCount + 3) / 4;
+	for (int i = 0; i < giSampleCount; i++)
+	{
+		RayPayload payloadGI;
+
+		float2 E = RNG::Hammersley(i, giSampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+		float3 vec1 = normalize(TangentToWorld(N, RNG::HammersleySampleCos(E)));
+
+		payloadGI.direction = vec1;
+
+		payloadGI.color = float4(0, 0, 0, 0);
+		payloadGI.depth = 2;
+		RayDesc rayX;
+		rayX.Origin = pos;
+		rayX.Direction = payloadGI.direction;
+		rayX.TMin = 1e-3f;
+		rayX.TMax = 10000.0;
+		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadGI);
+
+		float3 L = vec1;
+		float3 H = normalize(L + V);
+		float3 NdotL = saturate(dot(N, L));
+		float3 LdotH = saturate(dot(L, H));
+		float3 NdotH = saturate(dot(N, H));
+
+		float diffuse_factor = 1;
+		gi += NdotL * (payloadGI.color.rgb) * (diffuse_factor / COO_PI);
+	}
+	gi /= giSampleCount;
+	//if(InCamera)
+	//SceneLightWrite[dtid.x] = float4(1,1,1, 1);
+	//else
+	SceneLightWrite[dtid.x] = float4(gi, 1);
+}
+
 [shader("anyhit")]
 void AnyHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 {
+	uint3 meshIndexs;
+	meshIndexs[0] = MeshIndexs[PrimitiveIndex() * 3];
+	meshIndexs[1] = MeshIndexs[PrimitiveIndex() * 3 + 1];
+	meshIndexs[2] = MeshIndexs[PrimitiveIndex() * 3 + 2];
+
 	VertexSkinned triVert[3];
-	triVert[0] = Vertices[PrimitiveIndex() * 3];
-	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
-	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+	triVert[0] = Vertices[meshIndexs[0]];
+	triVert[1] = Vertices[meshIndexs[1]];
+	triVert[2] = Vertices[meshIndexs[2]];
 
 	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
 		triVert[1].Tex * (attr.barycentrics.x) +
@@ -140,36 +220,42 @@ void AnyHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 		IgnoreHit();
 	}
 }
-float3 RandomVecImp(inout uint randomState, float3 N, out float weight)
-{
-	float3 randomVec = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-	if (dot(randomVec, N) < 0)
-	{
-		randomVec = -randomVec;
-	}
-	weight = 1;
-	return randomVec;
-}
+
 [shader("closesthit")]
 void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 {
 	payload.depth++;
+	uint3 meshIndexs;
+	meshIndexs[0] = MeshIndexs[PrimitiveIndex() * 3];
+	meshIndexs[1] = MeshIndexs[PrimitiveIndex() * 3 + 1];
+	meshIndexs[2] = MeshIndexs[PrimitiveIndex() * 3 + 2];
+
+	float3 vertexWeight;
+	vertexWeight[0] = 1 - attr.barycentrics.x - attr.barycentrics.y;
+	vertexWeight[1] = attr.barycentrics.x;
+	vertexWeight[2] = attr.barycentrics.y;
+
 	VertexSkinned triVert[3];
-	triVert[0] = Vertices[PrimitiveIndex() * 3];
-	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
-	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+	triVert[0] = Vertices[meshIndexs[0]];
+	triVert[1] = Vertices[meshIndexs[1]];
+	triVert[2] = Vertices[meshIndexs[2]];
 	float3 triNorm = normalize(cross(triVert[0].Pos - triVert[1].Pos, triVert[1].Pos - triVert[2].Pos));
-	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		triVert[1].Tex * (attr.barycentrics.x) +
-		triVert[2].Tex * (attr.barycentrics.y);
-	float3 pos = (triVert[0].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		triVert[1].Pos * (attr.barycentrics.x) +
-		triVert[2].Pos * (attr.barycentrics.y)).xyz;
-	float3 normal = triVert[0].Norm * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		triVert[1].Norm * (attr.barycentrics.x) +
-		triVert[2].Norm * (attr.barycentrics.y);
+	float2 uv = triVert[0].Tex * vertexWeight[0] +
+		triVert[1].Tex * vertexWeight[1] +
+		triVert[2].Tex * vertexWeight[2];
+	float3 pos = (triVert[0].Pos * vertexWeight[0] +
+		triVert[1].Pos * vertexWeight[1] +
+		triVert[2].Pos * vertexWeight[2]).xyz;
+	float3 normal = triVert[0].Norm * vertexWeight[0] +
+		triVert[1].Norm * vertexWeight[1] +
+		triVert[2].Norm * vertexWeight[2];
+
+	float3 GIVertex = SceneLightRead[meshIndexs[0] + _VertexBegin] * vertexWeight[0] +
+		SceneLightRead[meshIndexs[1] + _VertexBegin] * vertexWeight[1] +
+		SceneLightRead[meshIndexs[2] + _VertexBegin] * vertexWeight[2];
 
 	float4 diffuseColor = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;
+
 
 	normal = normalize(normal);
 
@@ -182,7 +268,6 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 	}
 	float NdotV = saturate(dot(N, V));
 
-	// Burley roughness bias
 	float alpha = _Roughness * _Roughness;
 
 	float roughness = _Roughness;
@@ -195,35 +280,6 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 	float3 outputColor = float3(0, 0, 0);
 
 	uint randomState = RNG::RandomSeed(DispatchRaysIndex().x + DispatchRaysIndex().y * 8192 + g_camera_randomValue);
-	float3 AOFactor = 1.0f;
-	//if (payload.depth == 1 && g_enableAO != 0)
-	//{
-	//	static const float c_AOMaxDist = 32;
-	//	int aoSampleCount = pow(2, g_quality) * 8;
-	//	for (int i = 0; i < aoSampleCount; i++)
-	//	{
-	//		RayDesc ray2;
-	//		float startPosOffsetN = 0;
-	//		for (int j = 0; j < 3; j++)
-	//		{
-	//			startPosOffsetN = max(dot(triVert[j].Pos - pos, normal), startPosOffsetN);
-	//		}
-	//		ray2.Origin = pos + normal * startPosOffsetN;
-	//		ray2.Direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-	//		if (dot(ray2.Direction, normal) < 0)
-	//		{
-	//			ray2.Direction = -ray2.Direction;
-	//		}
-	//		ray2.TMin = 1e-3f;
-	//		ray2.TMax = c_AOMaxDist;
-	//		TestRayPayload payload2 = { false,float3(0,0,0),float4(0,0,0,0) };
-	//		TraceRay(Scene, RAY_FLAG_NONE, ~0, c_testRayIndex, 2, c_testRayIndex, ray2, payload2);
-	//		if (!payload2.miss)
-	//		{
-	//			AOFactor -= (c_AOMaxDist - distance(payload2.hitPos, pos)) * (1 - payload2.color * 0.3) / c_AOMaxDist / aoSampleCount;
-	//		}
-	//	}
-	//}
 	if (g_enableShadow != 0)
 	{
 		[loop]
@@ -350,19 +406,19 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 	float surfaceReduction = 1.0f / (roughness * roughness + 1.0f);
 	float grazingTerm = saturate(1 - sqrt(roughness) + xxx);
 	float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, roughness), 0).rg;
-
-	if (payload.depth < 2 && g_enableAO != 0 && (c_diffuse.r > 0.02f || c_diffuse.g > 0.02f || c_diffuse.b > 0.02f))
+	if (payload.depth < 2 && g_enableAO != 0)
 	{
 		int giSampleCount = pow(2, g_quality) * 8;
 		float3 gi = 0;
 		for (int i = 0; i < giSampleCount; i++)
 		{
 			RayPayload payloadGI;
-			payloadGI.direction = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-			if (dot(payloadGI.direction, N) < 0)
-			{
-				payloadGI.direction = -payloadGI.direction;
-			}
+
+			float2 E = RNG::Hammersley(i, giSampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+			float3 vec1 = normalize(TangentToWorld(N, RNG::HammersleySampleCos(E)));
+
+			payloadGI.direction = vec1;
+
 			payloadGI.color = float4(0, 0, 0, 0);
 			payloadGI.depth = 2;
 			RayDesc rayX;
@@ -372,23 +428,22 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 			rayX.TMax = 10000.0;
 			TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadGI);
 
-			float3 L = payloadGI.direction;
+			float3 L = vec1;
 			float3 H = normalize(L + V);
 			float3 NdotL = saturate(dot(N, L));
 			float3 LdotH = saturate(dot(L, H));
 			float3 NdotH = saturate(dot(N, H));
 
-			float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, _Roughness);
+			float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, roughness);
 			float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
 
-			//gi += payloadGI.color.rgb * dot(payloadGI.direction, N);
-			gi += NdotL * payloadGI.color.rgb * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor));
+			gi += NdotL * (payloadGI.color.rgb) * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor));
 		}
 		outputColor += gi / giSampleCount;
 	}
 	else
 	{
-		outputColor += IrradianceCube.SampleLevel(s0, N, 0) * g_skyBoxMultiple * c_diffuse;
+		outputColor += GIVertex * diffuseColor.rgb;
 	}
 
 	if (payload.depth < 3)
@@ -408,12 +463,14 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 	}
 	else
 	{
-		outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), _Roughness * 6) * g_skyBoxMultiple * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+		outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), roughness * 6) * g_skyBoxMultiple * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
 	}
-	outputColor *= AOFactor;
 	outputColor += _Emission * _AmbientColor;
 
+	//if (payload.depth > 1)
 	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * outputColor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
+	//else
+	//	payload.color = float4(GIVertex * albedo, 1);
 
 	RayDesc rayNext;
 	rayNext.Origin = pos;
@@ -434,10 +491,15 @@ void MissShaderSurface(inout RayPayload payload)
 [shader("anyhit")]
 void AnyHitShaderTest(inout TestRayPayload payload, in TriAttributes attr)
 {
+	uint3 meshIndexs;
+	meshIndexs[0] = MeshIndexs[PrimitiveIndex() * 3];
+	meshIndexs[1] = MeshIndexs[PrimitiveIndex() * 3 + 1];
+	meshIndexs[2] = MeshIndexs[PrimitiveIndex() * 3 + 2];
+
 	VertexSkinned triVert[3];
-	triVert[0] = Vertices[PrimitiveIndex() * 3];
-	triVert[1] = Vertices[PrimitiveIndex() * 3 + 1];
-	triVert[2] = Vertices[PrimitiveIndex() * 3 + 2];
+	triVert[0] = Vertices[meshIndexs[0]];
+	triVert[1] = Vertices[meshIndexs[1]];
+	triVert[2] = Vertices[meshIndexs[2]];
 
 	float2 uv = triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
 		triVert[1].Tex * (attr.barycentrics.x) +
@@ -452,13 +514,23 @@ void AnyHitShaderTest(inout TestRayPayload payload, in TriAttributes attr)
 [shader("closesthit")]
 void ClosestHitShaderTest(inout TestRayPayload payload, in TriAttributes attr)
 {
+	uint3 meshIndexs;
+	meshIndexs[0] = MeshIndexs[PrimitiveIndex() * 3];
+	meshIndexs[1] = MeshIndexs[PrimitiveIndex() * 3 + 1];
+	meshIndexs[2] = MeshIndexs[PrimitiveIndex() * 3 + 2];
+
+	VertexSkinned triVert[3];
+	triVert[0] = Vertices[meshIndexs[0]];
+	triVert[1] = Vertices[meshIndexs[1]];
+	triVert[2] = Vertices[meshIndexs[2]];
+
 	payload.miss = false;
-	float3 pos = (Vertices[PrimitiveIndex() * 3].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		Vertices[PrimitiveIndex() * 3 + 1].Pos * (attr.barycentrics.x) +
-		Vertices[PrimitiveIndex() * 3 + 2].Pos * (attr.barycentrics.y)).xyz;
-	float2 uv = (Vertices[PrimitiveIndex() * 3].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
-		Vertices[PrimitiveIndex() * 3 + 1].Tex * (attr.barycentrics.x) +
-		Vertices[PrimitiveIndex() * 3 + 2].Tex * (attr.barycentrics.y));
+	float3 pos = (triVert[0].Pos * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Pos * (attr.barycentrics.x) +
+		triVert[2].Pos * (attr.barycentrics.y)).xyz;
+	float2 uv = (triVert[0].Tex * (1 - attr.barycentrics.x - attr.barycentrics.y) +
+		triVert[1].Tex * (attr.barycentrics.x) +
+		triVert[2].Tex * (attr.barycentrics.y));
 
 	payload.hitPos = pos;
 	payload.color = diffuseMap.SampleLevel(s0, uv, 0) * _DiffuseColor;

@@ -125,7 +125,11 @@ namespace Coocoo3D.FileFormat
         public MMDMesh GetMesh()
         {
             MMDMesh meshInstance;
+#if _TEST
+            meshInstance = MMDMesh.Load1(verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._POINTLIST);
+#else
             meshInstance = MMDMesh.Load1(verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._TRIANGLELIST);
+#endif
             return meshInstance;
         }
         ~PMXFormat()

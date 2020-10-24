@@ -1,11 +1,15 @@
 # Coocoo3D
-一个MMD渲染器，支持DirectX12和DXR光线追踪，具有多线程优化，能最大程度利用GPU。核心是用户体验。
+一个CPU要求极低的MMD渲染器，支持DirectX12和DXR实时光线追踪。
 
 视频及演示下载[https://www.bilibili.com/video/BV1p54y127ig/](https://www.bilibili.com/video/BV1p54y127ig/)
 
-支持自定义着色器，支持GPU粒子。
+光线追踪全局光照演示[https://www.bilibili.com/video/bv13Z4y1V7a2](https://www.bilibili.com/video/bv13Z4y1V7a2)
 
-想要使用GPU粒子，你需要载入自定义着色器，可以先载入示例着色器试试效果。
+支持自定义着色器。支持光线追踪全局光照
+
+已经不打算维持较高的更新频率了，希望有人能接手一下。这个软件绝大部分逻辑使用C#写成，维护较为方便。
+
+部分Shader代码仍然不正确，请接手的人更正他们。
 ## 基本功能
 * 加载pmx模型
 * 加载vmd动作

@@ -109,6 +109,7 @@ namespace Coocoo3D.Core
             _currentRenderPipeline = forwardRenderPipeline1;
             graphicsContext.Reload(deviceResources);
             graphicsContext2.Reload(deviceResources);
+            renderPipelineContext.deviceResources = deviceResources;
             renderPipelineContext.LoadTask = Task.Run(async () =>
             {
                 RPAssetsManager.Reload(deviceResources);
@@ -120,7 +121,7 @@ namespace Coocoo3D.Core
                 await renderPipelineContext.ReloadDefalutResources(wicFactory, ProcessingList, miscProcessContext);
 
                 await RPAssetsManager.ReloadAssets();
-                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, RTFormat, backBufferFormat);
+                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, renderPipelineContext.RTFormat, renderPipelineContext.backBufferFormat);
 
                 //await forwardRenderPipeline1.ReloadAssets(deviceResources);
 
@@ -161,8 +162,7 @@ namespace Coocoo3D.Core
         public PostProcess postProcess = new PostProcess();
         public RenderPipeline.RenderPipeline CurrentRenderPipeline { get => _currentRenderPipeline; }
         RenderPipeline.RenderPipeline _currentRenderPipeline;
-        public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
-        public DxgiFormat backBufferFormat = DxgiFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+
         public bool UseNewFun;
         Task[] poolTasks1;
         private void UpdateEntities(float playTime)
@@ -192,27 +192,6 @@ namespace Coocoo3D.Core
             else for (int i = 0; i < Entities.Count; i++)
                 {
                     Entities[i].SetMotionTime(playTime);
-                    //var entity = Entities[i];
-                    //if (!entity.ComponentReady) continue;
-
-                    //lock (entity.motionComponent)
-                    //{
-                    //entity.morphStateComponent.SetPose(entity.motionComponent, playTime);
-                    //entity.morphStateComponent.ComputeWeight();
-
-
-                    //stopwatch1.Restart();
-                    //entity.boneComponent.SetPose(entity.motionComponent, entity.morphStateComponent, playTime);
-                    //stopwatch1.Stop();
-                    //}
-                    //StopwatchTimes[0] = stopwatch1.ElapsedTicks;
-                    //stopwatch1.Restart();
-                    //entity.boneComponent.ComputeMatricesData();
-                    //entity.rendererComponent.SetPose(entity.morphStateComponent);
-                    //entity.needUpdateMotion = true;
-
-                    //stopwatch1.Stop();
-                    //StopwatchTimes[1] = stopwatch1.ElapsedTicks;
                 }
         }
         public void RequireRender(bool updateEntities = false)
@@ -227,7 +206,7 @@ namespace Coocoo3D.Core
 
         public bool swapChainReady;
         //public long[] StopwatchTimes = new long[8];
-        System.Diagnostics.Stopwatch stopwatch1 = new System.Diagnostics.Stopwatch();
+        //System.Diagnostics.Stopwatch stopwatch1 = new System.Diagnostics.Stopwatch();
         public GraphicsContext graphicsContext = new GraphicsContext();
         public GraphicsContext graphicsContext2 = new GraphicsContext();
         Task RenderTask1;
@@ -241,8 +220,9 @@ namespace Coocoo3D.Core
             {
                 #region Render Preparing
 
-                stopwatch1.Restart();
                 renderPipelineContext.dynamicContext1.ClearCollections();
+                renderPipelineContext.dynamicContext1.frameRenderIndex = renderPipelineContext.frameRenderIndex;
+                renderPipelineContext.frameRenderIndex++;
                 CurrentScene.DealProcessList(physics3DScene);
                 lock (CurrentScene)
                 {
@@ -329,24 +309,6 @@ namespace Coocoo3D.Core
                 {
                     entities[i].boneComponent.WriteMatriticesData();
                 }
-                stopwatch1.Stop();
-                //StopwatchTimes[0] = stopwatch1.ElapsedTicks;
-
-                ////test code-------------------
-
-                ////stopwatch1.Restart();
-                //if (Playing)
-                //    PlayTime += t1;
-                //if (Playing || needUpdateEntities)
-                //    UpdateEntities((float)PlayTime);
-                ////stopwatch1.Stop();
-                ////StopwatchTimes[0] = stopwatch1.ElapsedTicks;
-                ////stopwatch1.Restart();
-                //for (int i = 0; i < entities.Count; i++)
-                //    entities[i].boneComponent.WriteMatriticesData();
-                ////stopwatch1.Stop();
-                ////StopwatchTimes[1] = stopwatch1.ElapsedTicks;
-                ////endtest code-------------------
 
                 if (RenderTask1 != null && RenderTask1.Status != TaskStatus.RanToCompletion) RenderTask1.Wait();
                 #region Render preparing
@@ -356,8 +318,8 @@ namespace Coocoo3D.Core
 
 
                 ProcessingList.MoveToAnother(_processingList);
-                int SceneObjectIndexCount = renderPipelineContext.dynamicContext.GetSceneObjectIndexCount();
-                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender || SceneObjectIndexCount > renderPipelineContext.SkinningMeshBufferSize)
+                int SceneObjectVertexCount = renderPipelineContext.dynamicContext.GetSceneObjectVertexCount();
+                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender || SceneObjectVertexCount > renderPipelineContext.SkinningMeshBufferSize)
                 {
                     GameDriverContext.RequireInterruptRender = false;
                     GraphicsContext.BeginAlloctor(deviceResources);
@@ -369,20 +331,8 @@ namespace Coocoo3D.Core
                     {
                         GameDriverContext.RequireResize = false;
                         deviceResources.SetLogicalSize(GameDriverContext.NewSize);
-                        int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
-                        int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
-                        renderPipelineContext.outputRTV.ReloadAsRTVUAV(x, y, RTFormat);
-                        _processingList.UnsafeAdd(renderPipelineContext.outputRTV);
-                        for (int i = 0; i < renderPipelineContext.ScreenSizeRenderTextures.Length; i++)
-                        {
-                            renderPipelineContext.ScreenSizeRenderTextures[i].ReloadAsRTVUAV(x, y, RTFormat);
-                            _processingList.UnsafeAdd(renderPipelineContext.ScreenSizeRenderTextures[i]);
-                        }
-                        for (int i = 0; i < renderPipelineContext.ScreenSizeDSVs.Length; i++)
-                        {
-                            renderPipelineContext.ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y);
-                            _processingList.UnsafeAdd(renderPipelineContext.ScreenSizeDSVs[i]);
-                        }
+
+                        renderPipelineContext.ReloadTextureSizeResources(_processingList);
                     }
                     if (HighResolutionShadowNow != performaceSettings.HighResolutionShadow)
                     {
@@ -397,10 +347,11 @@ namespace Coocoo3D.Core
                     _processingList._DealStep2(graphicsContext, deviceResources);
                     RPAssetsManager._DealStep3(deviceResources, _processingList);
                     _processingList.Clear();
-                    if (SceneObjectIndexCount > renderPipelineContext.SkinningMeshBufferSize)
+                    if (SceneObjectVertexCount > renderPipelineContext.SkinningMeshBufferSize)
                     {
-                        renderPipelineContext.SkinningMeshBuffer.Reload(deviceResources, SceneObjectIndexCount);
-                        renderPipelineContext.SkinningMeshBufferSize = SceneObjectIndexCount;
+                        renderPipelineContext.SkinningMeshBuffer.Reload(deviceResources, SceneObjectVertexCount);
+                        renderPipelineContext.SkinningMeshBufferSize = SceneObjectVertexCount;
+                        renderPipelineContext.LightCacheBuffer.Initialize(deviceResources, SceneObjectVertexCount * 16);
                     }
                 }
                 #endregion
@@ -411,7 +362,6 @@ namespace Coocoo3D.Core
                 _miscProcessContext.graphicsContext = graphicsContext2;
                 miscProcess.Process(_miscProcessContext);
 
-                //stopwatch1.Restart();
                 if (swapChainReady && !GameDriverContext.RequireResize)
                 {
                     #region context preparing
@@ -445,25 +395,12 @@ namespace Coocoo3D.Core
                     {
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
                         renderPipelineContext.UpdateGPUResource();
-                        if (currentRenderPipeline.Ready && RPAssetsManager.Ready)
+                        if (RPAssetsManager.Ready)
                         {
-                            //stopwatch1.Restart();
-                            currentRenderPipeline.RenderCamera(renderPipelineContext, 1);
-                            //stopwatch1.Stop();
-                            //StopwatchTimes[4] = stopwatch1.ElapsedTicks;
-
-                            //stopwatch1.Restart();
-                            //currentRenderPipeline.PrepareRenderData(renderPipelineContext);
-                            //stopwatch1.Stop();
-                            //StopwatchTimes[3] = stopwatch1.ElapsedTicks;
-                            //stopwatch1.Restart();
-                            //currentRenderPipeline.RenderCamera(renderPipelineContext, 0);
-                            //stopwatch1.Stop();
-                            //StopwatchTimes[4] = stopwatch1.ElapsedTicks;
-                        }
-                        if (postProcess.Ready && RPAssetsManager.Ready)
-                        {
-                            postProcess.RenderCamera(renderPipelineContext, 1);
+                            if (currentRenderPipeline.Ready)
+                                currentRenderPipeline.RenderCamera(renderPipelineContext, 1);
+                            if (postProcess.Ready && RPAssetsManager.Ready)
+                                postProcess.RenderCamera(renderPipelineContext, 1);
                         }
                         //if (defaultResources.Initilized && settings.viewSelectedEntityBone)
                         //{
@@ -477,21 +414,15 @@ namespace Coocoo3D.Core
                         GameDriver.AfterRender(graphicsContext, ref GameDriverContext);
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                         graphicsContext.EndCommand();
-                        //stopwatch1.Restart();
                         graphicsContext.Execute();
-                        //stopwatch1.Stop();
-                        //StopwatchTimes[2] = stopwatch1.ElapsedTicks;
                         RenderCount++;
                         deviceResources.Present(false);
-
                     }
                     if (performaceSettings.MultiThreadRendering)
                         RenderTask1 = Task.Run(_RenderFunction);
                     else
                         _RenderFunction();
                 }
-                //stopwatch1.Stop();
-                //StopwatchTimes[3] = stopwatch1.ElapsedTicks;
             }
             return true;
         }

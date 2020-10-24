@@ -19,6 +19,23 @@ float1 pow5(float1 x)
 	return x * x * x * x * x;
 }
 
+float4 pow2(float4 x)
+{
+	return x * x;
+}
+float3 pow2(float3 x)
+{
+	return x * x;
+}
+float2 pow2(float2 x)
+{
+	return x * x;
+}
+float1 pow2(float1 x)
+{
+	return x * x;
+}
+
 // Shlick's approximation of Fresnel
 // https://en.wikipedia.org/wiki/Schlick%27s_approximation
 float3 Fresnel_Shlick(in float3 f0, in float3 f90, in float x)

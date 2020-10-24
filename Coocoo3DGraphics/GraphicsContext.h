@@ -81,7 +81,9 @@ namespace Coocoo3DGraphics
 		void SetComputeSRVT(TextureCube^ texture, int index);
 		void SetComputeSRVT(RenderTexture2D^ texture, int index);
 		void SetComputeSRVT(RenderTextureCube^ texture, int index);
-		void SetComputeSRVR(MeshBuffer^ mesh,int startLocation, int index);
+		void SetComputeSRVR(TwinBuffer^ mesh, int bufIndex, int index);
+		void SetComputeSRVR(MeshBuffer^ mesh, int startLocation, int index);
+		void SetComputeSRVRIndex(MMDMesh^ mesh, int startLocation, int index);
 		void SetComputeCBVR(ConstantBuffer^ buffer, int index);
 		void SetComputeCBVR(ConstantBufferStatic^ buffer, int index);
 		void SetComputeUAVR(MeshBuffer^ mesh, int startLocation, int index);
@@ -92,7 +94,7 @@ namespace Coocoo3DGraphics
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
 		void Dispatch(int x, int y, int z);
-		void DoRayTracing(RayTracingScene^ rayTracingScene);
+		void DoRayTracing(RayTracingScene^ rayTracingScene, int width, int height, int raygenIndex);
 		void UploadMesh(MMDMesh^ mesh);
 		void UploadTexture(ITexture^ texture);
 		void UploadBuffer(StaticBuffer^ buffer);
@@ -100,11 +102,12 @@ namespace Coocoo3DGraphics
 		void UpdateReadBackTexture(ReadBackTexture2D^ texture);
 		void Copy(TextureCube^ source, RenderTextureCube^ dest);
 		void CopyBackBuffer(ReadBackTexture2D^ target, int index);
-		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, int vertexBegin, int vertexCount);
-		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, UINT instanceMask, int vertexBegin, int vertexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
-		//void BuildInstance(RayTracingScene^ rayTracingAccelerationStructure, MMDMesh^ mesh, int vertexBegin, UINT instanceMask, Texture2D^ diff, ConstantBufferStatic^ mat);
+		void BuildBottomAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, MMDMesh^ indexBuffer, int vertexBegin, int indexBegin, int indexCount);
+		void BuildBASAndParam(RayTracingScene^ rayTracingAccelerationStructure, MeshBuffer^ mesh, MMDMesh^ indexBuffer, UINT instanceMask, int vertexBegin, int indexBegin, int indexCount, Texture2D^ diff, ConstantBufferStatic^ mat);
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
+		void SetMeshVertex(MMDMesh^ mesh);
+		void SetMeshIndex(MMDMesh^ mesh);
 		void SetMesh(MeshBuffer^ mesh);
 		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
 		void SetAndClearDSV(RenderTexture2D^ texture);

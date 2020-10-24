@@ -1,6 +1,7 @@
 // Ref: http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
 namespace RNG
 {
+	static const float RANDOM_NUMBER_PI = 3.141592653589793238;
 	uint RandomSeed(uint seed)
 	{
 		// Thomas Wang hash 
@@ -54,5 +55,20 @@ namespace RNG
 		float E1 = frac((float)Index / NumSamples + float(Random.x & 0xffff) / (1 << 16));
 		float E2 = float(reversebits(Index) ^ Random.y) * 2.3283064365386963e-10;
 		return float2(E1, E2);
+	}
+
+	float3 HammersleySampleCos(float2 Xi)
+	{
+		float phi = 2 * RANDOM_NUMBER_PI * Xi.x;
+
+		float cosTheta = sqrt(Xi.y);
+		float sinTheta = sqrt(1 - cosTheta * cosTheta);
+
+		float3 H;
+		H.x = sinTheta * cos(phi);
+		H.y = sinTheta * sin(phi);
+		H.z = cosTheta;
+
+		return H;
 	}
 }

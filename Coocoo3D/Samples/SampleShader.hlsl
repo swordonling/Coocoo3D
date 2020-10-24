@@ -457,37 +457,37 @@ struct ParticleDynamicData
 RWStructuredBuffer<Triangle1> targetPrimitives : register(u0);
 RWStructuredBuffer<ParticleDynamicData> particleDynamicData : register(u1);
 
-[numthreads(64, 1, 1)]
-void CSParticle(uint3 dtid : SV_DispatchThreadID)
-{
-	uint index = dtid.x;
-	if (index >= g_indexCount / 3)return;//防止内存访问溢出，溢出会造成严重后果。
-	Triangle1 tri1 = targetPrimitives[index];
-	if (particleDynamicData[index].life <= 0)
-	{
-		uint seed = SeedThread(index + g_camera_randomValue);
-
-		particleDynamicData[index].life = 5 * Random01(seed);
-		particleDynamicData[index].position = tri1.verts[0].Pos + tri1.verts[1].Pos + tri1.verts[2].Pos;
-		particleDynamicData[index].speed = float3(Random01(seed) - 0.5f, -3 * Random01(seed), Random01(seed) - 0.5f);
-		for (int i = 0; i < 3; i++)
-		{
-			particleDynamicData[index].verts[i] = tri1.verts[i].Pos;
-		}
-	}
-	else
-	{
-		particleDynamicData[index].life -= g_deltaTime;
-
-		for (int i = 0; i < 3; i++)
-		{
-			particleDynamicData[index].verts[i] += particleDynamicData[index].speed * g_deltaTime;
-		}
-	}
-	for (int i = 0; i < 3; i++)
-	{
-		tri1.verts[i].Pos = particleDynamicData[index].verts[i];
-	}
-	targetPrimitives[index] = tri1;
-}
+//[numthreads(64, 1, 1)]
+//void CSParticle(uint3 dtid : SV_DispatchThreadID)
+//{
+//	uint index = dtid.x;
+//	if (index >= g_indexCount / 3)return;//防止内存访问溢出，溢出会造成严重后果。
+//	Triangle1 tri1 = targetPrimitives[index];
+//	if (particleDynamicData[index].life <= 0)
+//	{
+//		uint seed = SeedThread(index + g_camera_randomValue);
+//
+//		particleDynamicData[index].life = 5 * Random01(seed);
+//		particleDynamicData[index].position = tri1.verts[0].Pos + tri1.verts[1].Pos + tri1.verts[2].Pos;
+//		particleDynamicData[index].speed = float3(Random01(seed) - 0.5f, -3 * Random01(seed), Random01(seed) - 0.5f);
+//		for (int i = 0; i < 3; i++)
+//		{
+//			particleDynamicData[index].verts[i] = tri1.verts[i].Pos;
+//		}
+//	}
+//	else
+//	{
+//		particleDynamicData[index].life -= g_deltaTime;
+//
+//		for (int i = 0; i < 3; i++)
+//		{
+//			particleDynamicData[index].verts[i] += particleDynamicData[index].speed * g_deltaTime;
+//		}
+//	}
+//	for (int i = 0; i < 3; i++)
+//	{
+//		tri1.verts[i].Pos = particleDynamicData[index].verts[i];
+//	}
+//	targetPrimitives[index] = tri1;
+//}
 #endif

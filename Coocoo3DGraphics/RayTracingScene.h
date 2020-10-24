@@ -8,13 +8,13 @@ namespace Coocoo3DGraphics
 	struct CooRayTracingParamLocal1
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS cbv3;
+		D3D12_GPU_VIRTUAL_ADDRESS srv0_1;
 		D3D12_GPU_VIRTUAL_ADDRESS srv1_1;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv2_1;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv3_1;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv4_1;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv5_1;
 		D3D12_GPU_DESCRIPTOR_HANDLE srv6_1;
-		D3D12_GPU_DESCRIPTOR_HANDLE srv7_1;
 	};
 	using namespace Windows::Storage::Streams;
 	public ref class HitGroupDesc sealed

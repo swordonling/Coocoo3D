@@ -8,13 +8,16 @@ void TwinBuffer::Reload(int size)
 	m_size = size;
 }
 
-void TwinBuffer::Initilize(DeviceResources^ deviceResources)
+void TwinBuffer::Initialize(DeviceResources^ deviceResources)
 {
 	Initialize(deviceResources, m_size);
 }
 
 void TwinBuffer::Initialize(DeviceResources^ deviceResources, int size)
 {
+	m_size = size;
+	if (m_size < 64)
+		m_size = 64;
 	auto d3dDevice = deviceResources->GetD3DDevice();
 	for (int i = 0; i < 2; i++)
 	{

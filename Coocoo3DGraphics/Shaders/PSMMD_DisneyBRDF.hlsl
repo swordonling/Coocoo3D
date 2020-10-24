@@ -2,6 +2,41 @@
 #include "FromDisney/DisneyBRDF.hlsli"
 #include "RandomNumberGenerator.hlsli"
 #include "CameraDataDefine.hlsli"
+
+
+float4 Pow2(float4 x)
+{
+	return x * x;
+}
+float3 Pow2(float3 x)
+{
+	return x * x;
+}
+float2 Pow2(float2 x)
+{
+	return x * x;
+}
+float Pow2(float x)
+{
+	return x * x;
+}
+
+float3x3 GetTangentBasis(float3 TangentZ)
+{
+	const float Sign = TangentZ.z >= 0 ? 1 : -1;
+	const float a = -rcp(Sign + TangentZ.z);
+	const float b = TangentZ.x * TangentZ.y * a;
+
+	float3 TangentX = { 1 + Sign * a * Pow2(TangentZ.x), Sign * b, -Sign * TangentZ.x };
+	float3 TangentY = { b,  Sign + a * Pow2(TangentZ.y), -TangentZ.y };
+
+	return float3x3(TangentX, TangentY, TangentZ);
+}
+
+float3 TangentToWorld(float3 Vec, float3 TangentZ)
+{
+	return mul(Vec, GetTangentBasis(TangentZ));
+}
 struct LightInfo
 {
 	float3 LightDir;
@@ -147,13 +182,13 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 {
 	float3 strength = float3(0,0,0);
 	float3 viewDir = normalize(g_vCamPos - input.wPos);
-	float3 norm = normalize(input.Norm);
+	float3 N = normalize(input.Norm);
 	float4 texColor = texture0.Sample(s1, input.TexCoord) * _DiffuseColor;
 	clip(texColor.a - 0.01f);
 	float3 diff = texColor.rgb;
-	uint randomState = (uint)(input.Pos.x * input.Pos.w + (uint)(input.Pos.y * input.Pos.w) * 8192) * 8192 + g_camera_randomValue;
+	uint randomState = RNG::RandomSeed((uint)(input.Pos.x * input.Pos.w + (uint)(input.Pos.y * input.Pos.w) * 8192) * 8192 + g_camera_randomValue);
 	float3 randomDir = normalize(float3(RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1, RNG::Random01(randomState) * 2 - 1));
-	if (dot(randomDir, norm) < 0)
+	if (dot(randomDir, N) < 0)
 	{
 		randomDir = -randomDir;
 	}
@@ -177,14 +212,14 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
 
-			strength += brdf_s(lightDir,viewDir,norm,X,Y,diff) * lightStrength * dot(lightDir, norm) * inShadow;
+			strength += brdf_s(lightDir,viewDir,N,X,Y,diff) * lightStrength * dot(lightDir, N) * inShadow;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm);
+			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N);
 		}
 	}
 	for (int i = 1; i < 4; i++)
@@ -195,31 +230,34 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a;
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm) * inShadow;
+			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N) * inShadow;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
-			strength += brdf_s(lightDir, viewDir, norm, X, Y, diff) * lightStrength * dot(lightDir, norm);
+			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N);
 		}
 	}
 	strength += _Emission * _AmbientColor;
 	//strength += _AmbientColor * diff;
 	int sampleCount = pow(2, g_quality) * 2;
-	if (dot(viewDir, norm) < 0)
+	if (dot(viewDir, N) < 0)
 	{
-		norm = -norm;
+		N = -N;
 	}
 	for (int i = 0; i < sampleCount; i++)
 	{
-		randomDir = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-		if (dot(randomDir, norm) < 0)
-		{
-			randomDir = -randomDir;
-		}
-		strength += brdf_s(randomDir, viewDir, norm, X, Y, diff) * (EnvCube.Sample(s1, randomDir) * g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, norm);
+		float2 E = RNG::Hammersley(i, sampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+		float3 randomDir = TangentToWorld(N, RNG::HammersleySampleCos(E));
+
+		//randomDir = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
+		//if (dot(randomDir, norm) < 0)
+		//{
+		//	randomDir = -randomDir;
+		//}
+		strength += brdf_s(randomDir, viewDir, N, X, Y, diff) * (EnvCube.Sample(s1, randomDir) * g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, N);
 	}
 	return float4(strength, texColor.a);
 }

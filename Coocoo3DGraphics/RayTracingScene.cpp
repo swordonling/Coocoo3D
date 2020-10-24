@@ -71,7 +71,7 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 		SRVDescriptors[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
 		SRVDescriptors[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
 		SRVDescriptors[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4);
-		CD3DX12_ROOT_PARAMETER rootParameters[7];
+		CD3DX12_ROOT_PARAMETER rootParameters[10];
 		rootParameters[0].InitAsDescriptorTable(1, &UAVDescriptor);
 		rootParameters[1].InitAsShaderResourceView(0);
 		rootParameters[2].InitAsConstantBufferView(0);
@@ -79,6 +79,9 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 		rootParameters[4].InitAsDescriptorTable(1, &SRVDescriptors[1]);
 		rootParameters[5].InitAsDescriptorTable(1, &SRVDescriptors[2]);
 		rootParameters[6].InitAsDescriptorTable(1, &SRVDescriptors[3]);
+		rootParameters[7].InitAsShaderResourceView(1, 2);
+		rootParameters[8].InitAsUnorderedAccessView(0, 2);
+		rootParameters[9].InitAsShaderResourceView(0, 2);
 		CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters, _countof(staticSamplerDescs), staticSamplerDescs);
 
 		Microsoft::WRL::ComPtr<ID3DBlob> blob;
@@ -90,19 +93,18 @@ void RayTracingScene::ReloadPipelineStates(DeviceResources^ deviceResources, con
 
 	{
 		CD3DX12_ROOT_PARAMETER rootParameters[8];
-		CD3DX12_DESCRIPTOR_RANGE range[6];
-		for (int i = 0; i < 6; i++)
+		CD3DX12_DESCRIPTOR_RANGE range[5];
+		for (int i = 0; i < 5; i++)
 		{
 			range[i].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, i + 2, 1);
 		}
 		rootParameters[0].InitAsConstantBufferView(3);
-		rootParameters[1].InitAsShaderResourceView(1, 1);
-		rootParameters[2].InitAsDescriptorTable(1, &range[0]);
-		rootParameters[3].InitAsDescriptorTable(1, &range[1]);
-		rootParameters[4].InitAsDescriptorTable(1, &range[2]);
-		rootParameters[5].InitAsDescriptorTable(1, &range[3]);
-		rootParameters[6].InitAsDescriptorTable(1, &range[4]);
-		rootParameters[7].InitAsDescriptorTable(1, &range[5]);
+		rootParameters[1].InitAsShaderResourceView(0, 1);
+		rootParameters[2].InitAsShaderResourceView(1, 1);
+		for (int i = 3; i < 8; i++)
+		{
+			rootParameters[i].InitAsDescriptorTable(1, &range[i - 3]);
+		}
 
 
 		CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
@@ -208,7 +210,7 @@ void RayTracingScene::BuildShaderTable(DeviceResources^ deviceResources, const P
 	// Ray gen shader table
 	{
 		UINT numShaderRecords = raygenShaderNames->Length;
-		UINT shaderRecordSize = shaderIdentifierSize + argumentSize;
+		UINT shaderRecordSize = Align(shaderIdentifierSize + argumentSize, 64);
 		ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RayGenShaderTable");
 		for (int i = 0; i < numShaderRecords; i++)
 		{

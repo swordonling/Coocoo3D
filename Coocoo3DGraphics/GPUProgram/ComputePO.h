@@ -14,6 +14,7 @@ namespace Coocoo3DGraphics
 		bool CompileReload1(IBuffer^ file1, Platform::String^ entryPoint, ShaderMacro macro);
 		void Reload(DeviceResources^ deviceResources,GraphicsSignature^ rootSignature, IBuffer^ data);
 		bool Upload(DeviceResources^ deviceResources, GraphicsSignature^ rootSignature);
+		void Reload(IBuffer^ data);
 	internal:
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pipelineState;
 		Microsoft::WRL::ComPtr<ID3DBlob> byteCode;

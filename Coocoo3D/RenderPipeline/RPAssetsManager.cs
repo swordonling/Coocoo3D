@@ -106,6 +106,10 @@ namespace Coocoo3D.RenderPipeline
         {
             geometryShader.Reload(await ReadFile(uri));
         }
+        protected async Task ReloadComputeShader(ComputePO computeShader, string uri)
+        {
+            computeShader.Reload(await ReadFile(uri));
+        }
         protected async Task<IBuffer> ReadFile(string uri)
         {
             StorageFile file = await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri));

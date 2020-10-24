@@ -6,9 +6,10 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		void Reload(int size);
-		void Initilize(DeviceResources^ deviceResources);
-	internal:
+		void Initialize(DeviceResources^ deviceResources);
+
 		void Initialize(DeviceResources^ deviceResources, int size);
+	internal:
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_buffer[2] = {};
 		D3D12_RESOURCE_STATES m_prevResourceState[2];
 		bool m_inverted = false;

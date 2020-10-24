@@ -65,3 +65,14 @@ bool ComputePO::Upload(DeviceResources^ deviceResources, GraphicsSignature^ root
 	Status = GraphicsObjectStatus::loaded;
 	return true;
 }
+
+void ComputePO::Reload(IBuffer^ data)
+{
+	Microsoft::WRL::ComPtr<IBufferByteAccess> bufferByteAccess;
+	reinterpret_cast<IInspectable*>(data)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
+	byte* pData = nullptr;
+	DX::ThrowIfFailed(bufferByteAccess->Buffer(&pData));
+
+	D3DCreateBlob(data->Length, &byteCode);
+	memcpy(byteCode->GetBufferPointer(), pData, data->Length);
+}

@@ -174,7 +174,7 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < readBackTextureList.Count; i++)
                 graphicsContext.UpdateReadBackTexture(readBackTextureList[i]);
             for (int i = 0; i < twinBufferList.Count; i++)
-                twinBufferList[i].Initilize(deviceResources);
+                twinBufferList[i].Initialize(deviceResources);
         }
     }
 }

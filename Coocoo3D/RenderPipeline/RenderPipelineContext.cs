@@ -20,16 +20,17 @@ namespace Coocoo3D.RenderPipeline
         public List<MMD3DEntity> entities = new List<MMD3DEntity>();
         public List<LightingData> lightings = new List<LightingData>();
         public List<CameraData> cameras = new List<CameraData>();
-        public int IndexCount;
+        public int VertexCount;
+        public int frameRenderIndex;
 
-        public int GetSceneObjectIndexCount()
+        public int GetSceneObjectVertexCount()
         {
             int count = 0;
             for (int i = 0; i < entities.Count; i++)
             {
-                count += entities[i].rendererComponent.meshIndexCount;
+                count += entities[i].rendererComponent.meshVertexCount;
             }
-            IndexCount = count;
+            VertexCount = count;
             return count;
         }
 
@@ -63,7 +64,9 @@ namespace Coocoo3D.RenderPipeline
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
         public MeshBuffer SkinningMeshBuffer = new MeshBuffer();
+        public TwinBuffer LightCacheBuffer = new TwinBuffer();
         public int SkinningMeshBufferSize;
+        public int frameRenderIndex;
 
         public RPAssetsManager RPAssetsManager;
         public DeviceResources deviceResources;
@@ -78,6 +81,12 @@ namespace Coocoo3D.RenderPipeline
         public RenderPipelineDynamicContext dynamicContext1 = new RenderPipelineDynamicContext();
 
         public List<ConstantBuffer> CBs_Bone = new List<ConstantBuffer>();
+
+        public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
+        public DxgiFormat backBufferFormat = DxgiFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+
+        public int width;
+        public int height;
 
         public RenderPipelineContext()
         {
@@ -96,6 +105,13 @@ namespace Coocoo3D.RenderPipeline
             _bigBufferHandle.Free();
         }
 
+        struct _Data1
+        {
+            public int vertexStart;
+            public int indexStart;
+            public int vertexCount;
+            public int indexCount;
+        }
         public void UpdateGPUResource()
         {
             #region Update bone data
@@ -106,20 +122,46 @@ namespace Coocoo3D.RenderPipeline
                 constantBuffer.Reload(deviceResources, c_entityDataBufferSize);
                 CBs_Bone.Add(constantBuffer);
             }
+            _Data1 data1 = new _Data1();
             for (int i = 0; i < count; i++)
             {
                 var entity = dynamicContext.entities[i];
+                data1.vertexCount = entity.rendererComponent.meshVertexCount;
+                data1.indexCount = entity.rendererComponent.meshIndexCount;
                 IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(bigBuffer, 0);
                 Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(world), ptr1, true);
                 Marshal.StructureToPtr(entity.rendererComponent.amountAB, ptr1 + 64, true);
                 Marshal.StructureToPtr(entity.rendererComponent.meshVertexCount, ptr1 + 68, true);
                 Marshal.StructureToPtr(entity.rendererComponent.meshIndexCount, ptr1 + 72, true);
+                Marshal.StructureToPtr(data1, ptr1 + 80, true);
 
                 graphicsContext.UpdateResource(CBs_Bone[i], bigBuffer, 256, 0);
                 graphicsContext.UpdateResourceRegion(CBs_Bone[i], 256, dynamicContext.entities[i].boneComponent.boneMatricesData, 65280, 0);
+                data1.vertexStart += entity.rendererComponent.meshVertexCount;
+                data1.indexStart += entity.rendererComponent.meshIndexCount;
             }
             #endregion
+        }
+
+        public void ReloadTextureSizeResources(ProcessingList processingList)
+        {
+            int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
+            int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
+            outputRTV.ReloadAsRTVUAV(x, y, RTFormat);
+            processingList.UnsafeAdd(outputRTV);
+            for (int i = 0; i < ScreenSizeRenderTextures.Length; i++)
+            {
+                ScreenSizeRenderTextures[i].ReloadAsRTVUAV(x, y, RTFormat);
+                processingList.UnsafeAdd(ScreenSizeRenderTextures[i]);
+            }
+            for (int i = 0; i < ScreenSizeDSVs.Length; i++)
+            {
+                ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y);
+                processingList.UnsafeAdd(ScreenSizeDSVs[i]);
+            }
+            width = x;
+            height = y;
         }
 
         public bool Initilized = false;
