@@ -2,7 +2,6 @@
 using Coocoo3D.Core;
 using Coocoo3D.Present;
 using Coocoo3DGraphics;
-using Coocoo3DNativeInteroperable;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -259,23 +258,9 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetPObjectStreamOut(POSkinning);
             else
                 graphicsContext.SetPObjectStreamOut(currentSkinningPObject);
-#if _TEST
             graphicsContext.SetMeshVertex(rendererComponent.mesh);
             int indexCountAll = rendererComponent.meshVertexCount;
-#else
-            graphicsContext.SetMesh(rendererComponent.mesh);
-            int indexCountAll = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                indexCountAll += Materials[i].indexCount;
-            }
-#endif
-
-#if _TEST
             graphicsContext.Draw(indexCountAll, 0);
-#else
-            graphicsContext.DrawIndexed(indexCountAll, 0, 0);
-#endif
         }
         private void RenderEntityShadow(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
         {
@@ -287,27 +272,21 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetCBVR(entityDataBuffer, 1);
             graphicsContext.SetCBVR(cameraPresentData, 2);
 
-#if _TEST
             graphicsContext.SetMeshIndex(rendererComponent.mesh);
-#endif
             List<Texture2D> texs = rendererComponent.textures;
             graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDShadowDepth);
 
             int countIndexLocal = 0;
             for (int i = 0; i < Materials.Count; i++)
             {
-                if (Materials[i].DrawFlags.HasFlag(NMMDE_DrawFlag.CastSelfShadow))
+                if (Materials[i].DrawFlags.HasFlag(DrawFlag.CastSelfShadow))
                 {
                     Texture2D tex1 = null;
                     if (Materials[i].texIndex != -1)
                         tex1 = texs[Materials[i].texIndex];
                     graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
                     graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-#if _TEST
                     graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-#else
-                    graphicsContext.Draw(Materials[i].indexCount, counter.vertex+countIndexLocal);
-#endif
                 }
                 counter.material++;
                 countIndexLocal += Materials[i].indexCount;
@@ -324,9 +303,7 @@ namespace Coocoo3D.RenderPipeline
             var PODraw = PObjectStatusSelect(rendererComponent.PODraw, context.RPAssetsManager.PObjectMMDLoading, currentDrawPObject, context.RPAssetsManager.PObjectMMDError);
             var Materials = rendererComponent.Materials;
             List<Texture2D> texs = rendererComponent.textures;
-#if _TEST
             graphicsContext.SetMeshIndex(rendererComponent.mesh);
-#endif
             //graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
             //graphicsContext.SetCBVR(entityDataBuffer, 1);
             //graphicsContext.SetCBVR(cameraPresentData, 2);
@@ -351,14 +328,10 @@ namespace Coocoo3D.RenderPipeline
                 //graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
                 CooGExtension.SetSRVTexture2(graphicsContext, tex1, tex2, 4, textureLoading, textureError);
                 CullMode cullMode = CullMode.back;
-                if (Materials[i].DrawFlags.HasFlag(NMMDE_DrawFlag.DrawDoubleFace))
+                if (Materials[i].DrawFlags.HasFlag(DrawFlag.DrawDoubleFace))
                     cullMode = CullMode.none;
                 graphicsContext.SetPObject(PODraw, cullMode);
-#if _TEST
                 graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-#else
-                graphicsContext.Draw(Materials[i].indexCount, counter.vertex+countIndexLocal);
-#endif
                 counter.material++;
                 countIndexLocal += Materials[i].indexCount;
             }
@@ -375,9 +348,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetCBVR(entityDataBuffer, 1);
             graphicsContext.SetCBVR(cameraPresentData, 2);
             List<Texture2D> texs = rendererComponent.textures;
-#if _TEST
             graphicsContext.SetMeshIndex(rendererComponent.mesh);
-#endif
             graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDDepth);
             //graphicsContext.SetMeshSkinned(rendererComponent.mesh);
             int countIndexLocal = 0;
@@ -388,11 +359,7 @@ namespace Coocoo3D.RenderPipeline
                     tex1 = texs[Materials[i].texIndex];
                 graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
                 graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-#if _TEST
                 graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-#else
-                graphicsContext.Draw(Materials[i].indexCount, counter.vertex + countIndexLocal);
-#endif
                 counter.material++;
                 countIndexLocal += Materials[i].indexCount;
             }

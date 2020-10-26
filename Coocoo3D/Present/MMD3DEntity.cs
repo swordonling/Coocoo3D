@@ -86,27 +86,22 @@ namespace Coocoo3D.FileFormat
         GCHandle gch_verticesData;
         byte[] verticesData2;
         GCHandle gch_verticesData2;
-        byte[] indexsData;
-        GCHandle gch_indexsData;
 
         public void Reload2()
         {
             if (gch_verticesData.IsAllocated) gch_verticesData.Free();
             if (gch_verticesData2.IsAllocated) gch_verticesData2.Free();
-            if (gch_indexsData.IsAllocated) gch_indexsData.Free();
             verticesData = new byte[Vertices.Count * c_vertexStride];
             verticesData2 = new byte[Vertices.Count * c_vertexStride2];
-            indexsData = new byte[TriangleIndexs.Count * 4];
             gch_verticesData = GCHandle.Alloc(verticesData);
             gch_verticesData2 = GCHandle.Alloc(verticesData2);
-            gch_indexsData = GCHandle.Alloc(indexsData);
             IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData, 0);
             for (int i = 0; i < Vertices.Count; i++)
             {
                 Marshal.StructureToPtr(Vertices[i].innerStruct, ptr, true);
                 for (int j = 0; j < 4; j++)
                     Marshal.WriteInt32(ptr + 24 + j * 4, Vertices[i].boneId[j]);
-                Marshal.Copy(Vertices[i].weight, 0, ptr + 24 + 16, 4);
+                Marshal.StructureToPtr(Vertices[i].Weights, ptr + 24 + 16, true);
                 ptr += c_vertexStride;
             }
             IntPtr ptr2 = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData2, 0);
@@ -114,29 +109,18 @@ namespace Coocoo3D.FileFormat
             {
                 Marshal.StructureToPtr(Vertices[i].Coordinate, ptr2 + i * c_vertexStride2, true);
             }
-
-            IntPtr ptr3 = Marshal.UnsafeAddrOfPinnedArrayElement(indexsData, 0);
-            for (int i = 0; i < TriangleIndexs.Count; i++)
-            {
-                Marshal.WriteInt32(ptr3 + i * c_indexStride, TriangleIndexs[i]);
-            }
         }
         ///<summary>Reoad2()后可用</summary>
         public MMDMesh GetMesh()
         {
             MMDMesh meshInstance;
-#if _TEST
-            meshInstance = MMDMesh.Load1(verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._POINTLIST);
-#else
-            meshInstance = MMDMesh.Load1(verticesData, verticesData2, indexsData, c_vertexStride, c_vertexStride2, c_indexStride, PrimitiveTopology._TRIANGLELIST);
-#endif
+            meshInstance = MMDMesh.Load1(verticesData, verticesData2, TriangleIndexs.ToArray(), c_vertexStride, c_vertexStride2, PrimitiveTopology._POINTLIST);
             return meshInstance;
         }
         ~PMXFormat()
         {
             if (gch_verticesData.IsAllocated) gch_verticesData.Free();
             if (gch_verticesData2.IsAllocated) gch_verticesData2.Free();
-            if (gch_indexsData.IsAllocated) gch_indexsData.Free();
         }
     }
     public static partial class PMXFormatExtension

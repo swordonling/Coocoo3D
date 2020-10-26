@@ -195,7 +195,8 @@ void MyRaygenShader1()
 	//if(InCamera)
 	//SceneLightWrite[dtid.x] = float4(1,1,1, 1);
 	//else
-	SceneLightWrite[dtid.x] = float4(gi, 1);
+	//for denoise
+	SceneLightWrite[dtid.x] = float4(SceneLightRead[dtid.x].rgb * 0.5 + gi * 0.5, 1);
 }
 
 [shader("anyhit")]

@@ -86,7 +86,7 @@ namespace Coocoo3D.RenderPipeline
 
             PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
 
-            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 5000);
+            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
             PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0);
             uploadProcess.RS(PObjectMMDShadowDepth, 0);
             uploadProcess.RS(PObjectMMDDepth, 0);

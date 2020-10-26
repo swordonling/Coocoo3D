@@ -194,7 +194,7 @@ bool PObject::Upload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 		}
 		else
 		{
-			state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, m_depthBias, 0.0f, 1.0f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
+			state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_FILL_MODE_SOLID, D3D12_CULL_MODE_NONE, false, m_depthBias, 0.0f, 1.5f, true, false, false, 0, D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF);
 			if (FAILED(deviceResources->GetD3DDevice()->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&m_pipelineState[c_indexPipelineStateDepth])))) { Status = GraphicsObjectStatus::error; return false; }
 		}
 

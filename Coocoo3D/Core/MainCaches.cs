@@ -191,13 +191,13 @@ namespace Coocoo3D.Core
             {
                 var attr = await storageItem.GetBasicPropertiesAsync();
                 lastModifiedTime = attr.DateModified;
+                return await ReloadTexture(storageItem);
             }
             catch
             {
                 Mark(GraphicsObjectStatus.error);
                 return false;
             }
-            return await ReloadTexture(storageItem);
         }
 
         public async Task<bool> ReloadTexture(IStorageItem storageItem)
@@ -208,7 +208,6 @@ namespace Coocoo3D.Core
                 Mark(GraphicsObjectStatus.error);
                 return false;
             }
-
             try
             {
                 texture2D.ReloadFromImage(await FileIO.ReadBufferAsync(texFile));
@@ -221,6 +220,18 @@ namespace Coocoo3D.Core
                 return false;
             }
         }
+    }
+    public class ModelPack
+    {
+        public PMXFormat pmx = new PMXFormat();
+        public StorageFolder folder;
+        public string relativePath;
+        public SingleLocker loadLocker;
+
+        byte[] verticesDataAnotherPart;
+        byte[] verticesDataPosPart;
+
+        public GraphicsObjectStatus Status;
     }
     public class MainCaches
     {
@@ -285,7 +296,6 @@ namespace Coocoo3D.Core
 
         public void ReloadShaders(ProcessingList processingList, RPAssetsManager RPAssetsManager, Action _RequireRender)
         {
-
             if (shaderTaskLocker.GetLocker())
             {
                 Task.Run(async () =>

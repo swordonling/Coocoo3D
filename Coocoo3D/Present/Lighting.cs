@@ -73,7 +73,7 @@ namespace Coocoo3D.Present
                     pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange, dist + ExtendRange, 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
                 else
                 {
-                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (4 * a + 1), dist + ExtendRange * (4 * a + 1), 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
+                    pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (3 * a + 1), dist + ExtendRange * (3 * a + 1), 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
                 }
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 

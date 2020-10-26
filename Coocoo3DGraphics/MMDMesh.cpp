@@ -4,24 +4,25 @@
 using namespace Coocoo3DGraphics;
 using namespace DirectX;
 
-MMDMesh^ MMDMesh::Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt)
+MMDMesh^ MMDMesh::Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<UINT>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
 {
 	MMDMesh^ mmdMesh = ref new MMDMesh();
-	mmdMesh->Reload1(verticeData, verticeData2, indexData, vertexStride, vertexStride2, indexStride, pt);
+	mmdMesh->Reload1(verticeData, verticeData2, indexData, vertexStride, vertexStride2, pt);
 	return mmdMesh;
 }
 
-void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<byte>^ indexData, int vertexStride, int vertexStride2, int indexStride, PrimitiveTopology pt)
+void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<UINT>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
 {
 	m_vertexStride = vertexStride;
 	m_vertexStride2 = vertexStride2;
-	m_indexStride = indexStride;
-	m_vertexCount = verticeData->Length / vertexStride;
-	m_indexCount = indexData->Length / indexStride;
+	m_indexStride = sizeof(UINT);
+	m_vertexCount = verticeData->Length / m_vertexStride;
+	m_indexCount = indexData->Length;
 	m_primitiveTopology = (D3D_PRIMITIVE_TOPOLOGY)pt;
 	m_verticeData = verticeData;
 	m_verticeDataPos = verticeData2;
-	m_indexData = indexData;
+	m_indexData = ref new Platform::Array<byte>(indexData->Length * sizeof(UINT));
+	memcpy(m_indexData->begin(), indexData->begin(), indexData->Length * sizeof(UINT));
 }
 
 struct OnlyPosition
@@ -34,8 +35,8 @@ void MMDMesh::ReloadNDCQuad()
 	{
 		XMFLOAT4(-1,-1,0,1),
 		XMFLOAT4(-1, 1,0,1),
-		XMFLOAT4( 1,-1,0,1),
-		XMFLOAT4( 1, 1,0,1),
+		XMFLOAT4(1,-1,0,1),
+		XMFLOAT4(1, 1,0,1),
 	};
 	unsigned int indices[] =
 	{

@@ -9,7 +9,6 @@ using Coocoo3D.MMDSupport;
 using Coocoo3D.Components;
 using Coocoo3DGraphics;
 using Coocoo3DPhysics;
-using Coocoo3DNativeInteroperable;
 
 namespace Coocoo3D.Components
 {
@@ -26,8 +25,8 @@ namespace Coocoo3D.Components
 
         public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
         public List<Physics3DJoint> physics3DJoints = new List<Physics3DJoint>();
-        public List<NMMD_JointDesc> jointDescs = new List<NMMD_JointDesc>();
-        public List<NMMD_RigidBodyDesc> rigidBodyDescs = new List<NMMD_RigidBodyDesc>();
+        public List<JointDesc> jointDescs = new List<JointDesc>();
+        public List<RigidBodyDesc> rigidBodyDescs = new List<RigidBodyDesc>();
 
         public Matrix4x4 LocalToWorld = Matrix4x4.Identity;
         public Matrix4x4 WorldToLocal = Matrix4x4.Identity;
@@ -73,9 +72,9 @@ namespace Coocoo3D.Components
 
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == NMMDE_MorphType.Bone)
+                if (morphStateComponent.morphs[i].Type == MorphType.Bone)
                 {
-                    NMMD_MorphBoneDesc[] morphBoneStructs = morphStateComponent.morphs[i].MorphBones;
+                    MorphBoneDesc[] morphBoneStructs = morphStateComponent.morphs[i].MorphBones;
                     float computedWeight = morphStateComponent.computedWeights[i];
                     for (int j = 0; j < morphBoneStructs.Length; j++)
                     {
@@ -657,7 +656,7 @@ namespace Coocoo3D.Components
         public bool IsAppendRotation;
         public bool IsAppendTranslation;
         public bool IsPhysicsFreeBone;
-        public NMMDE_BoneFlag Flags;
+        public BoneFlags Flags;
 
         /// <summary>在调用之前确保它的父级已经更新。一般从前向后调用即可。</summary>
         public void GetTransformMatrixG(List<BoneEntity> list)
@@ -716,6 +715,52 @@ namespace Coocoo3D.Components
         FixAll
     }
 
+    public enum RigidBodyType
+    {
+        Kinematic = 0,
+        Physics = 1,
+        PhysicsStrict = 2,
+        PhysicsGhost = 3
+    }
+
+    public enum RigidBodyShape
+    {
+        Sphere = 0,
+        Box = 1,
+        Capsule = 2
+    }
+
+    public struct RigidBodyDesc
+    {
+        public int AssociatedBoneIndex;
+        public byte CollisionGroup;
+        public ushort CollisionMask;
+        public RigidBodyShape Shape;
+        public Vector3 Dimemsions;
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public float Mass;
+        public float TranslateDamp;
+        public float RotateDamp;
+        public float Restitution;
+        public float Friction;
+        public RigidBodyType Type;
+    }
+
+    public struct JointDesc
+    {
+        public byte Type;
+        public int AssociatedRigidBodyIndex1;
+        public int AssociatedRigidBodyIndex2;
+        public Vector3 Position;
+        public Vector3 Rotation;
+        public Vector3 PositionMinimum;
+        public Vector3 PositionMaximum;
+        public Vector3 RotationMinimum;
+        public Vector3 RotationMaximum;
+        public Vector3 PositionSpring;
+        public Vector3 RotationSpring;
+    }
 }
 
 
@@ -723,13 +768,13 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static NMMD_RigidBodyDesc GetRigidBodyDesc(MMDRigidBody rigidBody)
+        public static RigidBodyDesc GetRigidBodyDesc(PMX_RigidBody rigidBody)
         {
-            NMMD_RigidBodyDesc desc = new NMMD_RigidBodyDesc();
+            RigidBodyDesc desc = new RigidBodyDesc();
             desc.AssociatedBoneIndex = rigidBody.AssociatedBoneIndex;
             desc.CollisionGroup = rigidBody.CollisionGroup;
             desc.CollisionMask = rigidBody.CollisionMask;
-            desc.Shape = rigidBody.Shape;
+            desc.Shape = (RigidBodyShape)rigidBody.Shape;
             desc.Dimemsions = rigidBody.Dimemsions;
             desc.Position = rigidBody.Position;
             desc.Rotation = MMDBoneComponent.ToQuaternion(rigidBody.Rotation);
@@ -738,12 +783,12 @@ namespace Coocoo3D.FileFormat
             desc.RotateDamp = rigidBody.RotateDamp;
             desc.Restitution = rigidBody.Restitution;
             desc.Friction = rigidBody.Friction;
-            desc.Type = rigidBody.Type;
+            desc.Type = (RigidBodyType)rigidBody.Type;
             return desc;
         }
-        public static NMMD_JointDesc GetJointDesc(MMDJoint joint)
+        public static JointDesc GetJointDesc(PMX_Joint joint)
         {
-            NMMD_JointDesc desc = new NMMD_JointDesc();
+            JointDesc desc = new JointDesc();
             desc.Type = joint.Type;
             desc.AssociatedRigidBodyIndex1 = joint.AssociatedRigidBodyIndex1;
             desc.AssociatedRigidBodyIndex2 = joint.AssociatedRigidBodyIndex2;
@@ -782,9 +827,9 @@ namespace Coocoo3D.FileFormat
 
                 boneEntity.Name = _bone.Name;
                 boneEntity.NameEN = _bone.NameEN;
-                boneEntity.Flags = _bone.Flags;
+                boneEntity.Flags = (BoneFlags)_bone.Flags;
 
-                if (_bone.Flags.HasFlag(NMMDE_BoneFlag.HasIK))
+                if (boneEntity.Flags.HasFlag(BoneFlags.HasIK))
                 {
                     boneEntity.IKTargetIndex = _bone.boneIK.IKTargetIndex;
                     boneEntity.CCDIterateLimit = _bone.boneIK.CCDIterateLimit;
@@ -852,8 +897,8 @@ namespace Coocoo3D.FileFormat
                 {
                     boneEntity.AppendParentIndex = _bone.AppendBoneIndex;
                     boneEntity.AppendRatio = _bone.AppendBoneRatio;
-                    boneEntity.IsAppendRotation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireRotate);
-                    boneEntity.IsAppendTranslation = _bone.Flags.HasFlag(NMMDE_BoneFlag.AcquireTranslate);
+                    boneEntity.IsAppendRotation = boneEntity.Flags.HasFlag(BoneFlags.AcquireRotate);
+                    boneEntity.IsAppendTranslation = boneEntity.Flags.HasFlag(BoneFlags.AcquireTranslate);
                 }
                 else
                 {
@@ -878,7 +923,7 @@ namespace Coocoo3D.FileFormat
                 var rigidBodyDesc = GetRigidBodyDesc(rigidBodyData);
 
                 boneComponent.rigidBodyDescs.Add(rigidBodyDesc);
-                if (rigidBodyData.Type != NMMDE_RigidBodyType.Kinematic && rigidBodyData.AssociatedBoneIndex != -1)
+                if (rigidBodyData.Type != PMX_RigidBodyType.Kinematic && rigidBodyData.AssociatedBoneIndex != -1)
                     boneComponent.bones[rigidBodyData.AssociatedBoneIndex].IsPhysicsFreeBone = true;
 
             }
