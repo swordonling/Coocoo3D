@@ -15,6 +15,7 @@ using Coocoo3D.Utility;
 using Coocoo3D.Core;
 using Windows.Storage.Streams;
 using System.Threading;
+using Coocoo3D.ResourceWarp;
 
 namespace Coocoo3D.UI
 {
@@ -23,30 +24,30 @@ namespace Coocoo3D.UI
         public static async Task LoadEntityIntoScene(Coocoo3DMain appBody, Scene scene, StorageFile pmxFile, StorageFolder storageFolder)
         {
             string pmxPath = pmxFile.Path;
-            PMXFormat pmx = null;
-            lock (appBody.mainCaches.pmxCaches)
+            string relatePath = pmxFile.Name;
+            ModelPack pack = null;
+            lock (appBody.mainCaches.ModelPackCaches)
             {
-                pmx = appBody.mainCaches.pmxCaches.GetOrCreate(pmxPath);
-                if (pmx.LoadTask == null && !pmx.Ready)
+                pack = appBody.mainCaches.ModelPackCaches.GetOrCreate(pmxPath);
+                if (pack.LoadTask == null && pack.Status != GraphicsObjectStatus.loaded)
                 {
-                    pmx.LoadTask = Task.Run(async () =>
+                    pack.LoadTask = Task.Run(async () =>
                     {
                         BinaryReader reader = new BinaryReader((await pmxFile.OpenReadAsync()).AsStreamForRead());
-                        pmx.Reload(reader);
-                        pmx.Reload2();
+                        pack.Reload2(reader);
+                        pack.folder = storageFolder;
+                        pack.relativePath = relatePath;
                         reader.Dispose();
-                        pmx.Ready = true;
-                        pmx.LoadTask = null;
+                        pack.Status = GraphicsObjectStatus.loaded;
+                        pack.LoadTask = null;
                     });
                 }
             }
-            if (!pmx.Ready && pmx.LoadTask != null) await pmx.LoadTask;
+            if (pack.Status != GraphicsObjectStatus.loaded && pack.LoadTask != null) await pack.LoadTask;
             MMD3DEntity entity = new MMD3DEntity();
-            entity.Reload2(appBody.ProcessingList, pmx);
-            entity.rendererComponent.textures = GetTextureListForModel(appBody, storageFolder, pmx);
+            entity.Reload2(appBody.ProcessingList, pack, GetTextureList(appBody, storageFolder, pack.pmx), pmxPath);
             scene.AddSceneObject(entity);
             appBody.RequireRender();
-
         }
         public static void NewLighting(Coocoo3DMain appBody)
         {
@@ -63,13 +64,9 @@ namespace Coocoo3D.UI
             if (scene.sceneObjects.Remove(sceneObject))
             {
                 if (sceneObject is MMD3DEntity entity)
-                {
                     scene.RemoveSceneObject(entity);
-                }
                 else if (sceneObject is Lighting lighting)
-                {
                     scene.RemoveSceneObject(lighting);
-                }
             }
             appBody.RequireRender();
         }
@@ -133,7 +130,7 @@ namespace Coocoo3D.UI
             appBody.RequireRender();
         }
 
-        public static List<Texture2D> GetTextureListForModel(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx)
+        public static List<Texture2D> GetTextureList(Coocoo3DMain appBody, StorageFolder storageFolder, PMXFormat pmx)
         {
             List<Texture2D> textures = new List<Texture2D>();
             List<string> paths = new List<string>();
@@ -159,18 +156,15 @@ namespace Coocoo3D.UI
         /// <summary>异步加载纹理</summary>
         public static void LoadTexture(Coocoo3DMain appBody, Texture2DPack texturePack, StorageFolder storageFolder, string relativePath)
         {
-            if (texturePack.Status != GraphicsObjectStatus.loaded)
+            if (texturePack.Status != GraphicsObjectStatus.loaded && texturePack.loadLocker.GetLocker())
             {
-                if (texturePack.loadLocker.GetLocker())
-                {
-                    _ = Task.Run(async () =>
-                  {
-                      if (await texturePack.ReloadTexture1(storageFolder, relativePath))
-                          appBody.ProcessingList.AddObject(texturePack.texture2D);
-                      appBody.RequireRender();
-                      texturePack.loadLocker.FreeLocker();
-                  });
-                }
+                _ = Task.Run(async () =>
+              {
+                  if (await texturePack.ReloadTexture1(storageFolder, relativePath))
+                      appBody.ProcessingList.AddObject(texturePack.texture2D);
+                  appBody.RequireRender();
+                  texturePack.loadLocker.FreeLocker();
+              });
             }
         }
     }

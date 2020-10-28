@@ -101,7 +101,7 @@ namespace Coocoo3D.PropertiesPages
                 }
             }
             showInfo.Text = resourceLoader.GetString("Message_Operating");
-            appBody.renderPipelineContext.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
+            appBody.RPContext.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
                 await FileIO.ReadBufferAsync(files[0]),
                 await FileIO.ReadBufferAsync(files[1]),
                 await FileIO.ReadBufferAsync(files[2]),
@@ -114,8 +114,8 @@ namespace Coocoo3D.PropertiesPages
 
             }
             prevRenderFrame = t1;
-            appBody.ProcessingList.AddObject(appBody.renderPipelineContext.EnvCubeMap);
-            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.renderPipelineContext.EnvCubeMap, appBody.renderPipelineContext.IrradianceMap, miscProcessType));
+            appBody.ProcessingList.AddObject(appBody.RPContext.EnvCubeMap);
+            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.RPContext.EnvCubeMap, appBody.RPContext.IrradianceMap, miscProcessType));
             appBody.RequireRender();
             showInfo.Text = resourceLoader.GetString("Message_Done");
         }

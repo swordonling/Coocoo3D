@@ -20,6 +20,7 @@ namespace Coocoo3D.Core
         public List<MMD3DEntity> EntityLoadList = new List<MMD3DEntity>();
         public List<Lighting> LightingLoadList = new List<Lighting>();
         public List<MMD3DEntity> EntityRemoveList = new List<MMD3DEntity>();
+        public List<MMD3DEntity> EntityRefreshList = new List<MMD3DEntity>();
         public List<Lighting> LightingRemoveList = new List<Lighting>();
 
         public void AddSceneObject(MMD3DEntity entity)
@@ -70,6 +71,11 @@ namespace Coocoo3D.Core
                     EntityRemoveList[i].boneComponent.RemovePhysics(physics3DScene);
                     Entities.Remove(EntityRemoveList[i]);
                 }
+                for (int i = 0; i < EntityRefreshList.Count; i++)
+                {
+                    EntityRefreshList[i].boneComponent.RemovePhysics(physics3DScene);
+                    EntityRefreshList[i].boneComponent.AddPhysics(physics3DScene);
+                }
                 for (int i = 0; i < LightingRemoveList.Count; i++)
                 {
                     Lightings.Remove(LightingRemoveList[i]);
@@ -77,6 +83,7 @@ namespace Coocoo3D.Core
                 EntityLoadList.Clear();
                 LightingLoadList.Clear();
                 EntityRemoveList.Clear();
+                EntityRefreshList.Clear();
                 LightingRemoveList.Clear();
             }
         }

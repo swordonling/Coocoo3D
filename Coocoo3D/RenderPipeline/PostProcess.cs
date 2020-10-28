@@ -67,7 +67,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetSRVT(context.postProcessBackground, 2);
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectPostProcess, CullMode.back);
-            graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
+            graphicsContext.DrawIndexed(context.ndcQuadMeshIndexCount, 0, 0);
         }
 
         public struct InnerStruct

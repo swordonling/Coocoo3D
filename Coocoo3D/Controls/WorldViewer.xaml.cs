@@ -51,8 +51,7 @@ namespace Coocoo3D.Controls
             AppBody.GameDriverContext.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.deviceResources.SetSwapChainPanel(swapChainPanel);
             AppBody.GameDriverContext.NewSize = new Size(ActualWidth, ActualHeight);
-            AppBody.GameDriverContext.RequireResize = true;
-            AppBody.GameDriverContext.RequireInterruptRender = true;
+            AppBody.GameDriverContext.RequireResizeOuter = true;
             AppBody.swapChainReady = true;
             AppBody.RequireRender();
             swapChainPanel.SizeChanged -= SwapChainPanel_SizeChanged;
@@ -61,11 +60,9 @@ namespace Coocoo3D.Controls
 
         private void SwapChainPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (AppBody.Recording) return;
             AppBody.GameDriverContext.AspectRatio = (float)(ActualWidth / ActualHeight);
             AppBody.GameDriverContext.NewSize = e.NewSize;
-            AppBody.GameDriverContext.RequireResize = true;
-            AppBody.GameDriverContext.RequireInterruptRender = true;
+            AppBody.GameDriverContext.RequireResizeOuter = true;
             AppBody.RequireRender();
         }
 

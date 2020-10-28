@@ -112,9 +112,11 @@ namespace Coocoo3D
         {
             if (appBody.Recording) return;
             if (appBody.performaceSettings.AutoReloadShaders)
-                appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager, () => appBody.RequireRender());
+                appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager,appBody.RequireRender);
             if (appBody.performaceSettings.AutoReloadTextures)
-                appBody.mainCaches.ReloadTextures(appBody.ProcessingList, () => appBody.RequireRender());
+                appBody.mainCaches.ReloadTextures(appBody.ProcessingList,appBody.RequireRender);
+            if (appBody.performaceSettings.AutoReloadModels)
+                appBody.GameDriverContext.ReqireReloadModel();
         }
 
         private async void OpenFolder_Click(object sender, RoutedEventArgs e)

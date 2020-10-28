@@ -173,6 +173,9 @@
   <data name="Page_Common_Button_RefreshCache.Content" xml:space="preserve">
     <value>刷新缓存</value>
   </data>
+  <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
+    <value>刷新模型缓存</value>
+  </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>刷新着色器缓存</value>
   </data>
@@ -184,6 +187,15 @@
   </data>
   <data name="Page_Common_Button_Settings.Content" xml:space="preserve">
     <value>设置</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadModel.Content" xml:space="preserve">
+    <value>自动重新加载模型</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadShader.Content" xml:space="preserve">
+    <value>自动重新加载着色器</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadTexture.Content" xml:space="preserve">
+    <value>自动重新加载纹理</value>
   </data>
   <data name="Page_Common_ComboBox_RenderPipeline.Header" xml:space="preserve">
     <value>渲染管线</value>

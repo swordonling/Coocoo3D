@@ -68,15 +68,6 @@ namespace Coocoo3D.RenderPipeline
             gch_rcDataUploadBuffer.Free();
         }
 
-        public override void TimeChange(double time, double deltaTime)
-        {
-            for (int i = 0; i < cameraPresentDatas.Length; i++)
-            {
-                cameraPresentDatas[i].PlayTime = (float)time;
-                cameraPresentDatas[i].DeltaTime = (float)deltaTime;
-            }
-        }
-
         bool HasMainLight;
         PObject currentDrawPObject;
         PObject currentSkinningPObject;
@@ -162,6 +153,9 @@ namespace Coocoo3D.RenderPipeline
             pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
             for (int i = 0; i < cameras.Count; i++)
             {
+                cameraPresentDatas[i].PlayTime = (float)context.dynamicContext.Time;
+                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContext.DeltaTime;
+
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);
@@ -213,7 +207,7 @@ namespace Coocoo3D.RenderPipeline
             #region Render Sky box
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectSkyBox, CullMode.back);
             graphicsContext.SetMesh(context.ndcQuadMesh);
-            graphicsContext.DrawIndexed(context.ndcQuadMesh.m_indexCount, 0, 0);
+            graphicsContext.DrawIndexed(context.ndcQuadMeshIndexCount, 0, 0);
             #endregion
 
             graphicsContext.SetMesh(context.SkinningMeshBuffer);

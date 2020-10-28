@@ -619,9 +619,9 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 
 		m_commandList->ResourceBarrier(c_frameCount * 2, barriers);
 	}
-	if (mesh->m_indexData->Length > 0)
+	if (mesh->m_indexCount > 0)
 	{
-		CD3DX12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexData->Length);
+		CD3DX12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * mesh->m_indexStride);
 		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
@@ -641,8 +641,8 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 		NAME_D3D12_OBJECT(mesh->m_indexBufferUpload);
 
 		D3D12_SUBRESOURCE_DATA indexData = {};
-		indexData.pData = mesh->m_indexData->begin();
-		indexData.RowPitch = mesh->m_indexData->Length;
+		indexData.pData = mesh->m_indexData->GetBufferPointer();
+		indexData.RowPitch = mesh->m_indexCount * mesh->m_indexStride;
 		indexData.SlicePitch = indexData.RowPitch;
 
 		UpdateSubresources(m_commandList.Get(), mesh->m_indexBuffer.Get(), mesh->m_indexBufferUpload.Get(), 0, 0, 1, &indexData);
@@ -670,7 +670,7 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 			mesh->m_vertexBufferPosView1[i].SizeInBytes = mesh->m_vertexStride2 * mesh->m_vertexCount;
 		}
 	}
-	if (mesh->m_indexData->Length > 0)
+	if (mesh->m_indexCount > 0)
 	{
 		mesh->m_indexBufferView.BufferLocation = mesh->m_indexBuffer->GetGPUVirtualAddress();
 		mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount * mesh->m_indexStride;

@@ -86,14 +86,6 @@ namespace Coocoo3D.RenderPipeline
         #endregion
 
 
-        public override void TimeChange(double time, double deltaTime)
-        {
-            for (int i = 0; i < cameraPresentDatas.Length; i++)
-            {
-                cameraPresentDatas[i].PlayTime = (float)time;
-                cameraPresentDatas[i].DeltaTime = (float)deltaTime;
-            }
-        }
         bool HasMainLight;
         int renderMatCount = 0;
         public override void PrepareRenderData(RenderPipelineContext context)
@@ -126,6 +118,9 @@ namespace Coocoo3D.RenderPipeline
 
             for (int i = 0; i < cameras.Count; i++)
             {
+                cameraPresentDatas[i].PlayTime = (float)context.dynamicContext.Time;
+                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContext.DeltaTime;
+
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].innerStruct.RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
                 cameraPresentDatas[i].innerStruct.RandomValue2 = randomGenerator.Next(int.MinValue, int.MaxValue);

@@ -36,7 +36,7 @@ namespace Coocoo3D.Components
     }
     public struct MorphVertexDesc
     {
-        public uint VertexIndex;
+        public int VertexIndex;
         public Vector3 Offset;
     }
     public struct MorphBoneDesc

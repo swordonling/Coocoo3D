@@ -4,14 +4,14 @@
 using namespace Coocoo3DGraphics;
 using namespace DirectX;
 
-MMDMesh^ MMDMesh::Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<UINT>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
+MMDMesh^ MMDMesh::Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<int>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
 {
 	MMDMesh^ mmdMesh = ref new MMDMesh();
 	mmdMesh->Reload1(verticeData, verticeData2, indexData, vertexStride, vertexStride2, pt);
 	return mmdMesh;
 }
 
-void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<UINT>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
+void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<int>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt)
 {
 	m_vertexStride = vertexStride;
 	m_vertexStride2 = vertexStride2;
@@ -21,8 +21,9 @@ void MMDMesh::Reload1(const Platform::Array<byte>^ verticeData, const Platform::
 	m_primitiveTopology = (D3D_PRIMITIVE_TOPOLOGY)pt;
 	m_verticeData = verticeData;
 	m_verticeDataPos = verticeData2;
-	m_indexData = ref new Platform::Array<byte>(indexData->Length * sizeof(UINT));
-	memcpy(m_indexData->begin(), indexData->begin(), indexData->Length * sizeof(UINT));
+
+	D3DCreateBlob(indexData->Length * sizeof(UINT), &m_indexData);
+	memcpy(m_indexData->GetBufferPointer(), indexData->begin(), indexData->Length * sizeof(UINT));
 }
 
 struct OnlyPosition
@@ -51,10 +52,11 @@ void MMDMesh::ReloadNDCQuad()
 	m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	m_verticeData = ref new Platform::Array<byte, 1>(sizeof(positions));
 	m_verticeDataPos = nullptr;
-	m_indexData = ref new Platform::Array<byte, 1>(sizeof(indices));
+
 
 	memcpy(m_verticeData->begin(), positions, sizeof(positions));
-	memcpy(m_indexData->begin(), indices, sizeof(indices));
+	D3DCreateBlob(sizeof(indices), &m_indexData);
+	memcpy(m_indexData->GetBufferPointer(), indices, sizeof(indices));
 }
 
 void MMDMesh::ReleaseUploadHeapResource()

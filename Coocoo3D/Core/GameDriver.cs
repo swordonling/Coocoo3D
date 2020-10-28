@@ -17,29 +17,51 @@ namespace Coocoo3D.Core
         public int Width;
         public int Height;
     }
-    public struct GameDriverContext
+    public class GameDriverContext
     {
         public volatile bool NeedRender;
+        public volatile bool NeedUpdateEntities;
+        public volatile bool EnableDisplay;
         public bool Playing;
         public double PlayTime;
+        public double DeltaTime;
         public TimeSpan FrameInterval;
-        public double deltaTime;
         public float PlaySpeed;
-        public bool RequireResetPhysics;
+        public volatile bool RequireResetPhysics;
+        public bool NeedReloadModel;
         public DeviceResources DeviceResources;
         public ProcessingList ProcessingList;
         public bool RequireResize;
+        public bool RequireResizeOuter;
         public Windows.Foundation.Size NewSize;
         public float AspectRatio;
         public bool RequireInterruptRender;
         public WICFactory WICFactory;
         public RecordSettings recordSettings;
+
+        public void ReqireReloadModel()
+        {
+            NeedReloadModel = true;
+            RequireInterruptRender = true;
+            NeedRender = true;
+        }
+
+        public void RequireRender(bool updateEntities)
+        {
+            NeedUpdateEntities |= updateEntities;
+            NeedRender = true;
+        }
+
+        public void RequireRender()
+        {
+            NeedRender = true;
+        }
     }
     public abstract class GameDriver
     {
-        public abstract bool Next(ref GameDriverContext context);
+        public abstract bool Next(GameDriverContext context);
 
-        public virtual void AfterRender(GraphicsContext graphicsContext, ref GameDriverContext context)
+        public virtual void AfterRender(GraphicsContext graphicsContext, GameDriverContext context)
         {
 
         }

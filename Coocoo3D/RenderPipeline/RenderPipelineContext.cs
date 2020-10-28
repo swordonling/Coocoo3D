@@ -22,6 +22,9 @@ namespace Coocoo3D.RenderPipeline
         public List<CameraData> cameras = new List<CameraData>();
         public int VertexCount;
         public int frameRenderIndex;
+        public double Time;
+        public double DeltaTime;
+        public bool EnableDisplay;
 
         public int GetSceneObjectVertexCount()
         {
@@ -63,6 +66,7 @@ namespace Coocoo3D.RenderPipeline
         public RenderTextureCube IrradianceMap = new RenderTextureCube();
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
+        public int ndcQuadMeshIndexCount;
         public MeshBuffer SkinningMeshBuffer = new MeshBuffer();
         public TwinBuffer LightCacheBuffer = new TwinBuffer();
         public int SkinningMeshBufferSize;
@@ -183,6 +187,7 @@ namespace Coocoo3D.RenderPipeline
             processingList.AddObject(IrradianceMap);
 
             ndcQuadMesh.ReloadNDCQuad();
+            ndcQuadMeshIndexCount = ndcQuadMesh.m_indexCount;
             processingList.AddObject(ndcQuadMesh);
 
             processingList.AddObject(postProcessBackground);

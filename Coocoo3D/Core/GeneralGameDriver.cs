@@ -8,7 +8,7 @@ namespace Coocoo3D.Core
 {
     public class GeneralGameDriver : GameDriver
     {
-        public override bool Next(ref GameDriverContext context)
+        public override bool Next(GameDriverContext context)
         {
             if (!(context.NeedRender || context.Playing))
             {
@@ -19,12 +19,18 @@ namespace Coocoo3D.Core
                 context.NeedRender = true;
                 return false;
             }
+            context.EnableDisplay = true;
             context.NeedRender = false;
+            context.RequireResize = context.RequireResizeOuter;
+            context.RequireResizeOuter = false;
+            if (context.RequireResize)
+                context.RequireInterruptRender = true;
+
             DateTime now = DateTime.Now;
-            context.deltaTime = Math.Clamp((now - LatestRenderTime).TotalSeconds * context.PlaySpeed, -0.17f, 0.17f);
+            context.DeltaTime = Math.Clamp((now - LatestRenderTime).TotalSeconds * context.PlaySpeed, -0.17f, 0.17f);
             LatestRenderTime = now;
             if (context.Playing)
-                context.PlayTime += context.deltaTime;
+                context.PlayTime += context.DeltaTime;
             return true;
         }
     }

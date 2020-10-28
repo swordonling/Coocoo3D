@@ -25,8 +25,9 @@ namespace Coocoo3D.Components
 
         public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
         public List<Physics3DJoint> physics3DJoints = new List<Physics3DJoint>();
-        public List<JointDesc> jointDescs = new List<JointDesc>();
         public List<RigidBodyDesc> rigidBodyDescs = new List<RigidBodyDesc>();
+        public List<JointDesc> jointDescs = new List<JointDesc>();
+
 
         public Matrix4x4 LocalToWorld = Matrix4x4.Identity;
         public Matrix4x4 WorldToLocal = Matrix4x4.Identity;
@@ -359,11 +360,13 @@ namespace Coocoo3D.Components
         {
             for (int j = 0; j < rigidBodyDescs.Count; j++)
             {
+                physics3DRigidBodys.Add(new Physics3DRigidBody());
                 var desc = rigidBodyDescs[j];
                 physics3DScene.AddRigidBody(physics3DRigidBodys[j], desc.Position, desc.Rotation, desc.Dimemsions, desc.Mass, desc.Restitution, desc.Friction, desc.TranslateDamp, desc.RotateDamp, (byte)desc.Shape, (byte)desc.Type, desc.CollisionGroup, desc.CollisionMask);
             }
             for (int j = 0; j < jointDescs.Count; j++)
             {
+                physics3DJoints.Add(new Physics3DJoint());
                 var desc = jointDescs[j];
                 physics3DScene.AddJoint(physics3DJoints[j], desc.Position, MMDBoneComponent.ToQuaternion(desc.Rotation), physics3DRigidBodys[desc.AssociatedRigidBodyIndex1], physics3DRigidBodys[desc.AssociatedRigidBodyIndex2],
                     desc.PositionMinimum, desc.PositionMaximum, desc.RotationMinimum, desc.RotationMaximum, desc.PositionSpring, desc.RotationSpring);
@@ -380,6 +383,8 @@ namespace Coocoo3D.Components
             {
                 physics3DScene.RemoveJoint(physics3DJoints[j]);
             }
+            physics3DRigidBodys.Clear();
+            physics3DJoints.Clear();
         }
 
         #region helpers
@@ -814,7 +819,6 @@ namespace Coocoo3D.FileFormat
         {
             boneComponent.bones.Clear();
             boneComponent.stringBoneMap.Clear();
-            boneComponent.physics3DRigidBodys.Clear();
             var _bones = modelResource.Bones;
             for (int i = 0; i < _bones.Count; i++)
             {
@@ -914,12 +918,11 @@ namespace Coocoo3D.FileFormat
 
             boneComponent.BakeSequenceProcessMatrixsIndex();
 
+            boneComponent.rigidBodyDescs.Clear();
             var rigidBodys = modelResource.RigidBodies;
             for (int i = 0; i < rigidBodys.Count; i++)
             {
                 var rigidBodyData = rigidBodys[i];
-                Physics3DRigidBody physics3DRigidBody = new Physics3DRigidBody();
-                boneComponent.physics3DRigidBodys.Add(physics3DRigidBody);
                 var rigidBodyDesc = GetRigidBodyDesc(rigidBodyData);
 
                 boneComponent.rigidBodyDescs.Add(rigidBodyDesc);
@@ -927,11 +930,11 @@ namespace Coocoo3D.FileFormat
                     boneComponent.bones[rigidBodyData.AssociatedBoneIndex].IsPhysicsFreeBone = true;
 
             }
+            boneComponent.jointDescs.Clear();
             var joints = modelResource.Joints;
             for (int i = 0; i < joints.Count; i++)
             {
                 boneComponent.jointDescs.Add(GetJointDesc(joints[i]));
-                boneComponent.physics3DJoints.Add(new Physics3DJoint());
             }
 
             int morphCount = modelResource.Morphs.Count;

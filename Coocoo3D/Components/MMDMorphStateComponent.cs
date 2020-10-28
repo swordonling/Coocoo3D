@@ -139,7 +139,7 @@ namespace Coocoo3D.Components
     }
     public struct MorphUVDesc
     {
-        public uint VertexIndex;
+        public int VertexIndex;
         public Vector4 Offset;
     }
 
@@ -287,8 +287,8 @@ namespace Coocoo3D.FileFormat
         public static void Reload(this MMDMorphStateComponent component, PMXFormat pmx)
         {
             component.stringMorphIndexMap.Clear();
-            int morphCount = pmx.Morphs.Count;
             component.morphs.Clear();
+            int morphCount = pmx.Morphs.Count;
             for (int i = 0; i < pmx.Morphs.Count; i++)
             {
                 component.morphs.Add(GetMorphDesc(pmx.Morphs[i]));

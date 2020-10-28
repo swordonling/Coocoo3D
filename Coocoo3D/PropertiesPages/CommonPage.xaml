@@ -84,8 +84,10 @@
                             <StackPanel>
                                 <Button x:Uid="Page_Common_Button_RefreshShaderCaches" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
                                 <Button x:Uid="Page_Common_Button_RefreshTextureCaches" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
-                                <CheckBox IsChecked="{x:Bind VAutoReloadShader}" Checked="ReloadShaders_Click" Content="自动重新加载着色器"/>
-                                <CheckBox IsChecked="{x:Bind VAutoReloadTexture}" Checked="ReloadTextures_Click" Content="自动重新加载纹理"/>
+                                <Button x:Uid="Page_Common_Button_RefreshModelCaches" Click="ReloadModels_Click" ToolTipService.ToolTip="重新加载模型"/>
+                                <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadShader" IsChecked="{x:Bind VAutoReloadShader,Mode=TwoWay}" Checked="ReloadShaders_Click"/>
+                                <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadTexture" IsChecked="{x:Bind VAutoReloadTexture,Mode=TwoWay}" Checked="ReloadTextures_Click"/>
+                                <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadModel" IsChecked="{x:Bind VAutoReloadModel,Mode=TwoWay}" Checked="ReloadModels_Click"/>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

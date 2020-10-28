@@ -124,6 +124,7 @@
     <Compile Include="Components\MMDMorphStateComponent.cs" />
     <Compile Include="Components\MMDMotionComponent.cs" />
     <Compile Include="Components\MMDRendererComponent.cs" />
+    <Compile Include="Core\ModelReloader.cs" />
     <Compile Include="Present\CameraMotion.cs" />
     <Compile Include="Core\GameDriver.cs" />
     <Compile Include="Core\GeneralGameDriver.cs" />
@@ -191,11 +192,14 @@
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="RenderPipeline\RPAssetsManager.cs" />
+    <Compile Include="ResourceWarp\ModelPack.cs" />
+    <Compile Include="ResourceWarp\ShaderPack.cs" />
+    <Compile Include="ResourceWarp\Texture2DPack.cs" />
     <Compile Include="UI\PlayControl.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />
     <Compile Include="Utility\IDictionaryExt.cs" />
-    <Compile Include="Core\MainCaches.cs" />
+    <Compile Include="RenderPipeline\MainCaches.cs" />
     <Compile Include="Utility\DoubleVector3.cs" />
     <Compile Include="Utility\IListExt.cs" />
     <Compile Include="Utility\SingleLocker.cs" />

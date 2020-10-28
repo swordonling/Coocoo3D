@@ -12,7 +12,7 @@ namespace Coocoo3D.Core
     public class RecorderGameDriver : GameDriver
     {
         const int c_frameCount = 3;
-        public override bool Next(ref GameDriverContext context)
+        public override bool Next(GameDriverContext context)
         {
             context.NeedRender = false;
             DateTime now = DateTime.Now;
@@ -29,35 +29,43 @@ namespace Coocoo3D.Core
                 context.NewSize = new Windows.Foundation.Size(recordSettings.Width / logicSizeScale, recordSettings.Height / logicSizeScale);
                 context.AspectRatio = (float)recordSettings.Width / (float)recordSettings.Height;
                 context.RequireResize = true;
-                ReadBackTexture2D.Reload(recordSettings.Width, recordSettings.Height, 4);
-                context.ProcessingList.AddObject(ReadBackTexture2D);
                 context.RequireInterruptRender = true;
                 context.RequireResetPhysics = true;
                 StartTime = recordSettings.StartTime;
                 StopTime = recordSettings.StopTime;
                 RenderCount = 0;
                 RecordCount = 0;
-                FrameIntervalF = 1 / context.recordSettings.FPS;
+                FrameIntervalF = 1 / MathF.Max(context.recordSettings.FPS, 1e-3f);
+
+                ReadBackTexture2D.Reload(recordSettings.Width, recordSettings.Height, 4);
+                context.ProcessingList.AddObject(ReadBackTexture2D);
             }
             else
             {
             }
-            context.deltaTime = FrameIntervalF;
+
+            context.DeltaTime = FrameIntervalF;
             context.PlayTime = FrameIntervalF * RenderCount;
             RenderCount++;
+
+            if (context.PlayTime >= StartTime || context.RequireResize)
+                context.EnableDisplay = true;
+            else
+                context.EnableDisplay = false;
+
             return true;
         }
         class Pack1
         {
+            public Task runningTask;
             public ReadBackTexture2D ReadBackTexture2D;
-            public int index;
+            public int swapIndex;
             public int renderIndex;
             public WICFactory WICFactory;
-            public Task taskX;
             public StorageFolder saveFolder;
             public async Task task1()
             {
-                var bytes = ReadBackTexture2D.EncodePNG(WICFactory, index);
+                var bytes = ReadBackTexture2D.EncodePNG(WICFactory, swapIndex);
                 StorageFile file = await saveFolder.CreateFileAsync(string.Format("{0}.png", renderIndex), CreationCollisionOption.ReplaceExisting);
                 var stream = await file.OpenStreamForWriteAsync();
                 stream.Write(bytes, 0, bytes.Length);
@@ -66,33 +74,33 @@ namespace Coocoo3D.Core
             }
         }
         Pack1[] packs = new Pack1[c_frameCount];
-        public override void AfterRender(GraphicsContext graphicsContext, ref GameDriverContext context)
+        public override void AfterRender(GraphicsContext graphicsContext, GameDriverContext context)
         {
-            if (context.PlayTime >= StartTime && (RenderCount - 3) * FrameIntervalF <= StopTime)
+            if (context.PlayTime >= StartTime && (RenderCount - c_frameCount) * FrameIntervalF <= StopTime)
             {
                 int index1 = RecordCount % c_frameCount;
                 graphicsContext.CopyBackBuffer(ReadBackTexture2D, index1);
-                if (RecordCount > 2)
+                if (RecordCount >= c_frameCount)
                 {
                     ReadBackTexture2D.GetDataTolocal(index1);
                     if (packs[index1] == null)
-                        packs[index1] = new Pack1() { ReadBackTexture2D = ReadBackTexture2D, index = index1, WICFactory = context.WICFactory, saveFolder = saveFolder };
-                    else if (!packs[index1].taskX.IsCompleted)
+                        packs[index1] = new Pack1() { ReadBackTexture2D = ReadBackTexture2D, swapIndex = index1, WICFactory = context.WICFactory, saveFolder = saveFolder };
+                    else if (!packs[index1].runningTask.IsCompleted)
                     {
-                        packs[index1].taskX.Wait();
+                        packs[index1].runningTask.Wait();
                     }
-                    packs[index1].renderIndex = RecordCount - 3;
-                    packs[index1].taskX = Task.Run(packs[index1].task1);
+                    packs[index1].renderIndex = RecordCount - c_frameCount;
+                    packs[index1].runningTask = Task.Run(packs[index1].task1);
                 }
                 RecordCount++;
             }
             else
             {
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < c_frameCount; i++)
                 {
-                    if (packs[i] != null && !packs[i].taskX.IsCompleted)
+                    if (packs[i] != null && !packs[i].runningTask.IsCompleted)
                     {
-                        packs[i].taskX.Wait();
+                        packs[i].runningTask.Wait();
                         packs[i] = null;
                     }
                 }

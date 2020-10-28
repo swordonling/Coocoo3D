@@ -173,6 +173,9 @@ Bone count: {2}</value>
   <data name="Page_Common_Button_RefreshCache.Content" xml:space="preserve">
     <value>Refresh Cache</value>
   </data>
+  <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
+    <value>Refresh Model Caches</value>
+  </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>Refresh Shader Caches</value>
   </data>
@@ -184,6 +187,15 @@ Bone count: {2}</value>
   </data>
   <data name="Page_Common_Button_Settings.Content" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadModel.Content" xml:space="preserve">
+    <value>Auto reload model</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadShader.Content" xml:space="preserve">
+    <value>Auto reload shader</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadTexture.Content" xml:space="preserve">
+    <value>Auto reload texture</value>
   </data>
   <data name="Page_Common_ComboBox_RenderPipeline.Header" xml:space="preserve">
     <value>Render Pipeline</value>
@@ -277,6 +289,9 @@ Bone count: {2}</value>
   </data>
   <data name="Page_SkyBox_TextBox_SkyBoxLightMultiple.Header" xml:space="preserve">
     <value>Sky box light multiple</value>
+  </data>
+  <data name="String1" xml:space="preserve">
+    <value />
   </data>
   <data name="Tab_Title_Common" xml:space="preserve">
     <value>Common</value>

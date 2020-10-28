@@ -1,9 +1,7 @@
 ﻿using Coocoo3D.Components;
-using Coocoo3D.Core;
-using Coocoo3D.FileFormat;
 using Coocoo3D.MMDSupport;
 using Coocoo3D.Present;
-using Coocoo3D.RenderPipeline;
+using Coocoo3D.ResourceWarp;
 using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
@@ -260,24 +258,29 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static void Reload(this MMDRendererComponent rendererComponent, ProcessingList processingList, PMXFormat modelResource)
+        public static void Reload(this MMDRendererComponent rendererComponent, ModelPack modelPack)
         {
-            rendererComponent.Materials.Clear();
-            rendererComponent.mesh = modelResource.GetMesh();
-            rendererComponent.meshVertexCount = rendererComponent.mesh.m_vertexCount;
-            rendererComponent.meshIndexCount = rendererComponent.mesh.m_indexCount;
-            processingList.AddObject(rendererComponent.mesh);
-            rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_indexCount / 3 * 128);
-            processingList.AddObject(rendererComponent.meshParticleBuffer);
-            rendererComponent.POSkinning = new PObject();
-            rendererComponent.PODraw = new PObject();
+            rendererComponent.POSkinning = null;
+            rendererComponent.PODraw = null;
             rendererComponent.ParticleCompute = null;
             rendererComponent.POParticleDraw = null;
+
+            ReloadModel(rendererComponent, modelPack);
+        }
+
+        public static void ReloadModel(this MMDRendererComponent rendererComponent, ModelPack modelPack)
+        {
+            rendererComponent.Materials.Clear();
+            rendererComponent.mesh = modelPack.GetMesh();
+            rendererComponent.meshVertexCount = rendererComponent.mesh.m_vertexCount;
+            rendererComponent.meshIndexCount = rendererComponent.mesh.m_indexCount;
+            rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_indexCount / 3 * 128);
             rendererComponent.meshPosData1 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.meshPosData2 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.gch_meshPosData1 = GCHandle.Alloc(rendererComponent.meshPosData1);
             rendererComponent.gch_meshPosData2 = GCHandle.Alloc(rendererComponent.meshPosData2);
 
+            var modelResource = modelPack.pmx;
             for (int i = 0; i < modelResource.Materials.Count; i++)
             {
                 var mmdMat = modelResource.Materials[i];

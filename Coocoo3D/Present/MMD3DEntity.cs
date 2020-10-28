@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 using Coocoo3D.Components;
 using Coocoo3D.Present;
 using Coocoo3DGraphics;
-using Coocoo3D.Core;
 using System.ComponentModel;
 using Coocoo3D.RenderPipeline;
+using Coocoo3D.ResourceWarp;
 
 namespace Coocoo3D.Present
 {
@@ -24,6 +24,7 @@ namespace Coocoo3D.Present
 
         public string Name;
         public string Description;
+        public string ModelPath;
 
         public MMDRendererComponent rendererComponent = new MMDRendererComponent();
         public MMDBoneComponent boneComponent = new MMDBoneComponent();
@@ -38,15 +39,6 @@ namespace Coocoo3D.Present
         public void PropChange(PropertyChangedEventArgs e)
         {
             PropertyChanged?.Invoke(this, e);
-        }
-
-        //重新加载不依赖其他实例的资源，仅用于简化代码。
-        public void ReloadBase()
-        {
-            Position = Vector3.Zero;
-            Rotation = Quaternion.Identity;
-            Name = "";
-            Description = "";
         }
 
         public void SetMotionTime(float time)
@@ -76,66 +68,30 @@ namespace Coocoo3D.Present
 }
 namespace Coocoo3D.FileFormat
 {
-    public partial class PMXFormat
-    {
-        const int c_vertexStride = 68;
-        const int c_vertexStride2 = 12;
-        const int c_vertexFront = 36;
-        const int c_indexStride = 4;
-        byte[] verticesData;
-        GCHandle gch_verticesData;
-        byte[] verticesData2;
-        GCHandle gch_verticesData2;
-
-        public void Reload2()
-        {
-            if (gch_verticesData.IsAllocated) gch_verticesData.Free();
-            if (gch_verticesData2.IsAllocated) gch_verticesData2.Free();
-            verticesData = new byte[Vertices.Count * c_vertexStride];
-            verticesData2 = new byte[Vertices.Count * c_vertexStride2];
-            gch_verticesData = GCHandle.Alloc(verticesData);
-            gch_verticesData2 = GCHandle.Alloc(verticesData2);
-            IntPtr ptr = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData, 0);
-            for (int i = 0; i < Vertices.Count; i++)
-            {
-                Marshal.StructureToPtr(Vertices[i].innerStruct, ptr, true);
-                for (int j = 0; j < 4; j++)
-                    Marshal.WriteInt32(ptr + 24 + j * 4, Vertices[i].boneId[j]);
-                Marshal.StructureToPtr(Vertices[i].Weights, ptr + 24 + 16, true);
-                ptr += c_vertexStride;
-            }
-            IntPtr ptr2 = Marshal.UnsafeAddrOfPinnedArrayElement(verticesData2, 0);
-            for (int i = 0; i < Vertices.Count; i++)
-            {
-                Marshal.StructureToPtr(Vertices[i].Coordinate, ptr2 + i * c_vertexStride2, true);
-            }
-        }
-        ///<summary>Reoad2()后可用</summary>
-        public MMDMesh GetMesh()
-        {
-            MMDMesh meshInstance;
-            meshInstance = MMDMesh.Load1(verticesData, verticesData2, TriangleIndexs.ToArray(), c_vertexStride, c_vertexStride2, PrimitiveTopology._POINTLIST);
-            return meshInstance;
-        }
-        ~PMXFormat()
-        {
-            if (gch_verticesData.IsAllocated) gch_verticesData.Free();
-            if (gch_verticesData2.IsAllocated) gch_verticesData2.Free();
-        }
-    }
     public static partial class PMXFormatExtension
     {
-        public static void Reload2(this MMD3DEntity entity, ProcessingList processingList, PMXFormat modelResource)
+        public static void Reload2(this MMD3DEntity entity, ProcessingList processingList, ModelPack modelPack, List<Texture2D> textures,string ModelPath)
         {
-            entity.ReloadBase();
+            var modelResource = modelPack.pmx;
             entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);
             entity.Description = string.Format("{0}\n{1}", modelResource.Description, modelResource.DescriptionEN);
+            entity.ModelPath = ModelPath;
             entity.motionComponent.ReloadEmpty();
 
+            ReloadModel(entity, processingList, modelPack, textures);
+        }
+
+        public static void ReloadModel(this MMD3DEntity entity, ProcessingList processingList, ModelPack modelPack, List<Texture2D> textures)
+        {
+            var modelResource = modelPack.pmx;
             entity.morphStateComponent.Reload(modelResource);
             entity.boneComponent.Reload(modelResource);
 
-            entity.rendererComponent.Reload(processingList, modelResource);
+            entity.rendererComponent.Reload(modelPack);
+            processingList.AddObject(entity.rendererComponent.mesh);
+            processingList.AddObject(entity.rendererComponent.meshParticleBuffer);
+            entity.rendererComponent.textures = textures;
+
             entity.ComponentReady = true;
         }
     }

@@ -81,6 +81,8 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVD = new PropertyChangedEventArgs("VD");
         PropertyChangedEventArgs eaVCameraMotionOn = new PropertyChangedEventArgs("VCameraMotionOn");
         //long[] txs = new long[8];
+        int prevRenderCount = 0;
+        int prevVirtualRenderCount = 0;
         private void FrameUpdated(object sender, EventArgs e)
         {
             if (_cachePos != appBody.camera.LookAtPoint)
@@ -115,9 +117,20 @@ namespace Coocoo3D.PropertiesPages
             DateTime Now = DateTime.Now;
             if (Now - PrevUpdateTime > TimeSpan.FromSeconds(1))
             {
-                ViewFrameRate.Text = string.Format("FPS: {0}", (TimeSpan.FromSeconds(1) / (Now - PrevUpdateTime) * (appBody.RenderCount - prevRenderCount)).ToString(".0"));
+                int capRenderCount = appBody.RenderCount;
+                int capVRenderCount = appBody.VirtualRenderCount;
+                if (capVRenderCount - prevVirtualRenderCount > 0)
+                {
+                    ViewFrameRate.Text = string.Format("Virtual FPS: {0}", (TimeSpan.FromSeconds(1) / (Now - PrevUpdateTime) * (capVRenderCount - prevVirtualRenderCount)).ToString(".0"));
+                }
+                else
+                {
+                    ViewFrameRate.Text = string.Format("FPS: {0}", (TimeSpan.FromSeconds(1) / (Now - PrevUpdateTime) * (capRenderCount - prevRenderCount)).ToString(".0"));
+                }
+
                 PrevUpdateTime = Now;
-                prevRenderCount = appBody.RenderCount;
+                prevRenderCount = capRenderCount;
+                prevVirtualRenderCount = capVRenderCount;
             }
             //Array.Copy(appBody.StopwatchTimes, txs, appBody.StopwatchTimes.Length);
             //showt1.Text = txs[0].ToString();
@@ -126,7 +139,6 @@ namespace Coocoo3D.PropertiesPages
             //showt4.Text = txs[3].ToString();
             //showt5.Text = txs[4].ToString();
         }
-        int prevRenderCount = 0;
         DateTime PrevUpdateTime = DateTime.Now;
 
         public float VPX
@@ -297,13 +309,19 @@ namespace Coocoo3D.PropertiesPages
         public bool VAutoReloadShader
         {
             get => appBody.performaceSettings.AutoReloadShaders;
-            set=>appBody.performaceSettings.AutoReloadShaders = value;
+            set => appBody.performaceSettings.AutoReloadShaders = value;
         }
         public bool VAutoReloadTexture
         {
             get => appBody.performaceSettings.AutoReloadTextures;
-            set=>appBody.performaceSettings.AutoReloadTextures = value;
+            set => appBody.performaceSettings.AutoReloadTextures = value;
         }
+        public bool VAutoReloadModel
+        {
+            get => appBody.performaceSettings.AutoReloadModels;
+            set => appBody.performaceSettings.AutoReloadModels = value;
+        }
+
         bool _cacheCameraMotionOn;
         #endregion
 
@@ -400,12 +418,17 @@ namespace Coocoo3D.PropertiesPages
 
         private void ReloadTextures_Click(object sender, RoutedEventArgs e)
         {
-            appBody.mainCaches.ReloadTextures(appBody.ProcessingList, () => appBody.RequireRender());
+            appBody.mainCaches.ReloadTextures(appBody.ProcessingList, appBody.RequireRender);
         }
 
         private void ReloadShaders_Click(object sender, RoutedEventArgs e)
         {
-            appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager, () => appBody.RequireRender());
+            appBody.mainCaches.ReloadShaders(appBody.ProcessingList, appBody.RPAssetsManager, appBody.RequireRender);
+        }
+
+        private void ReloadModels_Click(object sender, RoutedEventArgs e)
+        {
+            appBody.GameDriverContext.ReqireReloadModel();
         }
     }
 }

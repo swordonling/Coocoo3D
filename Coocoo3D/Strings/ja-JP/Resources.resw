@@ -173,6 +173,9 @@
   <data name="Page_Common_Button_RefreshCache.Content" xml:space="preserve">
     <value>キャッシュを更新する</value>
   </data>
+  <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
+    <value>Refresh Model Caches</value>
+  </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>シャドウキャッシュを更新する</value>
   </data>
@@ -184,6 +187,15 @@
   </data>
   <data name="Page_Common_Button_Settings.Content" xml:space="preserve">
     <value>設定</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadModel.Content" xml:space="preserve">
+    <value>Auto reload model</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadShader.Content" xml:space="preserve">
+    <value>Auto reload shader</value>
+  </data>
+  <data name="Page_Common_ChechBox_AutoReloadTexture.Content" xml:space="preserve">
+    <value>Auto reload texture</value>
   </data>
   <data name="Page_Common_ComboBox_RenderPipeline.Header" xml:space="preserve">
     <value>レンダリングパイプライン</value>

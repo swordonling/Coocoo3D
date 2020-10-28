@@ -17,13 +17,7 @@ namespace Coocoo3D.RenderPipeline
 
         public abstract void RenderCamera(RenderPipelineContext context, int cameraCount);
 
-
         public volatile bool Ready;
-
-        public virtual void TimeChange(double time, double deltaTime)
-        {
-
-        }
 
         protected Texture2D TextureStatusSelect(Texture2D texture, Texture2D loading, Texture2D unload, Texture2D error)
         {

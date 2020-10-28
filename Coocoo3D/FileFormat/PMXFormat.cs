@@ -17,7 +17,7 @@ namespace Coocoo3D.FileFormat
         QDEF = 4
     }
 
-    public class PMX_Vertex
+    public struct PMX_Vertex
     {
         public struct VertexStruct
         {
@@ -29,8 +29,11 @@ namespace Coocoo3D.FileFormat
         public Vector3 Normal { get => innerStruct.Normal; set { innerStruct.Normal = value; } }
         public Vector2 UvCoordinate { get => innerStruct.UvCoordinate; set { innerStruct.UvCoordinate = value; } }
         public Vector4[] ExtraUvCoordinate;
-        public int[] boneId = new int[4];
-        public Vector4 Weights = new Vector4();
+        public int boneId0;
+        public int boneId1;
+        public int boneId2;
+        public int boneId3;
+        public Vector4 Weights;
         public float EdgeScale { get => innerStruct.EdgeScale; set { innerStruct.EdgeScale = value; } }
         public Vector3 Coordinate;
         public VertexStruct innerStruct;
@@ -40,7 +43,7 @@ namespace Coocoo3D.FileFormat
         }
     }
 
-    public class PMX_Texture
+    public struct PMX_Texture
     {
         public string TexturePath;
         public override string ToString()
@@ -174,7 +177,7 @@ namespace Coocoo3D.FileFormat
     }
     public struct PMX_MorphUVDesc
     {
-        public uint VertexIndex;
+        public int VertexIndex;
         public Vector4 Offset;
     }
 
@@ -194,7 +197,7 @@ namespace Coocoo3D.FileFormat
 
     public struct PMX_MorphVertexDesc
     {
-        public uint VertexIndex;
+        public int VertexIndex;
         public Vector3 Offset;
     }
 
@@ -304,18 +307,17 @@ namespace Coocoo3D.FileFormat
         }
     }
 
-    public partial class PMXFormat
+    public class PMXFormat
     {
         public bool Ready;
-        public Task LoadTask;
 
         public string Name;
         public string NameEN;
         public string Description;
         public string DescriptionEN;
 
-        List<PMX_Vertex> Vertices = new List<PMX_Vertex>();
-        List<uint> TriangleIndexs = new List<uint>();
+        public PMX_Vertex[] Vertices;
+        public int[] TriangleIndexs;
         public List<PMX_Texture> Textures = new List<PMX_Texture>();
         public List<PMX_Material> Materials = new List<PMX_Material>();
         public List<PMX_Bone> Bones = new List<PMX_Bone>();
@@ -333,8 +335,6 @@ namespace Coocoo3D.FileFormat
 
         public void Reload(BinaryReader reader)
         {
-            Vertices.Clear();
-            TriangleIndexs.Clear();
             Textures.Clear();
             Materials.Clear();
             Bones.Clear();
@@ -366,10 +366,10 @@ namespace Coocoo3D.FileFormat
             DescriptionEN = ReadString(reader, encoding);
 
             int countOfVertex = reader.ReadInt32();
-            Vertices.Capacity = countOfVertex;
+            Vertices = new PMX_Vertex[countOfVertex];
             for (int i = 0; i < countOfVertex; i++)
             {
-                PMX_Vertex vertex = new PMX_Vertex();
+                ref PMX_Vertex vertex = ref Vertices[i];
                 vertex.Coordinate = ReadVector3(reader);
                 vertex.Normal = ReadVector3(reader);
                 vertex.UvCoordinate = ReadVector2(reader);
@@ -384,36 +384,36 @@ namespace Coocoo3D.FileFormat
                 int skinningType = reader.ReadByte();
                 if (skinningType == (int)PMX_BoneWeightDeformType.BDEF1)
                 {
-                    vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
-                    vertex.boneId[1] = -1;
-                    vertex.boneId[2] = -1;
-                    vertex.boneId[3] = -1;
+                    vertex.boneId0 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId1 = -1;
+                    vertex.boneId2 = -1;
+                    vertex.boneId3 = -1;
                     vertex.Weights.X = 1;
                 }
                 else if (skinningType == (int)PMX_BoneWeightDeformType.BDEF2)
                 {
-                    vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
-                    vertex.boneId[1] = ReadIndex(reader, boneIndexSize);
-                    vertex.boneId[2] = -1;
-                    vertex.boneId[3] = -1;
+                    vertex.boneId0 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId1 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId2 = -1;
+                    vertex.boneId3 = -1;
                     vertex.Weights.X = reader.ReadSingle();
                     vertex.Weights.Y = 1.0f - vertex.Weights.X;
                 }
                 else if (skinningType == (int)PMX_BoneWeightDeformType.BDEF4)
                 {
-                    for (int j = 0; j < 4; j++)
-                    {
-                        vertex.boneId[j] = ReadIndex(reader, boneIndexSize);
-                    }
+                    vertex.boneId0 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId1 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId2 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId3 = ReadIndex(reader, boneIndexSize);
                     vertex.Weights = ReadVector4(reader);
                 }
                 else if (skinningType == (int)PMX_BoneWeightDeformType.SDEF)
                 {
 
-                    vertex.boneId[0] = ReadIndex(reader, boneIndexSize);
-                    vertex.boneId[1] = ReadIndex(reader, boneIndexSize);
-                    vertex.boneId[2] = -1;
-                    vertex.boneId[3] = -1;
+                    vertex.boneId0 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId1 = ReadIndex(reader, boneIndexSize);
+                    vertex.boneId2 = -1;
+                    vertex.boneId3 = -1;
                     vertex.Weights.X = reader.ReadSingle();
                     vertex.Weights.Y = 1.0f - vertex.Weights.X;
                     ReadVector3(reader);
@@ -425,14 +425,13 @@ namespace Coocoo3D.FileFormat
 
                 }
                 vertex.EdgeScale = reader.ReadSingle();
-                Vertices.Add(vertex);
             }
 
             int countOfTriangleIndex = reader.ReadInt32();
-            TriangleIndexs.Capacity = countOfTriangleIndex;
+            TriangleIndexs = new int[countOfTriangleIndex];
             for (int i = 0; i < countOfTriangleIndex; i++)
             {
-                TriangleIndexs.Add(ReadUIndex(reader, vertexIndexSize));
+                TriangleIndexs[i] = ReadUIndex(reader, vertexIndexSize);
             }
 
             int countOfTexture = reader.ReadInt32();
@@ -714,11 +713,11 @@ namespace Coocoo3D.FileFormat
             if (size == 2) return reader.ReadInt16();
             return reader.ReadInt32();
         }
-        private uint ReadUIndex(BinaryReader reader, int size)
+        private int ReadUIndex(BinaryReader reader, int size)
         {
             if (size == 1) return reader.ReadByte();
             if (size == 2) return reader.ReadUInt16();
-            return reader.ReadUInt32();
+            return reader.ReadInt32();
         }
 
         private Vector2 ReadVector2(BinaryReader reader)
