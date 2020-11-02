@@ -34,6 +34,7 @@ namespace Coocoo3D.UI
                     pack.LoadTask = Task.Run(async () =>
                     {
                         BinaryReader reader = new BinaryReader((await pmxFile.OpenReadAsync()).AsStreamForRead());
+                        pack.lastModifiedTime = (await pmxFile.GetBasicPropertiesAsync()).DateModified;
                         pack.Reload2(reader);
                         pack.folder = storageFolder;
                         pack.relativePath = relatePath;
@@ -142,11 +143,11 @@ namespace Coocoo3D.UI
                 paths.Add(texPath);
                 relativePaths.Add(relativePath);
             }
-            lock (appBody.mainCaches.textureCaches)
+            lock (appBody.mainCaches.TextureCaches)
             {
                 for (int i = 0; i < pmx.Textures.Count; i++)
                 {
-                    Texture2DPack tex = appBody.mainCaches.textureCaches.GetOrCreate(paths[i]);
+                    Texture2DPack tex = appBody.mainCaches.TextureCaches.GetOrCreate(paths[i]);
                     LoadTexture(appBody, tex, storageFolder, relativePaths[i]);
                     textures.Add(tex.texture2D);
                 }
@@ -159,12 +160,12 @@ namespace Coocoo3D.UI
             if (texturePack.Status != GraphicsObjectStatus.loaded && texturePack.loadLocker.GetLocker())
             {
                 _ = Task.Run(async () =>
-              {
-                  if (await texturePack.ReloadTexture1(storageFolder, relativePath))
-                      appBody.ProcessingList.AddObject(texturePack.texture2D);
-                  appBody.RequireRender();
-                  texturePack.loadLocker.FreeLocker();
-              });
+                {
+                    if (await texturePack.ReloadTexture1(storageFolder, relativePath))
+                        appBody.ProcessingList.AddObject(texturePack.texture2D);
+                    appBody.RequireRender();
+                    texturePack.loadLocker.FreeLocker();
+                });
             }
         }
     }

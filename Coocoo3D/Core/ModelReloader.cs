@@ -125,11 +125,11 @@ namespace Coocoo3D.Core
                 paths.Add(texPath);
                 relativePaths.Add(relativePath);
             }
-            lock (mainCaches.textureCaches)
+            lock (mainCaches.TextureCaches)
             {
                 for (int i = 0; i < pmx.Textures.Count; i++)
                 {
-                    Texture2DPack tex = mainCaches.textureCaches.GetOrCreate(paths[i]);
+                    Texture2DPack tex = mainCaches.TextureCaches.GetOrCreate(paths[i]);
                     LoadTexture(processingList, tex, storageFolder, relativePaths[i], _RequireRender);
                     textures.Add(tex.texture2D);
                 }

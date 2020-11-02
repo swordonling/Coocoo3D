@@ -1,9 +1,16 @@
 #include "../RandomNumberGenerator.hlsli"
 cbuffer cb0 : register(b0)
 {
-	uint2 imageSize;
+	uint2 notuse0;
 	int quality;
 	uint batch;
+	uint2 imageSize;
+}
+cbuffer cb1 : register(b1)
+{
+	uint3 notUse1;
+	uint batch1;
+	uint2 imageSize1;
 }
 const static float4x4 _xproj =
 { 0,0,-1,0,
@@ -36,7 +43,7 @@ const static float4x4 _nzproj =
 0,0,0,-100,
 0,0,-1,100, };
 
-float COO_PI = 3.141592653589793238;
+const static float COO_PI = 3.141592653589793238;
 RWTexture2DArray<float4> EnvMap : register(u0);
 TextureCube AmbientCubemap : register(t0);
 SamplerState s0 : register(s0);
@@ -112,7 +119,11 @@ float3 PrefilterEnvMap(uint2 Random, float Roughness, float3 R)
 	float3 FilteredColor = 0;
 	float Weight = 0;
 
-	const uint NumSamples = 128;
+	uint NumSamples = 128;
+	if (Roughness < 0.5)
+		NumSamples = 32;
+	if (Roughness < 0.25)
+		NumSamples = 16;
 	for (uint i = 0; i < NumSamples; i++)
 	{
 		float2 E = RNG::Hammersley(i, NumSamples, Random);
@@ -123,45 +134,55 @@ float3 PrefilterEnvMap(uint2 Random, float Roughness, float3 R)
 		if (NoL > 0)
 		{
 			FilteredColor += AmbientCubemap.SampleLevel(s0, L, clamp(round(Roughness * 4), 0, 4)).rgb * NoL;
+			//FilteredColor += float4(1,1,1,1).rgb * NoL;
 			Weight += NoL;
 		}
 	}
 
 	return FilteredColor / max(Weight, 0.001);
 }
+
+
+
 [numthreads(8, 8, 1)]
 void main(uint3 dtid : SV_DispatchThreadID)
 {
-	float4 dir1 = float4(0, 0, 0, 0);
-	float2 screenPos = ((float2)dtid.xy + 0.5f) / (float2)imageSize * 2 - 1;
-	if (dtid.x > imageSize.x || dtid.y > imageSize.y)
+	float3 N = float4(0, 0, 0, 0);
+	uint ba1 = (int)pow(2, batch1 + 1) / 2;
+	uint2 size1 = imageSize / ba1;
+	uint randomState = RNG::RandomSeed(dtid.x + dtid.y * 2048 + dtid.z * 4194304 + batch * 67108864);
+	float2 screenPos = ((float2)dtid.xy + 0.5f) / (float2)size1 * 2 - 1;
+	if (dtid.x > size1.x || dtid.y > size1.y)
 	{
 		return;
 	}
 	if (dtid.z == 0)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _xproj);
+		N = mul(float4(screenPos, 0, 1), _xproj);
 	}
 	else if (dtid.z == 1)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _nxproj);
+		N = mul(float4(screenPos, 0, 1), _nxproj);
 	}
 	else if (dtid.z == 2)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _yproj);
+		N = mul(float4(screenPos, 0, 1), _yproj);
 	}
 	else if (dtid.z == 3)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _nyproj);
+		N = mul(float4(screenPos, 0, 1), _nyproj);
 	}
 	else if (dtid.z == 4)
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _zproj);
+		N = mul(float4(screenPos, 0, 1), _zproj);
 	}
 	else
 	{
-		dir1 = mul(float4(screenPos, 0, 1), _nzproj);
+		N = mul(float4(screenPos, 0, 1), _nzproj);
 	}
-	dir1 = normalize(dir1);
-	EnvMap[dtid] = float4(PrefilterEnvMap(dtid.xy, batch / 4.0f, dir1),1);
+	N = normalize(N);
+	if (batch1 == 0)
+		EnvMap[dtid] = float4(PrefilterEnvMap(uint2(RNG::Random(randomState), RNG::Random(randomState)), 0, N) / quality + EnvMap[dtid].rgb, 1);
+	else
+		EnvMap[dtid] = float4(PrefilterEnvMap(uint2(RNG::Random(randomState), RNG::Random(randomState)), Pow2(batch1 / 6.0f), N) / quality + EnvMap[dtid].rgb, 1);
 }

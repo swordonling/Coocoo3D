@@ -75,9 +75,13 @@ inline void _Fun1(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::Scrat
 	}
 }
 
-inline void _Fun2(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::ScratchImage& scratchImage, DirectX::ScratchImage& generatedMips)
+inline void _Fun2(Texture2D^ tex, DirectX::TexMetadata& metaData, DirectX::ScratchImage& scratchImage, DirectX::ScratchImage& generatedMips, bool srgb)
 {
-	tex->m_format = DirectX::MakeSRGB(metaData.format);
+	if (srgb)
+		tex->m_format = DirectX::MakeSRGB(metaData.format);
+	else
+		tex->m_format = metaData.format;
+
 	tex->m_width = metaData.width;
 	tex->m_height = metaData.height;
 
@@ -124,7 +128,7 @@ void Texture2D::ReloadFromImage(IBuffer^ file1)
 	}
 }
 
-void Texture2D::ReloadFromImageNoMip(IBuffer^ file1)
+void Texture2D::ReloadFromImageNoMip(IBuffer^ file1, bool srgb)
 {
 	ComPtr<IBufferByteAccess> bufferByteAccess;
 	reinterpret_cast<IInspectable*>(file1)->QueryInterface(IID_PPV_ARGS(&bufferByteAccess));
@@ -138,7 +142,7 @@ void Texture2D::ReloadFromImageNoMip(IBuffer^ file1)
 	if (SUCCEEDED(hr1))
 	{
 		DX::ThrowIfFailed(DirectX::LoadFromTGAMemory(pixels, file1->Length, &metaData, scratchImage));
-		_Fun2(this, metaData, scratchImage, generatedMips);
+		_Fun2(this, metaData, scratchImage, generatedMips, srgb);
 		return;
 	}
 
@@ -146,7 +150,7 @@ void Texture2D::ReloadFromImageNoMip(IBuffer^ file1)
 	if (SUCCEEDED(hr2))
 	{
 		DX::ThrowIfFailed(DirectX::LoadFromHDRMemory(pixels, file1->Length, &metaData, scratchImage));
-		_Fun2(this, metaData, scratchImage, generatedMips);
+		_Fun2(this, metaData, scratchImage, generatedMips, srgb);
 		return;
 	}
 
@@ -154,7 +158,7 @@ void Texture2D::ReloadFromImageNoMip(IBuffer^ file1)
 	if (SUCCEEDED(hr3))
 	{
 		DX::ThrowIfFailed(DirectX::LoadFromWICMemory(pixels, file1->Length, DirectX::WIC_FLAGS_NONE, &metaData, scratchImage));
-		_Fun2(this, metaData, scratchImage, generatedMips);
+		_Fun2(this, metaData, scratchImage, generatedMips, srgb);
 		return;
 	}
 }

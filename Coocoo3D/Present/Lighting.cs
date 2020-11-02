@@ -32,7 +32,7 @@ namespace Coocoo3D.Present
             Matrix4x4 vpMatrix = Matrix4x4.Identity;
             if (LightingType == LightingType.Directional)
             {
-                Vector3 lookat = cameraLookAt + Vector3.UnitY * 8;
+                Vector3 lookat = cameraLookAt + Vector3.UnitY * 4;
 
 
                 Matrix4x4 rotateMatrix = Matrix4x4.CreateFromQuaternion(Rotation);
@@ -56,14 +56,13 @@ namespace Coocoo3D.Present
             Matrix4x4 vpMatrix = Matrix4x4.Identity;
             if (LightingType == LightingType.Directional)
             {
-                Vector3 lookat = cameraLookAt + Vector3.UnitY * 8;
+                Matrix4x4 rot = Matrix4x4.CreateFromYawPitchRoll(-cameraRotation.Y, -cameraRotation.X, -cameraRotation.Z);
                 bool extendY = ((cameraRotation.X + MathF.PI / 4) % MathF.PI + MathF.PI) % MathF.PI < MathF.PI / 2;
 
 
                 Matrix4x4 rotateMatrix = Matrix4x4.CreateFromQuaternion(Rotation);
                 var pos = Vector3.Transform(-Vector3.UnitZ * 512, rotateMatrix);
                 var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
-                Matrix4x4 vMatrix = Matrix4x4.CreateLookAt(pos + lookat, lookat, up);
                 Matrix4x4 pMatrix;
 
                 float a = MathF.Abs((cameraRotation.X % MathF.PI + MathF.PI) % MathF.PI - MathF.PI / 2) / (MathF.PI / 4) - 0.5f;
@@ -75,6 +74,9 @@ namespace Coocoo3D.Present
                 {
                     pMatrix = Matrix4x4.CreateOrthographic(dist + ExtendRange * (3 * a + 1), dist + ExtendRange * (3 * a + 1), 0.0f, 1024) * Matrix4x4.CreateScale(-1, 1, 1);
                 }
+                Vector3 viewdirXZ = Vector3.Normalize(Vector3.Transform(new Vector3(0, 0, 1), rot));
+                Vector3 lookat = cameraLookAt + Vector3.UnitY * 8 + a * viewdirXZ * ExtendRange * 2;
+                Matrix4x4 vMatrix = Matrix4x4.CreateLookAt(pos + lookat, lookat, up);
                 vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
 
             }

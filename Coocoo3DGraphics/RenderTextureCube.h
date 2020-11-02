@@ -6,7 +6,7 @@ namespace Coocoo3DGraphics
 	public ref class RenderTextureCube sealed :public IRenderTexture
 	{
 	public:
-		void ReloadAsRTVUAV(int width, int height, DxgiFormat format);
+		void ReloadAsRTVUAV(int width, int height,int mipLevels, DxgiFormat format);
 		property UINT m_width;
 		property UINT m_height;
 		property UINT m_mipLevels;

@@ -65,7 +65,6 @@ namespace Coocoo3DGraphics
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
-		void UpdateVertices(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
 		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
 		void UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
@@ -89,8 +88,9 @@ namespace Coocoo3DGraphics
 		void SetComputeUAVR(MeshBuffer^ mesh, int startLocation, int index);
 		void SetComputeUAVR(TwinBuffer^ buffer, int bufIndex, int index);
 		void SetComputeUAVT(RenderTexture2D^ texture, int index);
-		void SetComputeUAVT(RenderTextureCube^ texture, int index);
+		void SetComputeUAVT(RenderTextureCube^ texture, int mipIndex, int index);
 		void SetSOMesh(MeshBuffer^ mesh);
+		void SetSOMeshNone();
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
 		void Dispatch(int x, int y, int z);
@@ -125,6 +125,7 @@ namespace Coocoo3DGraphics
 		void BeginEvent();
 		void EndEvent();
 		void Execute();
+		void ExecuteAndWait();
 	internal:
 		DeviceResources^ m_deviceResources;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4>	m_commandList;

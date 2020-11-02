@@ -107,55 +107,35 @@ namespace Coocoo3D.ResourceWarp
             bool haveCS1 = cs1.CompileReload1(datas, "CSParticle", ShaderMacro.DEFINE_COO_PARTICLE);
             if (haveVS || haveGS)
             {
-                //if (shaderPack.POSkinning.ReloadSkinning(appBody.deviceResources, RPAssetsManager.rootSignature,
-                //    haveVS ? vs0 : RPAssetsManager.VSMMDSkinning2,
-                //    haveGS ? gs0 : null))
-                //    shaderPack.POSkinning.Status = GraphicsObjectStatus.loaded;
-                //else
-                //    shaderPack.POSkinning.Status = GraphicsObjectStatus.error;
                 POSkinning.ReloadSkinning(
                     haveVS ? vs0 : RPAssetsManager.VSMMDSkinning2,
                     haveGS ? gs0 : null);
-                processingList.RS(POSkinning, 0);
+                processingList.UL(POSkinning, 1);
             }
             else
                 POSkinning.Status = GraphicsObjectStatus.unload;
             if (haveVS1 || haveGS1 || havePS1)
             {
-                //if (shaderPack.PODraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha,
-                //    haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform,
-                //    haveGS1 ? gs1 : null,
-                //    havePS1 ? ps1 : RPAssetsManager.PSMMD, appBody.RTFormat))
-                //    shaderPack.PODraw.Status = GraphicsObjectStatus.loaded;
-                //else
-                //    shaderPack.PODraw.Status = GraphicsObjectStatus.error;
                 PODraw.ReloadDrawing(BlendState.alpha,
                     haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform,
                     haveGS1 ? gs1 : null,
                     havePS1 ? ps1 : RPAssetsManager.PSMMD, RPAssetsManager.RTFormat);
-                processingList.RS(PODraw, 0);
+                processingList.UL(PODraw, 0);
             }
             else
                 PODraw.Status = GraphicsObjectStatus.unload;
             if (haveVSParticle || haveGSParticle || havePSParticle)
             {
-                //if (shaderPack.POParticleDraw.ReloadDrawing(appBody.deviceResources, RPAssetsManager.rootSignature, BlendState.alpha,
-                //    haveVSParticle ? vs2 : RPAssetsManager.VSMMDTransform,
-                //    haveGSParticle ? gs2 : null,
-                //    havePSParticle ? ps2 : RPAssetsManager.PSMMD, appBody.RTFormat))
-                //    shaderPack.POParticleDraw.Status = GraphicsObjectStatus.loaded;
-                //else
-                //    shaderPack.POParticleDraw.Status = GraphicsObjectStatus.error;
                 POParticleDraw.ReloadDrawing(BlendState.alpha,
                     haveVSParticle ? vs2 : RPAssetsManager.VSMMDTransform,
                     haveGSParticle ? gs2 : null,
                     havePSParticle ? ps2 : RPAssetsManager.PSMMD, RPAssetsManager.RTFormat);
-                processingList.RS(POParticleDraw, 0);
+                processingList.UL(POParticleDraw, 0);
             }
             else
                 POParticleDraw.Status = GraphicsObjectStatus.unload;
             if (haveCS1)
-                processingList.RS(CSParticle, 0);
+                processingList.UL(CSParticle, 0);
             else
                 CSParticle.Status = GraphicsObjectStatus.unload;
 

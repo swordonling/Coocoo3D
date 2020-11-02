@@ -71,15 +71,15 @@ namespace Coocoo3D.RenderPipeline
                 twinBufferList.Add(buffer);
             }
         }
-        /// <summary>无法用语言描述的函数 </summary>
-        public void RS(PObject pObject, int slot)
+        /// <summary>添加到上传列表</summary>
+        public void UL(PObject pObject, int slot)
         {
             lock (pobjectLists[slot])
             {
                 pobjectLists[slot].Add(pObject);
             }
         }
-        public void RS(ComputePO pObject, int slot)
+        public void UL(ComputePO pObject, int slot)
         {
             lock (computePObjectLists[slot])
             {

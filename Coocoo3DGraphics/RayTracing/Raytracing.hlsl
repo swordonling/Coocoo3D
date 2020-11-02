@@ -4,6 +4,23 @@
 #include "../Shaders/CameraDataDefine.hlsli"
 #include "../Shaders/RandomNumberGenerator.hlsli"
 
+float4 Pow4(float4 x)
+{
+	return x * x * x * x;
+}
+float3 Pow4(float3 x)
+{
+	return x * x * x * x;
+}
+float2 Pow4(float2 x)
+{
+	return x * x * x * x;
+}
+float Pow4(float x)
+{
+	return x * x * x * x;
+}
+
 float3x3 GetTangentBasis(float3 TangentZ)
 {
 	const float Sign = TangentZ.z >= 0 ? 1 : -1;
@@ -111,6 +128,46 @@ cbuffer cb3 : register(b3)
 	uint3 preserved2;
 	LightInfo Lightings[8];
 };
+float4 ImportanceSampleGGX(float2 E, float a2)
+{
+	float Phi = 2 * COO_PI * E.x;
+	float CosTheta = sqrt((1 - E.y) / (1 + (a2 - 1) * E.y));
+	float SinTheta = sqrt(1 - CosTheta * CosTheta);
+
+	float3 H;
+	H.x = SinTheta * cos(Phi);
+	H.y = SinTheta * sin(Phi);
+	H.z = CosTheta;
+
+	float d = (CosTheta * a2 - CosTheta) * CosTheta + 1;
+	float D = a2 / (COO_PI * d * d);
+	float PDF = D * CosTheta;
+
+	return float4(H, PDF);
+}
+
+float3 FilterEnvMap(uint2 Random, float Roughness, float3 N, float3 V)
+{
+	float3 FilteredColor = 0;
+	float Weight = 0;
+
+	const uint NumSamples = 64;
+	for (uint i = 0; i < NumSamples; i++)
+	{
+		float2 E = RNG::Hammersley(i, NumSamples, Random);
+		float3 H = TangentToWorld(ImportanceSampleGGX(E, Pow4(Roughness)).xyz, N);
+		float3 L = 2 * dot(V, H) * H - V;
+
+		float NdotL = saturate(dot(N, L));
+		if (NdotL > 0)
+		{
+			FilteredColor += EnvCube.SampleLevel(s0, L, 0).rgb * NdotL;
+			Weight += NdotL;
+		}
+	}
+
+	return FilteredColor / max(Weight, 0.001);
+}
 
 inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 projectionToWorld)
 {
@@ -268,12 +325,10 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 		N = -N;
 	}
 	float NdotV = saturate(dot(N, V));
+	float roughness = max(_Roughness, 0.002);
+	float alpha = roughness * roughness;
 
-	float alpha = _Roughness * _Roughness;
-
-	float roughness = _Roughness;
 	float3 albedo = diffuseColor.rgb;
-	float xxx = (_Specular * 0.08f + _Metallic * (1 - _Specular * 0.08f));
 
 	float3 c_diffuse = lerp(albedo * (1 - _Specular * 0.08f), 0, _Metallic);
 	float3 c_specular = lerp(_Specular * 0.08f, albedo, _Metallic);
@@ -361,7 +416,7 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 				float3 LdotH = saturate(dot(L, H));
 				float3 NdotH = saturate(dot(N, H));
 
-				float diffuse_factor = Diffuse_Lambert(NdotL, NdotV, LdotH, _Roughness);
+				float diffuse_factor = Diffuse_Lambert(NdotL, NdotV, LdotH, roughness);
 				float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
 
 				outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
@@ -395,7 +450,7 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 				float3 LdotH = saturate(dot(L, H));
 				float3 NdotH = saturate(dot(N, H));
 
-				float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, _Roughness);
+				float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, roughness);
 				float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
 
 				outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
@@ -404,18 +459,20 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 	}
 
 
-	float surfaceReduction = 1.0f / (roughness * roughness + 1.0f);
-	float grazingTerm = saturate(1 - sqrt(roughness) + xxx);
-	float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, roughness), 0).rg;
-	if (payload.depth < 2 && g_enableAO != 0)
+	float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, 1 - roughness), 0).rg;
+	float3 GF = c_specular * AB.x + AB.y;
+
+	uint budget = pow(2, g_quality) * 8;
+	uint diffuseBudget = clamp(roughness * budget * (1 - _Metallic * 0.8) * 0.8, 0, budget);
+	uint specularBudget = budget - diffuseBudget;
+	if (payload.depth < 2 && g_enableAO != 0 && diffuseBudget>0)
 	{
-		int giSampleCount = pow(2, g_quality) * 8;
 		float3 gi = 0;
-		for (int i = 0; i < giSampleCount; i++)
+		for (int i = 0; i < diffuseBudget; i++)
 		{
 			RayPayload payloadGI;
 
-			float2 E = RNG::Hammersley(i, giSampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+			float2 E = RNG::Hammersley(i, diffuseBudget, uint2(RNG::Random(randomState), RNG::Random(randomState)));
 			float3 vec1 = normalize(TangentToWorld(N, RNG::HammersleySampleCos(E)));
 
 			payloadGI.direction = vec1;
@@ -436,49 +493,65 @@ void ClosestHitShaderSurface(inout RayPayload payload, in TriAttributes attr)
 			float3 NdotH = saturate(dot(N, H));
 
 			float diffuse_factor = Diffuse_Burley(NdotL, NdotV, LdotH, roughness);
-			float3 specular_factor = Specular_BRDF(alpha, c_specular, NdotV, NdotL, LdotH, NdotH);
 
-			gi += NdotL * (payloadGI.color.rgb) * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor));
+			gi += NdotL * payloadGI.color.rgb * (c_diffuse * diffuse_factor / COO_PI);
 		}
-		outputColor += gi / giSampleCount;
+		if (diffuseBudget > 4)
+			outputColor += gi / diffuseBudget;
+		else
+			outputColor += gi / diffuseBudget * 0.75 + GIVertex * albedo.rgb * c_diffuse * 0.25;
 	}
 	else
 	{
-		outputColor += GIVertex * diffuseColor.rgb;
+		outputColor += GIVertex * albedo.rgb * c_diffuse;
 	}
 
-	if (payload.depth < 3)
+	if (payload.depth < 3 && specularBudget > 0)
 	{
-		RayPayload payloadReflect;
-		payloadReflect.direction = reflect(-V, N);
-		payloadReflect.color = float4(0, 0, 0, 0);
-		payloadReflect.depth = payload.depth;
-		RayDesc rayX;
-		rayX.Origin = pos;
-		rayX.Direction = payloadReflect.direction;
-		rayX.TMin = 1e-3f;
-		rayX.TMax = 10000.0;
-		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadReflect);
+		float3 filteredColor = 0;
+		float weight = 0;
+		if (payload.depth == 2)
+			specularBudget = min(1, specularBudget);
+		for (int i = 0; i < specularBudget; i++)
+		{
+			float2 E = RNG::Hammersley(i, specularBudget, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+			float3 H = TangentToWorld(ImportanceSampleGGX(E, Pow4(roughness)).xyz, N);
+			float3 L = 2 * dot(V, H) * H - V;
 
-		outputColor += payloadReflect.color * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+			float NdotL = saturate(dot(N, L));
+			if (NdotL > 0)
+			{
+				RayPayload payloadReflect;
+				payloadReflect.direction = L;
+				payloadReflect.color = float4(0, 0, 0, 0);
+				payloadReflect.depth = payload.depth;
+				RayDesc rayX;
+				rayX.Origin = pos;
+				rayX.Direction = payloadReflect.direction;
+				rayX.TMin = 1e-3f;
+				rayX.TMax = 10000.0;
+				TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayX, payloadReflect);
+
+				filteredColor += payloadReflect.color.rgb * NdotL;
+				weight += NdotL;
+			}
+		}
+		outputColor += filteredColor * GF / max(weight, 0.001);
 	}
 	else
 	{
-		outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), roughness * 6) * g_skyBoxMultiple * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+		outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), sqrt(max(roughness, 1e-5)) * 6) * g_skyBoxMultiple * GF;
 	}
 	outputColor += _Emission * _AmbientColor;
 
-	//if (payload.depth > 1)
 	payload.color = float4(payload.color.rgb + (1 - payload.color.a) * outputColor, payload.color.a + diffuseColor.a - payload.color.a * diffuseColor.a);
-	//else
-	//	payload.color = float4(GIVertex * albedo, 1);
 
 	RayDesc rayNext;
 	rayNext.Origin = pos;
 	rayNext.Direction = payload.direction;
 	rayNext.TMin = 5e-4f;
 	rayNext.TMax = 10000.0;
-	if (payload.depth < 2 && payload.color.a < 1 - 1e-3f)
+	if (payload.depth < 2 && payload.color.a < 0.99)
 		TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 2, 0, rayNext, payload);
 }
 

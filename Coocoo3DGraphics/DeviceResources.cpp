@@ -196,13 +196,11 @@ UINT DeviceResources::BitsPerPixel(DXGI_FORMAT format)
 }
 
 
-bool IsDirectXRaytracingSupported(IDXGIAdapter1* adapter)
+inline bool IsDirectXRaytracingSupported(ID3D12Device* testDevice)
 {
-	Microsoft::WRL::ComPtr<ID3D12Device> testDevice;
 	D3D12_FEATURE_DATA_D3D12_OPTIONS5 featureSupportData = {};
 
-	return SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&testDevice)))
-		&& SUCCEEDED(testDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureSupportData, sizeof(featureSupportData)))
+	return SUCCEEDED(testDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &featureSupportData, sizeof(featureSupportData)))
 		&& featureSupportData.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 }
 
@@ -248,7 +246,7 @@ void DeviceResources::CreateDeviceResources()
 
 	DX::ThrowIfFailed(hr);
 
-	m_isRayTracingSupport = IsDirectXRaytracingSupported(adapter.Get());
+	m_isRayTracingSupport = IsDirectXRaytracingSupported(m_d3dDevice.Get());
 
 	m_d3dDevice->QueryInterface(IID_PPV_ARGS(&m_d3dDevice2));
 	m_d3dDevice->QueryInterface(IID_PPV_ARGS(&m_d3dDevice5));
@@ -693,6 +691,16 @@ UINT DeviceResources::BitsPerPixel(DxgiFormat format)
 	return BitsPerPixel((DXGI_FORMAT)format);
 }
 
+Platform::String^ DeviceResources::GetDeviceDescription()
+{
+	return ref new Platform::String(m_deviceDescription);
+}
+
+UINT64 DeviceResources::GetDeviceVideoMemory()
+{
+	return m_deviceVideoMem;
+}
+
 // 准备呈现下一帧。
 void DeviceResources::MoveToNextFrame()
 {
@@ -791,6 +799,8 @@ void DeviceResources::GetHardwareAdapter(IDXGIAdapter1** ppAdapter)
 		// 仍为实际设备。
 		if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
 		{
+			memcpy(m_deviceDescription, desc.Description, sizeof(desc.Description));
+			m_deviceVideoMem = desc.DedicatedVideoMemory;
 			break;
 		}
 	}

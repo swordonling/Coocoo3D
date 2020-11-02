@@ -12,27 +12,18 @@ using Windows.Storage.Streams;
 
 namespace Coocoo3D.RenderPipeline
 {
-    public enum MiscProcessType
+
+    public struct P_Env_Data
     {
-        GenerateIrradianceMap = 65536,
-        GenerateIrradianceMapQ1 = 65537,
-    }
-    public struct MiscProcessPair<T0, T1>
-    {
-        public MiscProcessPair(T0 t0, T1 t1, MiscProcessType type)
-        {
-            this.t0 = t0;
-            this.t1 = t1;
-            this.Type = type;
-        }
-        public T0 t0;
-        public T1 t1;
-        public MiscProcessType Type;
+        public TextureCube source;
+        public RenderTextureCube IrradianceMap;
+        public RenderTextureCube EnvMap;
+        public int Level;
     }
     public class MiscProcessContext
     {
-        public List<MiscProcessPair<TextureCube, RenderTextureCube>> miscProcessPairs = new List<MiscProcessPair<TextureCube, RenderTextureCube>>();
-        public void Add(MiscProcessPair<TextureCube, RenderTextureCube> pair)
+        public List<P_Env_Data> miscProcessPairs = new List<P_Env_Data>();
+        public void Add(P_Env_Data pair)
         {
             lock (miscProcessPairs)
             {
@@ -54,14 +45,16 @@ namespace Coocoo3D.RenderPipeline
     }
     public class MiscProcess
     {
+        const int c_bufferSize = 256;
         public ComputePO IrradianceMap0 = new ComputePO();
+        public ComputePO EnvironmentMap0 = new ComputePO();
         public ComputePO ClearIrradianceMap = new ComputePO();
         GraphicsSignature rootSignature = new GraphicsSignature();
         public bool Ready = false;
         public const int c_maxIteration = 32;
         public ConstantBuffer[] constantBuffers = new ConstantBuffer[c_maxIteration];
         XYZData _XyzData;
-        public byte[] cpuBuffer1 = new byte[512];
+        public byte[] cpuBuffer1 = new byte[c_bufferSize];
         public GCHandle handle1;
         public MiscProcess()
         {
@@ -76,19 +69,22 @@ namespace Coocoo3D.RenderPipeline
             rootSignature.ReloadCompute(deviceResources, new GraphicSignatureDesc[]
             {
                 GraphicSignatureDesc.CBV,
+                GraphicSignatureDesc.CBV,
                 GraphicSignatureDesc.SRVTable,
                 GraphicSignatureDesc.UAVTable,
             });
             for (int i = 0; i < constantBuffers.Length; i++)
             {
                 if (constantBuffers[i] == null) constantBuffers[i] = new ConstantBuffer();
-                constantBuffers[i].Reload(deviceResources, 512);
+                constantBuffers[i].Reload(deviceResources, c_bufferSize);
             }
             IrradianceMap0.Reload(deviceResources, rootSignature, await ReadFile("ms-appx:///Coocoo3DGraphics/G_IrradianceMap0.cso"));
+            EnvironmentMap0.Reload(deviceResources, rootSignature, await ReadFile("ms-appx:///Coocoo3DGraphics/G_PreFilterEnv.cso"));
             ClearIrradianceMap.Reload(deviceResources, rootSignature, await ReadFile("ms-appx:///Coocoo3DGraphics/G_ClearIrradianceMap.cso"));
 
             Ready = true;
         }
+
         public void Process(MiscProcessContext context)
         {
             if (!Ready) return;
@@ -97,56 +93,71 @@ namespace Coocoo3D.RenderPipeline
             context.graphicsContext.SetDescriptorHeapDefault();
             for (int i = 0; i < context.miscProcessPairs.Count; i++)
             {
-                if (context.miscProcessPairs[i].Type.HasFlag(MiscProcessType.GenerateIrradianceMap))
+                var texture0 = context.miscProcessPairs[i].source;
+                var texture1 = context.miscProcessPairs[i].IrradianceMap;
+                var texture2 = context.miscProcessPairs[i].EnvMap;
+                IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(cpuBuffer1, 0);
+                _XyzData.x1 = (int)texture1.m_width;
+                _XyzData.y1 = (int)texture1.m_height;
+                _XyzData.x2 = (int)texture2.m_width;
+                _XyzData.y2 = (int)texture2.m_height;
+                _XyzData.Quality = context.miscProcessPairs[i].Level;
+                int itCount = context.miscProcessPairs[i].Level;
+
+                for (int j = 0; j < itCount; j++)
                 {
-                    var texture0 = context.miscProcessPairs[i].t0;
-                    var texture1 = context.miscProcessPairs[i].t1;
-                    IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(cpuBuffer1, 0);
-                    void UpdateGPUBuffer(int bufIndex)
-                    {
-                        Marshal.StructureToPtr(_XyzData, ptr1, true);
-                        context.graphicsContext.UpdateResource(constantBuffers[bufIndex], cpuBuffer1, 512, 0);
-                    }
-                    _XyzData.x1 = (int)texture1.m_width;
-                    _XyzData.y1 = (int)texture1.m_height;
-                    _XyzData.Quality = ((int)context.miscProcessPairs[i].Type - 65536) * (c_maxIteration - 1);
-                    int itCount = 1;
-                    if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMapQ1)
-                    {
-                        itCount = c_maxIteration;
-                    }
-                    for (int j = 0; j < itCount; j++)
-                    {
-                        _XyzData.Batch = j;
-                        UpdateGPUBuffer(j);
-                    }
+                    _XyzData.Batch = j;
 
-                    context.graphicsContext.SetRootSignatureCompute(rootSignature);
-                    context.graphicsContext.SetComputeCBVR(constantBuffers[0], 0);
-                    context.graphicsContext.SetComputeSRVT(texture0, 1);
-                    context.graphicsContext.SetComputeUAVT(texture1, 2);
-                    context.graphicsContext.SetPObject(ClearIrradianceMap);
-                    context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
-
-                    context.graphicsContext.SetPObject(IrradianceMap0);
-                    if (context.miscProcessPairs[i].Type == MiscProcessType.GenerateIrradianceMapQ1)
-                    {
-                        for (int j = 0; j < c_maxIteration; j++)
-                        {
-                            context.graphicsContext.SetComputeUAVT(texture1, 2);
-                            context.graphicsContext.SetComputeCBVR(constantBuffers[j], 0);
-                            context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
-                        }
-                    }
-                    else
-                    {
-                        context.graphicsContext.SetComputeUAVT(texture1, 2);
-                        context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8, (int)(texture1.m_height + 7) / 8, 6);
-                    }
+                    Marshal.StructureToPtr(_XyzData, ptr1, true);
+                    context.graphicsContext.UpdateResource(constantBuffers[j], cpuBuffer1, c_bufferSize, 0);
                 }
-                else if (context.miscProcessPairs[i].Type.HasFlag(MiscProcessType.GenerateIrradianceMap))
-                {
 
+                context.graphicsContext.SetRootSignatureCompute(rootSignature);
+                context.graphicsContext.SetComputeCBVR(constantBuffers[0], 0);
+                context.graphicsContext.SetComputeSRVT(texture0, 2);
+                context.graphicsContext.SetPObject(ClearIrradianceMap);
+
+                int pow2a = 1;
+                for (int j = 0; j < texture1.m_mipLevels; j++)
+                {
+                    context.graphicsContext.SetComputeUAVT(texture1, j, 3);
+                    context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
+                    pow2a *= 2;
+                }
+                pow2a = 1;
+                for (int j = 0; j < texture2.m_mipLevels; j++)
+                {
+                    context.graphicsContext.SetComputeUAVT(texture2, j, 3);
+                    context.graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
+                    pow2a *= 2;
+                }
+                context.graphicsContext.SetPObject(IrradianceMap0);
+
+                pow2a = 1;
+                for (int j = 0; j < texture1.m_mipLevels; j++)
+                {
+                    for (int k = 0; k < itCount; k++)
+                    {
+                        context.graphicsContext.SetComputeUAVT(texture1, j, 3);
+                        context.graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
+                        context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
+                    }
+                    pow2a *= 2;
+                }
+
+                context.graphicsContext.SetComputeSRVT(texture0, 2);
+                context.graphicsContext.SetPObject(EnvironmentMap0);
+                pow2a = 1;
+                for (int j = 0; j < texture2.m_mipLevels; j++)
+                {
+                    for (int k = 0; k < itCount; k++)
+                    {
+                        context.graphicsContext.SetComputeUAVT(texture2, j, 3);
+                        context.graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
+                        context.graphicsContext.SetComputeCBVR(constantBuffers[j], 1);
+                        context.graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
+                    }
+                    pow2a *= 2;
                 }
             }
             context.graphicsContext.EndCommand();
@@ -160,6 +171,8 @@ namespace Coocoo3D.RenderPipeline
             public int y1;
             public int Quality;
             public int Batch;
+            public int x2;
+            public int y2;
         }
 
         protected async Task<IBuffer> ReadFile(string uri)

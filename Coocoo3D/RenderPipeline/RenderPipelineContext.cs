@@ -22,6 +22,7 @@ namespace Coocoo3D.RenderPipeline
         public List<CameraData> cameras = new List<CameraData>();
         public int VertexCount;
         public int frameRenderIndex;
+        public int progressiveRenderIndex;
         public double Time;
         public double DeltaTime;
         public bool EnableDisplay;
@@ -58,12 +59,14 @@ namespace Coocoo3D.RenderPipeline
         public RenderTexture2D[] ScreenSizeRenderTextures = new RenderTexture2D[4];
         public RenderTexture2D[] ScreenSizeDSVs = new RenderTexture2D[2];
 
-        public RenderTexture2D DSV0 = new RenderTexture2D();
+        public RenderTexture2D ShadowMap0 = new RenderTexture2D();
+        public RenderTexture2D ShadowMap1 = new RenderTexture2D();
 
         public Texture2D TextureLoading = new Texture2D();
         public Texture2D TextureError = new Texture2D();
         public TextureCube EnvCubeMap = new TextureCube();
         public RenderTextureCube IrradianceMap = new RenderTextureCube();
+        public RenderTextureCube EnvironmentMap = new RenderTextureCube();
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
         public int ndcQuadMeshIndexCount;
@@ -168,23 +171,48 @@ namespace Coocoo3D.RenderPipeline
             height = y;
         }
 
+        const int c_shadowMapResolutionLow = 2048;
+        const int c_shadowMapResolutionHigh = 4096;
+        public bool HighResolutionShadowNow;
+        public void ChangeShadowMapsQuality(ProcessingList processingList, bool highQuality)
+        {
+            if (HighResolutionShadowNow == highQuality) return;
+            HighResolutionShadowNow = highQuality;
+            if (highQuality)
+            {
+                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh);
+                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh);
+            }
+            else
+            {
+                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+            }
+            processingList.UnsafeAdd(ShadowMap0);
+            processingList.UnsafeAdd(ShadowMap1);
+        }
+
         public bool Initilized = false;
         public Task LoadTask;
         public async Task ReloadDefalutResources(WICFactory wic, ProcessingList processingList, MiscProcessContext miscProcessContext)
         {
-            DSV0.ReloadAsDepthStencil(4096, 4096);
-            processingList.AddObject(DSV0);
+            ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+            ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+            processingList.AddObject(ShadowMap0);
+            processingList.AddObject(ShadowMap1);
 
             TextureLoading.ReloadPure(1, 1, new Vector4(0, 1, 1, 1));
             TextureError.ReloadPure(1, 1, new Vector4(1, 0, 1, 1));
-            EnvCubeMap.ReloadPure(64, 64, new Vector4[] { new Vector4(0.1f, 0.08f, 0.08f, 1), new Vector4(0.08f, 0.1f, 0.08f, 1), new Vector4(0.5f, 0.5f, 0.5f, 1), new Vector4(0.08f, 0.1f, 0.1f, 1), new Vector4(0.1f, 0.1f, 0.08f, 1), new Vector4(0.08f, 0.08f, 0.1f, 1) });
-            IrradianceMap.ReloadAsRTVUAV(32, 32, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
+            EnvCubeMap.ReloadPure(64, 64, new Vector4[] { new Vector4(0.2f, 0.16f, 0.16f, 1), new Vector4(0.16f, 0.2f, 0.16f, 1), new Vector4(0.2f, 0.2f, 0.2f, 1), new Vector4(0.16f, 0.2f, 0.2f, 1), new Vector4(0.2f, 0.2f, 0.16f, 1), new Vector4(0.16f, 0.16f, 0.2f, 1) });
+            IrradianceMap.ReloadAsRTVUAV(32, 32, 1, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
+            EnvironmentMap.ReloadAsRTVUAV(1024, 1024, 7, DxgiFormat.DXGI_FORMAT_R16G16B16A16_FLOAT);
             postProcessBackground.ReloadPure(64, 64, new Vector4(1, 1, 1, 0));
-            miscProcessContext.Add(new MiscProcessPair<TextureCube, RenderTextureCube>(EnvCubeMap, IrradianceMap, MiscProcessType.GenerateIrradianceMap));
+            miscProcessContext.Add(new P_Env_Data() { source = EnvCubeMap, IrradianceMap = IrradianceMap, EnvMap = EnvironmentMap, Level = 16 }); ;
             processingList.AddObject(TextureLoading);
             processingList.AddObject(TextureError);
             processingList.AddObject(EnvCubeMap);
             processingList.AddObject(IrradianceMap);
+            processingList.AddObject(EnvironmentMap);
 
             ndcQuadMesh.ReloadNDCQuad();
             ndcQuadMeshIndexCount = ndcQuadMesh.m_indexCount;
@@ -205,7 +233,7 @@ namespace Coocoo3D.RenderPipeline
         }
         private async Task ReloadTexture2DNoMip(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
         {
-            texture2D.ReloadFromImageNoMip(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))));
+            texture2D.ReloadFromImageNoMip(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))), false);
             processingList.AddObject(texture2D);
         }
     }

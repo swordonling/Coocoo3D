@@ -50,14 +50,16 @@ namespace Coocoo3D.PropertiesPages
                 _cacheFOV = appBody.camera.Fov;
                 _cacheDistance = appBody.camera.Distance;
                 var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
+                string raytracingSupportMsg;
                 if (appBody.deviceResources.IsRayTracingSupport())
                 {
-                    VRayTracingSupport.Text = resourceLoader.GetString("Message_GPUSupportRayTracing");
+                    raytracingSupportMsg = resourceLoader.GetString("Message_GPUSupportRayTracing");
                 }
                 else
                 {
-                    VRayTracingSupport.Text = resourceLoader.GetString("Message_GPUNotSupportRayTracing");
+                    raytracingSupportMsg = resourceLoader.GetString("Message_GPUNotSupportRayTracing");
                 }
+                VRayTracingSupport.Text = string.Format("{0}\n{1}", appBody.deviceResources.GetDeviceDescription(), raytracingSupportMsg);
                 for (int i = 0; i < comboBox1Values.Length; i++)
                 {
                     comboBox1Values[i] = (uint)i;
@@ -247,18 +249,14 @@ namespace Coocoo3D.PropertiesPages
 
         public bool VSaveCpuPower
         {
-            get => appBody.performaceSettings.SaveCpuPower; set
-            {
-                appBody.performaceSettings.SaveCpuPower = value;
-            }
+            get => appBody.performaceSettings.SaveCpuPower;
+            set => appBody.performaceSettings.SaveCpuPower = value;
         }
 
         public bool VMultiThreadRendering
         {
-            get => appBody.performaceSettings.MultiThreadRendering; set
-            {
-                appBody.performaceSettings.MultiThreadRendering = value;
-            }
+            get => appBody.performaceSettings.MultiThreadRendering;
+            set => appBody.performaceSettings.MultiThreadRendering = value;
         }
 
         public bool VHighResolutionShadow
@@ -274,6 +272,13 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
+
+        public bool VVSync
+        {
+            get => appBody.performaceSettings.VSync;
+            set => appBody.performaceSettings.VSync = value;
+        }
+
         public bool VZPrepass
         {
             get => appBody.settings.ZPrepass; set

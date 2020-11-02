@@ -15,7 +15,7 @@ namespace Coocoo3D.RenderPipeline
 {
     public class MainCaches
     {
-        public Dictionary<string, Texture2DPack> textureCaches = new Dictionary<string, Texture2DPack>();
+        public Dictionary<string, Texture2DPack> TextureCaches = new Dictionary<string, Texture2DPack>();
         public Dictionary<string, RPShaderPack> RPShaderPackCaches = new Dictionary<string, RPShaderPack>();
 
         public Dictionary<string, ModelPack> ModelPackCaches = new Dictionary<string, ModelPack>();
@@ -30,8 +30,8 @@ namespace Coocoo3D.RenderPipeline
                 Task.Run(async () =>
                 {
                     List<Texture2DPack> packs = new List<Texture2DPack>();
-                    lock (textureCaches)
-                        foreach (var texturePack in textureCaches.Values)
+                    lock (TextureCaches)
+                        foreach (var texturePack in TextureCaches.Values)
                             if (texturePack.Status == GraphicsObjectStatus.loaded || texturePack.Status == GraphicsObjectStatus.error)
                                 packs.Add(texturePack);
 
@@ -44,10 +44,9 @@ namespace Coocoo3D.RenderPipeline
                             {
                                 var file = await tex.folder.GetFileAsync(tex.relativePath);
                                 var attr = await file.GetBasicPropertiesAsync();
-                                if (attr.DateModified != tex.lastModifiedTime || tex.Status == GraphicsObjectStatus.error)
+                                if (attr.DateModified != tex.lastModifiedTime || tex.Status != GraphicsObjectStatus.loaded)
                                 {
                                     tex.lastModifiedTime = attr.DateModified;
-                                    tex.Mark(GraphicsObjectStatus.loading);
                                     _RequireRender();
                                     _ = Task.Run(async () =>
                                     {

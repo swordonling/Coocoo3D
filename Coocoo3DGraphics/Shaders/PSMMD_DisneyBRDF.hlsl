@@ -1,8 +1,24 @@
-#define UNITY_BRDF_GGX 1
 #include "FromDisney/DisneyBRDF.hlsli"
 #include "RandomNumberGenerator.hlsli"
 #include "CameraDataDefine.hlsli"
 
+
+float4 Pow4(float4 x)
+{
+	return x * x * x * x;
+}
+float3 Pow4(float3 x)
+{
+	return x * x * x * x;
+}
+float2 Pow4(float2 x)
+{
+	return x * x * x * x;
+}
+float Pow4(float x)
+{
+	return x * x * x * x;
+}
 
 float4 Pow2(float4 x)
 {
@@ -46,8 +62,8 @@ struct LightInfo
 
 cbuffer cb1 : register(b1)
 {
-	float4x4 LightSpaceMatrices[1];
-	LightInfo Lightings[4];
+	float4x4 LightSpaceMatrices[4];
+	LightInfo Lightings[8];
 };
 cbuffer cb2 : register(b2)
 {
@@ -86,6 +102,7 @@ Texture2D ShadowMap0:register(t2);
 TextureCube EnvCube : register (t3);
 TextureCube IrradianceCube : register (t4);
 Texture2D BRDFLut : register(t5);
+Texture2D ShadowMap1:register(t6);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -151,7 +168,7 @@ float3 BRDF_1(float3 L, float3 V, float3 N, /*float3 X, float3 Y,*/
 	//float ax = max(.001, pow2(roughness) / aspect);
 	//float ay = max(.001, pow2(roughness) * aspect);
 	//float Ds = GTR2_aniso(NdotH, dot(H, X), dot(H, Y), ax, ay);
-	float Ds = GTR2(NdotH, max(.001, roughness* roughness));
+	float Ds = GTR2(NdotH, max(.001, roughness * roughness));
 	float FH = SchlickFresnel(LdotH);
 	float3 Fs = lerp(Cspec0, float3(1, 1, 1), FH);
 	//float Gs;
@@ -177,11 +194,29 @@ float3 brdf_s(float3 L, float3 V, float3 N, float3 X, float3 Y, float3 baseColor
 	//return BRDF(L, V, N, X, Y, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
 	return BRDF_1(L, V, N, baseColor, _Metallic, _Roughness, _Subsurface, _Specular, _SpecularTint, _Anisotropic, _Sheen, _SheenTint, _Clearcoat, _ClearcoatGloss);
 }
+const static float COO_PI = 3.141592653589793238;
+float4 ImportanceSampleGGX(float2 E, float a2)
+{
+	float Phi = 2 * COO_PI * E.x;
+	float CosTheta = sqrt((1 - E.y) / (1 + (a2 - 1) * E.y));
+	float SinTheta = sqrt(1 - CosTheta * CosTheta);
+
+	float3 H;
+	H.x = SinTheta * cos(Phi);
+	H.y = SinTheta * sin(Phi);
+	H.z = CosTheta;
+
+	float d = (CosTheta * a2 - CosTheta) * CosTheta + 1;
+	float D = a2 / (COO_PI * d * d);
+	float PDF = D * CosTheta;
+
+	return float4(H, PDF);
+}
 
 float4 main(PSSkinnedIn input) : SV_TARGET
 {
 	float3 strength = float3(0,0,0);
-	float3 viewDir = normalize(g_vCamPos - input.wPos);
+	float3 V = normalize(g_vCamPos - input.wPos);
 	float3 N = normalize(input.Norm);
 	float4 texColor = texture0.Sample(s1, input.TexCoord) * _DiffuseColor;
 	clip(texColor.a - 0.01f);
@@ -202,24 +237,40 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		if (Lightings[i].LightType == 0)
 		{
 			float inShadow = 1.0f;
-			float4 sPos = mul(input.wPos, LightSpaceMatrices[0]);
-			float2 shadowTexCoords;
-			shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
-			shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-			if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0 && g_enableShadow != 0)
-				inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords, sPos.z / sPos.w).r;
+			if (g_enableShadow != 0)
+			{
+				float4 sPos = mul(input.wPos, LightSpaceMatrices[0]);
+				sPos = sPos / sPos.w;
+
+				float2 shadowTexCoords;
+				shadowTexCoords.x = 0.5f + (sPos.x * 0.5f);
+				shadowTexCoords.y = 0.5f - (sPos.y * 0.5f);
+				if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
+					inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords, sPos.z).r;
+				else
+				{
+					sPos = mul(input.wPos, LightSpaceMatrices[1]);
+					sPos = sPos / sPos.w;
+					float2 shadowTexCoords1;
+					shadowTexCoords1.x = 0.5f + (sPos.x * 0.5f);
+					shadowTexCoords1.y = 0.5f - (sPos.y * 0.5f);
+
+					if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
+						inShadow = ShadowMap1.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords1, sPos.z).r;
+				}
+			}
 
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a,0);
 
-			strength += brdf_s(lightDir,viewDir,N,X,Y,diff) * lightStrength * dot(lightDir, N) * inShadow;
+			strength += brdf_s(lightDir,V,N,X,Y,diff) * lightStrength * dot(lightDir, N) * inShadow;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir, input.wPos), 2);
-			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N);
+			strength += brdf_s(lightDir, V, N, X, Y, diff) * lightStrength * dot(lightDir, N);
 		}
 	}
 	for (int i = 1; i < 4; i++)
@@ -230,20 +281,22 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a;
-			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N) * inShadow;
+			strength += brdf_s(lightDir, V, N, X, Y, diff) * lightStrength * dot(lightDir, N) * inShadow;
 		}
 		else if (Lightings[i].LightType == 1)
 		{
 			float inShadow = 1.0f;
 			float3 lightDir = normalize(Lightings[i].LightDir - input.wPos);
 			float3 lightStrength = Lightings[i].LightColor.rgb * Lightings[i].LightColor.a / pow(distance(Lightings[i].LightDir ,input.wPos),2);
-			strength += brdf_s(lightDir, viewDir, N, X, Y, diff) * lightStrength * dot(lightDir, N);
+			strength += brdf_s(lightDir, V, N, X, Y, diff) * lightStrength * dot(lightDir, N);
 		}
+		else
+			break;
 	}
 	strength += _Emission * _AmbientColor;
-	//strength += _AmbientColor * diff;
+
 	int sampleCount = pow(2, g_quality) * 2;
-	if (dot(viewDir, N) < 0)
+	if (dot(V, N) < 0)
 	{
 		N = -N;
 	}
@@ -252,12 +305,23 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		float2 E = RNG::Hammersley(i, sampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
 		float3 randomDir = TangentToWorld(N, RNG::HammersleySampleCos(E));
 
-		//randomDir = normalize(float3(RNG::NDRandom(randomState), RNG::NDRandom(randomState), RNG::NDRandom(randomState)));
-		//if (dot(randomDir, norm) < 0)
-		//{
-		//	randomDir = -randomDir;
-		//}
-		strength += brdf_s(randomDir, viewDir, N, X, Y, diff) * (EnvCube.Sample(s1, randomDir) * g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, N);
+		strength += brdf_s(randomDir, V, N, X, Y, diff) * (EnvCube.Sample(s1, randomDir) * g_skyBoxMultiple + inDirect) / sampleCount * dot(randomDir, N);
 	}
+	//float weight = 0;
+	//float3 filteredColor = float3(0, 0, 0);
+	//for (int i = 0; i < sampleCount; i++)
+	//{
+		//float2 E = RNG::Hammersley(i, sampleCount, uint2(RNG::Random(randomState), RNG::Random(randomState)));
+		//float3 H = TangentToWorld(ImportanceSampleGGX(E, Pow4(_Roughness)).xyz, N);
+		//float3 L = 2 * dot(V, H) * H - V;
+
+		//float NdotL = saturate(dot(N, L));
+		//if (NdotL > 0)
+		//{
+		//	filteredColor += brdf_s(L, V, N, X, Y, diff) * (EnvCube.Sample(s1, L) * g_skyBoxMultiple) * NdotL;
+		//	weight += NdotL;
+		//}
+	//}
+	//strength += filteredColor / max(weight, 0.001);
 	return float4(strength, texColor.a);
 }

@@ -153,6 +153,8 @@ namespace Coocoo3DGraphics
 		bool IsRayTracingSupport();
 		DxgiFormat GetBackBufferFormat1();
 		static UINT BitsPerPixel(DxgiFormat format);
+		Platform::String^ GetDeviceDescription();
+		UINT64 GetDeviceVideoMemory();
 	internal:
 		bool						IsDeviceRemoved() const { return m_deviceRemoved; }
 
@@ -189,6 +191,8 @@ namespace Coocoo3DGraphics
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>	m_dsvHeap;
 		volatile UINT									m_dsvHeapAllocCount;
 
+		WCHAR m_deviceDescription[128];
+		UINT64 m_deviceVideoMem;
 	private:
 		void CreateWindowSizeDependentResources();
 		void UpdateRenderTargetSize();

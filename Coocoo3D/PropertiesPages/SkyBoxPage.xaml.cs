@@ -1,4 +1,5 @@
 ﻿using Coocoo3D.Core;
+using Coocoo3D.RenderPipeline;
 using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
@@ -89,7 +90,7 @@ namespace Coocoo3D.PropertiesPages
             public int y;
         }
         int prevRenderFrame = 0;
-        private async Task ApplySkyBoxTask(RenderPipeline.MiscProcessType miscProcessType)
+        private async Task ApplySkyBoxTask(int level)
         {
             var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
             for (int i = 0; i < 6; i++)
@@ -101,7 +102,8 @@ namespace Coocoo3D.PropertiesPages
                 }
             }
             showInfo.Text = resourceLoader.GetString("Message_Operating");
-            appBody.RPContext.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
+            var rp = appBody.RPContext;
+            rp.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
                 await FileIO.ReadBufferAsync(files[0]),
                 await FileIO.ReadBufferAsync(files[1]),
                 await FileIO.ReadBufferAsync(files[2]),
@@ -114,14 +116,14 @@ namespace Coocoo3D.PropertiesPages
 
             }
             prevRenderFrame = t1;
-            appBody.ProcessingList.AddObject(appBody.RPContext.EnvCubeMap);
-            appBody.miscProcessContext.Add(new RenderPipeline.MiscProcessPair<TextureCube, RenderTextureCube>(appBody.RPContext.EnvCubeMap, appBody.RPContext.IrradianceMap, miscProcessType));
+            appBody.ProcessingList.AddObject(rp.EnvCubeMap);
+            appBody.miscProcessContext.Add(new P_Env_Data() { source = rp.EnvCubeMap, IrradianceMap = rp.IrradianceMap, EnvMap = rp.EnvironmentMap, Level = level });
             appBody.RequireRender();
             showInfo.Text = resourceLoader.GetString("Message_Done");
         }
         private async void Apply_Click(object sender, RoutedEventArgs e)
         {
-            await ApplySkyBoxTask(RenderPipeline.MiscProcessType.GenerateIrradianceMapQ1);
+            await ApplySkyBoxTask(32);
         }
 
         private async void _img0_Drop(object sender, DragEventArgs e)

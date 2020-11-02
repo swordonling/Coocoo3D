@@ -14,10 +14,10 @@ namespace Coocoo3DGraphics
 		property UINT m_mipLevels;
 
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
-		void ReloadPure(int width, int height,Windows::Foundation::Numerics::float4 color);
+		void ReloadPure(int width, int height, Windows::Foundation::Numerics::float4 color);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::UploadTexture(Texture2D^ texture)上传。
 		void ReloadFromImage(IBuffer^ file1);
-		void ReloadFromImageNoMip(IBuffer^ file1);
+		void ReloadFromImageNoMip(IBuffer^ file1, bool srgb);
 		void Reload(Texture2D^ texture);
 		void Unload();
 

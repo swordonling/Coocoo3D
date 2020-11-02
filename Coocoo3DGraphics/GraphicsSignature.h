@@ -19,6 +19,7 @@ namespace Coocoo3DGraphics {
 	{
 	public:
 		void ReloadMMD(DeviceResources^ deviceResources);
+		void ReloadSkinning(DeviceResources^ deviceResources);
 		void Reload(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs);
 		void ReloadCompute(DeviceResources^ deviceResources, const Platform::Array<GraphicSignatureDesc>^ Descs);
 		void Unload();

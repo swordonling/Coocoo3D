@@ -9,8 +9,8 @@ struct LightInfo
 
 cbuffer cb1 : register(b1)
 {
-	float4x4 LightSpaceMatrices[1];
-	LightInfo Lightings[4];
+	float4x4 LightSpaceMatrices[4];
+	LightInfo Lightings[8];
 };
 cbuffer cb2 : register(b2)
 {
@@ -49,6 +49,7 @@ Texture2D ShadowMap0:register(t2);
 TextureCube EnvCube : register (t3);
 TextureCube IrradianceCube : register (t4);
 Texture2D BRDFLut : register(t5);
+Texture2D ShadowMap1:register(t6);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -72,8 +73,6 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 
 	float3 albedo = texColor.rgb;
 
-	float xxx = (_Specular * 0.08f + _Metallic * (1 - _Specular * 0.08f));
-
 	float3 c_diffuse = lerp(albedo * (1 - _Specular * 0.08f), 0, _Metallic);
 	float3 c_specular = lerp(_Specular * 0.08f, albedo, _Metallic);
 
@@ -85,13 +84,28 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 		{
 			float inShadow = 1.0f;
 			float3 lightStrength = max(Lightings[i].LightColor.rgb * Lightings[i].LightColor.a, 0);
+			if (g_enableShadow != 0)
+			{
+				float4 sPos = mul(input.wPos, LightSpaceMatrices[0]);
+				sPos = sPos / sPos.w;
 
-			float4 sPos = mul(input.wPos, LightSpaceMatrices[0]);
-			float2 shadowTexCoords;
-			shadowTexCoords.x = 0.5f + (sPos.x / sPos.w * 0.5f);
-			shadowTexCoords.y = 0.5f - (sPos.y / sPos.w * 0.5f);
-			if (saturate(shadowTexCoords.x) - shadowTexCoords.x == 0 && saturate(shadowTexCoords.y) - shadowTexCoords.y == 0 && g_enableShadow != 0)
-				inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords,sPos.z / sPos.w).r;
+				float2 shadowTexCoords;
+				shadowTexCoords.x = 0.5f + (sPos.x * 0.5f);
+				shadowTexCoords.y = 0.5f - (sPos.y * 0.5f);
+				if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
+					inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords,sPos.z).r;
+				else
+				{
+					sPos = mul(input.wPos, LightSpaceMatrices[1]);
+					sPos = sPos / sPos.w;
+					float2 shadowTexCoords1;
+					shadowTexCoords1.x = 0.5f + (sPos.x * 0.5f);
+					shadowTexCoords1.y = 0.5f - (sPos.y * 0.5f);
+
+					if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
+						inShadow = ShadowMap1.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords1, sPos.z).r;
+				}
+			}
 
 			float3 L = normalize(Lightings[i].LightDir);
 			float3 H = normalize(L + V);
@@ -123,7 +137,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 			outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
 		}
 	}
-	for (int i = 1; i < 4; i++)
+	for (int i = 1; i < 8; i++)
 	{
 		if (Lightings[i].LightColor.a == 0)continue;
 		if (Lightings[i].LightType == 0)
@@ -160,17 +174,14 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 
 			outputColor += NdotL * lightStrength * (((c_diffuse * diffuse_factor / COO_PI) + specular_factor)) * inShadow;
 		}
+		else
+			break;
 	}
-	float surfaceReduction = 1.0f / (roughness * roughness + 1.0f);
-	float grazingTerm = saturate(1 - sqrt(roughness) + xxx);
-	//float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, roughness), 0).rg;
-	float3 F = Fresnel_SchlickRoughness(saturate(NdotV), c_specular, roughness);
-	float3 kS = F;
-	float3 kD = 1.0 - kS;
-	kD *= 1.0 - _Metallic;
+	float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, 1 - roughness), 0).rg;
+	float3 GF = c_specular * AB.x + AB.y;
 
 	outputColor += IrradianceCube.Sample(s0, N) * g_skyBoxMultiple * c_diffuse;
-	outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), roughness * 6) * g_skyBoxMultiple * surfaceReduction * Fresnel_Shlick(c_specular, grazingTerm, NdotV);
+	outputColor += EnvCube.SampleLevel(s0, reflect(-V, N), sqrt(max(roughness,1e-5)) * 6) * g_skyBoxMultiple * GF;
 	outputColor += _Emission * _AmbientColor;
 
 	return float4(outputColor, texColor.a);

@@ -1,4 +1,3 @@
-
 static const float COO_PI = 3.141592653589793238f;
 static const float COO_EPSILON = 1e-5f;
 
@@ -14,7 +13,7 @@ float2 pow5(float2 x)
 {
 	return x * x * x * x * x;
 }
-float1 pow5(float1 x)
+float pow5(float x)
 {
 	return x * x * x * x * x;
 }
@@ -31,7 +30,7 @@ float2 pow2(float2 x)
 {
 	return x * x;
 }
-float1 pow2(float1 x)
+float pow2(float x)
 {
 	return x * x;
 }
@@ -96,5 +95,5 @@ float3 Specular_BRDF(in float alpha, in float3 specularColor, in float NdotV, in
 
 float3 Fresnel_SchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-	return F0 + (max(1.0 - roughness, F0) - F0) * pow(1.0 - cosTheta, 5.0);
+	return F0 + (max(1.0 - roughness, F0) - F0) * pow5(1.0 - cosTheta);
 }

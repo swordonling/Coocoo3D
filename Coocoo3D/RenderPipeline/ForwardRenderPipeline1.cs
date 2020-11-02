@@ -14,19 +14,23 @@ namespace Coocoo3D.RenderPipeline
 {
     public class ForwardRenderPipeline1 : RenderPipeline
     {
-        public const int c_lightingDataSize = 384;
+        public const int c_lightingDataSize = 512;
         public const int c_offsetLightingData = 0;
         public const int c_materialDataSize = 256;
         public const int c_offsetMaterialData = c_offsetLightingData + c_lightingDataSize;
         public const int c_presentDataSize = 512;
         public const int c_offsetPresentData = c_offsetMaterialData + c_materialDataSize;
+        public const int c_lightCameraCount = 2;
         public void Reload(DeviceResources deviceResources)
         {
             for (int i = 0; i < c_maxCameraPerRender; i++)
             {
                 cameraPresentDatas[i].Reload(deviceResources, c_presentDataSize);
             }
-            LightCameraDataBuffer.Reload(deviceResources, c_presentDataSize);
+            for (int i = 0; i < c_lightCameraCount; i++)
+            {
+                LightCameraDataBuffers[i].Reload(deviceResources, c_presentDataSize);
+            }
             Ready = true;
         }
         #region graphics assets
@@ -36,14 +40,17 @@ namespace Coocoo3D.RenderPipeline
             {
                 cameraPresentDatas[i].Unload();
             }
-            LightCameraDataBuffer.Unload();
+            for (int i = 0; i < c_lightCameraCount; i++)
+            {
+                LightCameraDataBuffers[i].Unload();
+            }
         }
         #endregion
 
         Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
-        public ConstantBuffer LightCameraDataBuffer = new ConstantBuffer();
+        public ConstantBuffer[] LightCameraDataBuffers = new ConstantBuffer[c_lightCameraCount];
         public List<ConstantBuffer> entityDataBuffers = new List<ConstantBuffer>();
         public List<ConstantBuffer> materialBuffers = new List<ConstantBuffer>();
         byte[] rcDataUploadBuffer = new byte[c_lightingDataSize + c_materialDataSize + c_presentDataSize];
@@ -60,6 +67,10 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < c_maxCameraPerRender; i++)
             {
                 cameraPresentDatas[i] = new PresentData();
+            }
+            for (int i = 0; i < c_lightCameraCount; i++)
+            {
+                LightCameraDataBuffers[i] = new ConstantBuffer();
             }
             gch_rcDataUploadBuffer = GCHandle.Alloc(rcDataUploadBuffer);
         }
@@ -97,14 +108,19 @@ namespace Coocoo3D.RenderPipeline
             DesireEntityBuffers(deviceResources, Entities.Count);
             DesireMaterialBuffers(deviceResources, countMaterials);
             var camera = context.dynamicContext.cameras[0];
-            Matrix4x4 lightCameraMatrix = Matrix4x4.Identity;
+            Matrix4x4 lightCameraMatrix0 = Matrix4x4.Identity;
+            Matrix4x4 lightCameraMatrix1 = Matrix4x4.Identity;
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, c_offsetPresentData);
             HasMainLight = false;
             if (lightings.Count > 0 && lightings[0].LightingType == LightingType.Directional)
             {
-                lightCameraMatrix = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Angle, camera.Distance));
-                Marshal.StructureToPtr(lightCameraMatrix, pBufferData, true);
-                graphicsContext.UpdateResource(LightCameraDataBuffer, rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
+                lightCameraMatrix0 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(4, camera.LookAtPoint, camera.Distance));
+                Marshal.StructureToPtr(lightCameraMatrix0, pBufferData, true);
+                graphicsContext.UpdateResource(LightCameraDataBuffers[0], rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
+
+                lightCameraMatrix1 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Angle, camera.Distance));
+                Marshal.StructureToPtr(lightCameraMatrix1, pBufferData, true);
+                graphicsContext.UpdateResource(LightCameraDataBuffers[1], rcDataUploadBuffer, c_presentDataSize, c_offsetPresentData);
                 HasMainLight = true;
             }
             #region Update Entities Data
@@ -113,8 +129,9 @@ namespace Coocoo3D.RenderPipeline
             #region Lighting
             Array.Clear(rcDataUploadBuffer, c_offsetLightingData, c_lightingDataSize);
             int lightCount = 0;
-            pBufferData = p0 + 64;
-            Marshal.StructureToPtr(lightCameraMatrix, p0, true);
+            pBufferData = p0 + 256;
+            Marshal.StructureToPtr(lightCameraMatrix0, p0, true);
+            Marshal.StructureToPtr(lightCameraMatrix1, p0 + 64, true);
             for (int j = 0; j < lightings.Count; j++)
             {
                 LightingData data1 = lightings[j];
@@ -124,7 +141,7 @@ namespace Coocoo3D.RenderPipeline
 
                 lightCount++;
                 pBufferData += 32;
-                if (lightCount >= 4)
+                if (lightCount >= 8)
                     break;
             }
             #endregion
@@ -165,33 +182,98 @@ namespace Coocoo3D.RenderPipeline
             }
 
         }
-
+        //you can fold local function in editor
         public override void RenderCamera(RenderPipelineContext context, int cameraCount)
         {
             var Entities = context.dynamicContext.entities;
             var graphicsContext = context.graphicsContext;
             ref var settings = ref context.dynamicContext.settings;
             ref var inShaderSettings = ref context.dynamicContext.inShaderSettings;
+            Texture2D textureLoading = context.TextureLoading;
+            Texture2D textureError = context.TextureError;
 
-            graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
-            //graphicsContext.SetSRVT((RenderTexture2D)null, 6);//may used in d3d11
-            graphicsContext.SetAndClearDSV(context.DSV0);
+            graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignatureSkinning);
             graphicsContext.SetSOMesh(context.SkinningMeshBuffer);
+            void EntitySkinning(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer)
+            {
+                var Materials = rendererComponent.Materials;
+                graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+                graphicsContext.SetCBVR(entityDataBuffer, 1);
+                graphicsContext.SetCBVR(cameraPresentData, 2);
+                var POSkinning = rendererComponent.POSkinning;
+                if (POSkinning != null && POSkinning.Status == GraphicsObjectStatus.loaded)
+                    graphicsContext.SetPObjectStreamOut(POSkinning);
+                else
+                    graphicsContext.SetPObjectStreamOut(currentSkinningPObject);
+                graphicsContext.SetMeshVertex(rendererComponent.mesh);
+                int indexCountAll = rendererComponent.meshVertexCount;
+                graphicsContext.Draw(indexCountAll, 0);
+            }
             for (int i = 0; i < Entities.Count; i++)
-                EntitySkinning(context, Entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i]);
-            graphicsContext.SetSOMesh((MeshBuffer)null);
+                EntitySkinning(Entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i]);
+            graphicsContext.SetSOMeshNone();
+
+
             graphicsContext.SetRootSignatureCompute(context.RPAssetsManager.rootSignatureCompute);
+            void ParticleCompute(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
+            {
+                if (rendererComponent.ParticleCompute == null || rendererComponent.ParticleCompute.Status != GraphicsObjectStatus.loaded)
+                {
+                    counter.vertex += rendererComponent.meshVertexCount;
+                    return;
+                }
+                graphicsContext.SetComputeCBVR(entityBoneDataBuffer, 0);
+                //graphicsContext.SetComputeCBVR(entityDataBuffer, 1);
+                graphicsContext.SetComputeCBVR(cameraPresentData, 2);
+                graphicsContext.SetComputeUAVR(context.SkinningMeshBuffer, counter.vertex, 4);
+                graphicsContext.SetComputeUAVR(rendererComponent.meshParticleBuffer, 0, 5);
+                graphicsContext.SetPObject(rendererComponent.ParticleCompute);
+                graphicsContext.Dispatch((rendererComponent.meshVertexCount + 63) / 64, 1, 1);
+                counter.vertex += rendererComponent.meshVertexCount;
+            }
             _Counters counterParticle = new _Counters();
             for (int i = 0; i < Entities.Count; i++)
-                ParticleCompute(context, Entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counterParticle);
+                ParticleCompute(Entities[i].rendererComponent, cameraPresentDatas[0].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counterParticle);
             if (HasMainLight && inShaderSettings.EnableShadow)
             {
-                graphicsContext.SetMesh(context.SkinningMeshBuffer);
+                void _RenderEntityShadow(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
+                {
+                    var Materials = rendererComponent.Materials;
+                    graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+                    graphicsContext.SetCBVR(entityDataBuffer, 1);
+                    graphicsContext.SetCBVR(cameraPresentData, 2);
+                    graphicsContext.SetMeshIndex(rendererComponent.mesh);
 
+                    List<Texture2D> texs = rendererComponent.textures;
+                    int countIndexLocal = 0;
+                    for (int i = 0; i < Materials.Count; i++)
+                    {
+                        if (Materials[i].DrawFlags.HasFlag(DrawFlag.CastSelfShadow))
+                        {
+                            Texture2D tex1 = null;
+                            if (Materials[i].texIndex != -1)
+                                tex1 = texs[Materials[i].texIndex];
+                            graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
+                            graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
+                            graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
+                        }
+                        counter.material++;
+                        countIndexLocal += Materials[i].indexCount;
+                    }
+                    counter.vertex += rendererComponent.meshVertexCount;
+                }
+
+                graphicsContext.SetMesh(context.SkinningMeshBuffer);
                 graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
-                _Counters counterShadow = new _Counters();
+                graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDShadowDepth);
+                graphicsContext.SetAndClearDSV(context.ShadowMap0);
+                _Counters counterShadow0 = new _Counters();
                 for (int i = 0; i < Entities.Count; i++)
-                    RenderEntityShadow(context, Entities[i].rendererComponent, LightCameraDataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counterShadow);
+                    _RenderEntityShadow(Entities[i].rendererComponent, LightCameraDataBuffers[0], context.CBs_Bone[i], entityDataBuffers[i], ref counterShadow0);
+                graphicsContext.SetAndClearDSV(context.ShadowMap1);
+                _Counters counterShadow1 = new _Counters();
+                for (int i = 0; i < Entities.Count; i++)
+                    _RenderEntityShadow(Entities[i].rendererComponent, LightCameraDataBuffers[1], context.CBs_Bone[i], entityDataBuffers[i], ref counterShadow1);
             }
 
 
@@ -200,24 +282,91 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
             graphicsContext.SetAndClearRTVDSV(context.outputRTV, context.ScreenSizeDSVs[0], Vector4.Zero);
             graphicsContext.SetCBVR(cameraPresentDatas[cameraIndex].DataBuffer, 2);
-            graphicsContext.SetSRVT(context.DSV0, 6);
+            graphicsContext.SetSRVT(context.ShadowMap0, 6);
             graphicsContext.SetSRVT(context.EnvCubeMap, 7);
             graphicsContext.SetSRVT(context.IrradianceMap, 8);
             graphicsContext.SetSRVT(context.BRDFLut, 9);
+            graphicsContext.SetSRVT(context.ShadowMap1, 10);
             #region Render Sky box
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectSkyBox, CullMode.back);
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.DrawIndexed(context.ndcQuadMeshIndexCount, 0, 0);
             #endregion
 
+            graphicsContext.SetSRVT(context.EnvironmentMap, 7);
             graphicsContext.SetMesh(context.SkinningMeshBuffer);
+
+            void ZPass(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
+            {
+                var Materials = rendererComponent.Materials;
+                graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+                graphicsContext.SetCBVR(entityDataBuffer, 1);
+                graphicsContext.SetCBVR(cameraPresentData, 2);
+                List<Texture2D> texs = rendererComponent.textures;
+                graphicsContext.SetMeshIndex(rendererComponent.mesh);
+                graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDDepth);
+                //graphicsContext.SetMeshSkinned(rendererComponent.mesh);
+                int countIndexLocal = 0;
+                for (int i = 0; i < Materials.Count; i++)
+                {
+                    Texture2D tex1 = null;
+                    if (Materials[i].texIndex != -1)
+                        tex1 = texs[Materials[i].texIndex];
+                    graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
+                    graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
+                    graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
+                    counter.material++;
+                    countIndexLocal += Materials[i].indexCount;
+                }
+                counter.vertex += rendererComponent.meshVertexCount;
+            }
             _Counters counter1 = new _Counters();
             if (context.dynamicContext.settings.ZPrepass)
                 for (int i = 0; i < Entities.Count; i++)
-                    ZPass(context, Entities[i].rendererComponent, cameraPresentDatas[cameraIndex].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counter1);
+                    ZPass(Entities[i].rendererComponent, cameraPresentDatas[cameraIndex].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counter1);
+
+            void _RenderEntity(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
+            {
+                var PODraw = PObjectStatusSelect(rendererComponent.PODraw, context.RPAssetsManager.PObjectMMDLoading, currentDrawPObject, context.RPAssetsManager.PObjectMMDError);
+                var Materials = rendererComponent.Materials;
+                List<Texture2D> texs = rendererComponent.textures;
+                graphicsContext.SetMeshIndex(rendererComponent.mesh);
+                //graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
+                //graphicsContext.SetCBVR(entityDataBuffer, 1);
+                //graphicsContext.SetCBVR(cameraPresentData, 2);
+                CooGExtension.SetCBVBuffer3(graphicsContext, entityBoneDataBuffer, entityDataBuffer, cameraPresentData, 0);
+                int countIndexLocal = 0;
+                for (int i = 0; i < Materials.Count; i++)
+                {
+                    if (Materials[i].innerStruct.DiffuseColor.W <= 0)
+                    {
+                        counter.material++;
+                        countIndexLocal += Materials[i].indexCount;
+                        continue;
+                    }
+                    Texture2D tex1 = null;
+                    if (Materials[i].texIndex != -1 && Materials[i].texIndex < Materials.Count)
+                        tex1 = texs[Materials[i].texIndex];
+                    Texture2D tex2 = null;
+                    if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
+                        tex2 = texs[Materials[i].toonIndex];
+                    graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
+                    //graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
+                    //graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
+                    CooGExtension.SetSRVTexture2(graphicsContext, tex1, tex2, 4, textureLoading, textureError);
+                    CullMode cullMode = CullMode.back;
+                    if (Materials[i].DrawFlags.HasFlag(DrawFlag.DrawDoubleFace))
+                        cullMode = CullMode.none;
+                    graphicsContext.SetPObject(PODraw, cullMode);
+                    graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
+                    counter.material++;
+                    countIndexLocal += Materials[i].indexCount;
+                }
+                counter.vertex += rendererComponent.meshVertexCount;
+            }
             _Counters counter2 = new _Counters();
             for (int i = 0; i < Entities.Count; i++)
-                RenderEntity(context, Entities[i].rendererComponent, cameraPresentDatas[cameraIndex].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counter2);
+                _RenderEntity(Entities[i].rendererComponent, cameraPresentDatas[cameraIndex].DataBuffer, context.CBs_Bone[i], entityDataBuffers[i], ref counter2);
         }
 
         private void DesireEntityBuffers(DeviceResources deviceResources, int count)
@@ -238,143 +387,6 @@ namespace Coocoo3D.RenderPipeline
                 constantBuffer.Reload(deviceResources, MMDMatLit.c_materialDataSize);
                 materialBuffers.Add(constantBuffer);
             }
-        }
-
-        private void EntitySkinning(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer)
-        {
-            var graphicsContext = context.graphicsContext;
-            var Materials = rendererComponent.Materials;
-            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData, 2);
-            var POSkinning = rendererComponent.POSkinning;
-            if (POSkinning != null && POSkinning.Status == GraphicsObjectStatus.loaded)
-                graphicsContext.SetPObjectStreamOut(POSkinning);
-            else
-                graphicsContext.SetPObjectStreamOut(currentSkinningPObject);
-            graphicsContext.SetMeshVertex(rendererComponent.mesh);
-            int indexCountAll = rendererComponent.meshVertexCount;
-            graphicsContext.Draw(indexCountAll, 0);
-        }
-        private void RenderEntityShadow(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
-        {
-            Texture2D textureLoading = context.TextureLoading;
-            Texture2D textureError = context.TextureError;
-            var Materials = rendererComponent.Materials;
-            var graphicsContext = context.graphicsContext;
-            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData, 2);
-
-            graphicsContext.SetMeshIndex(rendererComponent.mesh);
-            List<Texture2D> texs = rendererComponent.textures;
-            graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDShadowDepth);
-
-            int countIndexLocal = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                if (Materials[i].DrawFlags.HasFlag(DrawFlag.CastSelfShadow))
-                {
-                    Texture2D tex1 = null;
-                    if (Materials[i].texIndex != -1)
-                        tex1 = texs[Materials[i].texIndex];
-                    graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
-                    graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-                    graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-                }
-                counter.material++;
-                countIndexLocal += Materials[i].indexCount;
-            }
-            counter.vertex += rendererComponent.meshVertexCount;
-        }
-
-        private void RenderEntity(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
-        {
-            Texture2D textureLoading = context.TextureLoading;
-            Texture2D textureError = context.TextureError;
-            var graphicsContext = context.graphicsContext;
-
-            var PODraw = PObjectStatusSelect(rendererComponent.PODraw, context.RPAssetsManager.PObjectMMDLoading, currentDrawPObject, context.RPAssetsManager.PObjectMMDError);
-            var Materials = rendererComponent.Materials;
-            List<Texture2D> texs = rendererComponent.textures;
-            graphicsContext.SetMeshIndex(rendererComponent.mesh);
-            //graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            //graphicsContext.SetCBVR(entityDataBuffer, 1);
-            //graphicsContext.SetCBVR(cameraPresentData, 2);
-            CooGExtension.SetCBVBuffer3(graphicsContext, entityBoneDataBuffer, entityDataBuffer, cameraPresentData, 0);
-            int countIndexLocal = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                if (Materials[i].innerStruct.DiffuseColor.W <= 0)
-                {
-                    counter.material++;
-                    countIndexLocal += Materials[i].indexCount;
-                    continue;
-                }
-                Texture2D tex1 = null;
-                if (Materials[i].texIndex != -1 && Materials[i].texIndex < Materials.Count)
-                    tex1 = texs[Materials[i].texIndex];
-                Texture2D tex2 = null;
-                if (Materials[i].toonIndex > -1 && Materials[i].toonIndex < Materials.Count)
-                    tex2 = texs[Materials[i].toonIndex];
-                graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
-                //graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-                //graphicsContext.SetSRVT(TextureStatusSelect(tex2, textureLoading, textureError, textureError), 5);
-                CooGExtension.SetSRVTexture2(graphicsContext, tex1, tex2, 4, textureLoading, textureError);
-                CullMode cullMode = CullMode.back;
-                if (Materials[i].DrawFlags.HasFlag(DrawFlag.DrawDoubleFace))
-                    cullMode = CullMode.none;
-                graphicsContext.SetPObject(PODraw, cullMode);
-                graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-                counter.material++;
-                countIndexLocal += Materials[i].indexCount;
-            }
-            counter.vertex += rendererComponent.meshVertexCount;
-        }
-
-        private void ZPass(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
-        {
-            Texture2D textureLoading = context.TextureLoading;
-            Texture2D textureError = context.TextureError;
-            var Materials = rendererComponent.Materials;
-            var graphicsContext = context.graphicsContext;
-            graphicsContext.SetCBVR(entityBoneDataBuffer, 0);
-            graphicsContext.SetCBVR(entityDataBuffer, 1);
-            graphicsContext.SetCBVR(cameraPresentData, 2);
-            List<Texture2D> texs = rendererComponent.textures;
-            graphicsContext.SetMeshIndex(rendererComponent.mesh);
-            graphicsContext.SetPObjectDepthOnly(context.RPAssetsManager.PObjectMMDDepth);
-            //graphicsContext.SetMeshSkinned(rendererComponent.mesh);
-            int countIndexLocal = 0;
-            for (int i = 0; i < Materials.Count; i++)
-            {
-                Texture2D tex1 = null;
-                if (Materials[i].texIndex != -1)
-                    tex1 = texs[Materials[i].texIndex];
-                graphicsContext.SetCBVR(materialBuffers[counter.material], 3);
-                graphicsContext.SetSRVT(TextureStatusSelect(tex1, textureLoading, textureError, textureError), 4);
-                graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
-                counter.material++;
-                countIndexLocal += Materials[i].indexCount;
-            }
-            counter.vertex += rendererComponent.meshVertexCount;
-        }
-        private void ParticleCompute(RenderPipelineContext context, MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ConstantBuffer entityDataBuffer, ref _Counters counter)
-        {
-            if (rendererComponent.ParticleCompute == null || rendererComponent.ParticleCompute.Status != GraphicsObjectStatus.loaded)
-            {
-                counter.vertex += rendererComponent.meshVertexCount;
-                return;
-            }
-            var graphicsContext = context.graphicsContext;
-            graphicsContext.SetComputeCBVR(entityBoneDataBuffer, 0);
-            //graphicsContext.SetComputeCBVR(entityDataBuffer, 1);
-            graphicsContext.SetComputeCBVR(cameraPresentData, 2);
-            graphicsContext.SetComputeUAVR(context.SkinningMeshBuffer, counter.vertex, 4);
-            graphicsContext.SetComputeUAVR(rendererComponent.meshParticleBuffer, 0, 5);
-            graphicsContext.SetPObject(rendererComponent.ParticleCompute);
-            graphicsContext.Dispatch((rendererComponent.meshVertexCount + 63) / 64, 1, 1);
-            counter.vertex += rendererComponent.meshVertexCount;
         }
     }
 }

@@ -101,7 +101,11 @@
             </Grid>
         </ControlTemplate>
     </Page.Resources>
-    <ScrollViewer Padding="0,0,20,30">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
         <StackPanel Grid.Row="0">
             <TextBox Height="100" x:Name="pageHeader" FontSize="18" Text="{x:Bind vName,Mode=TwoWay}" PlaceholderText="名称" TextWrapping="Wrap" AcceptsReturn="True"/>
             <Grid>
@@ -121,30 +125,35 @@
                 <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
                 <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
             </Grid>
-            <Pivot>
-                <PivotItem x:Uid="Page_Entity_PivotItem_Description">
-                    <ScrollViewer Height="300" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
+        </StackPanel>
+        <Pivot Grid.Row="1">
+            <PivotItem x:Uid="Page_Entity_PivotItem_Description">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ScrollViewer Height="300" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto" IsHorizontalRailEnabled="True">
                         <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
                     </ScrollViewer>
+                    <ScrollViewer Height="100" Grid.Row="1">
+                        <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
+                    </ScrollViewer>
+                </Grid>
+            </PivotItem>
+            <PivotItem x:Uid="Page_Entity_PivotItem_Materials">
+                <ListView x:Name="ViewMaterials" SelectionMode="Single" ItemTemplate="{StaticResource itemMaterial}">
 
-                </PivotItem>
-                <PivotItem x:Uid="Page_Entity_PivotItem_Materials">
-                    <ListView Height="300" x:Name="ViewMaterials" SelectionMode="Single" ItemTemplate="{StaticResource itemMaterial}">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Margin" Value="0"/>
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
 
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Margin" Value="0"/>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                    </ListView>
-
-                </PivotItem>
-            </Pivot>
-            <ScrollViewer Height="150">
-                <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
-            </ScrollViewer>
-        </StackPanel>
-    </ScrollViewer>
+            </PivotItem>
+        </Pivot>
+    </Grid>
 </Page>

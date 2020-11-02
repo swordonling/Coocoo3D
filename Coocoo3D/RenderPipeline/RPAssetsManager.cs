@@ -14,7 +14,7 @@ namespace Coocoo3D.RenderPipeline
     public class RPAssetsManager
     {
         public GraphicsSignature rootSignature = new GraphicsSignature();
-        public GraphicsSignature rootSignatureLit = new GraphicsSignature();
+        public GraphicsSignature rootSignatureSkinning = new GraphicsSignature();
         public GraphicsSignature rootSignaturePostProcess = new GraphicsSignature();
         public GraphicsSignature rootSignatureCompute = new GraphicsSignature();
         public VertexShader VSMMDSkinning2 = new VertexShader();
@@ -45,7 +45,7 @@ namespace Coocoo3D.RenderPipeline
         public void Reload(DeviceResources deviceResources)
         {
             rootSignature.ReloadMMD(deviceResources);
-            rootSignatureLit.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.SRVTable });
+            rootSignatureSkinning.ReloadSkinning(deviceResources);
             rootSignaturePostProcess.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.SRVTable, GSD.SRVTable });
             rootSignatureCompute.ReloadCompute(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.CBV, GSD.SRV, GSD.UAV, GSD.UAV });
         }
@@ -71,25 +71,25 @@ namespace Coocoo3D.RenderPipeline
         {
             RTFormat = format;
             PObjectMMDSkinning.ReloadSkinning(VSMMDSkinning2, null);
-            uploadProcess.RS(PObjectMMDSkinning, 0);
+            uploadProcess.UL(PObjectMMDSkinning, 1);
 
             PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format);
             PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format);
             PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format);
             PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format);
             PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format);
-            uploadProcess.RS(PObjectMMD, 0);
-            uploadProcess.RS(PObjectMMD_DisneyBrdf, 0);
-            uploadProcess.RS(PObjectMMD_Toon1, 0);
-            uploadProcess.RS(PObjectMMDLoading, 0);
-            uploadProcess.RS(PObjectMMDError, 0);
+            uploadProcess.UL(PObjectMMD, 0);
+            uploadProcess.UL(PObjectMMD_DisneyBrdf, 0);
+            uploadProcess.UL(PObjectMMD_Toon1, 0);
+            uploadProcess.UL(PObjectMMDLoading, 0);
+            uploadProcess.UL(PObjectMMDError, 0);
 
             PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
 
             PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
             PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0);
-            uploadProcess.RS(PObjectMMDShadowDepth, 0);
-            uploadProcess.RS(PObjectMMDDepth, 0);
+            uploadProcess.UL(PObjectMMDShadowDepth, 0);
+            uploadProcess.UL(PObjectMMDDepth, 0);
 
             PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, backBufferFormat);
             Ready = true;
@@ -125,7 +125,7 @@ namespace Coocoo3D.RenderPipeline
             }
             foreach (var a in uploadProcess.pobjectLists[1])
             {
-                a.Upload(deviceResources, rootSignatureLit);
+                a.Upload(deviceResources, rootSignatureSkinning);
             }
             foreach (var a in uploadProcess.computePObjectLists[0])
             {
