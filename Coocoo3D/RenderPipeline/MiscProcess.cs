@@ -40,8 +40,6 @@ namespace Coocoo3D.RenderPipeline
         {
             miscProcessPairs.Clear();
         }
-
-        public GraphicsContext graphicsContext;
     }
     public class MiscProcess
     {
@@ -85,12 +83,12 @@ namespace Coocoo3D.RenderPipeline
             Ready = true;
         }
 
-        public void Process(MiscProcessContext context)
+        public void Process(GraphicsContext graphicsContext, MiscProcessContext context)
         {
             if (!Ready) return;
             if (context.miscProcessPairs.Count == 0) return;
-            context.graphicsContext.BeginCommand();
-            context.graphicsContext.SetDescriptorHeapDefault();
+            graphicsContext.BeginCommand();
+            graphicsContext.SetDescriptorHeapDefault();
             for (int i = 0; i < context.miscProcessPairs.Count; i++)
             {
                 var texture0 = context.miscProcessPairs[i].source;
@@ -109,59 +107,59 @@ namespace Coocoo3D.RenderPipeline
                     _XyzData.Batch = j;
 
                     Marshal.StructureToPtr(_XyzData, ptr1, true);
-                    context.graphicsContext.UpdateResource(constantBuffers[j], cpuBuffer1, c_bufferSize, 0);
+                    graphicsContext.UpdateResource(constantBuffers[j], cpuBuffer1, c_bufferSize, 0);
                 }
 
-                context.graphicsContext.SetRootSignatureCompute(rootSignature);
-                context.graphicsContext.SetComputeCBVR(constantBuffers[0], 0);
-                context.graphicsContext.SetComputeSRVT(texture0, 2);
-                context.graphicsContext.SetPObject(ClearIrradianceMap);
+                graphicsContext.SetRootSignatureCompute(rootSignature);
+                graphicsContext.SetComputeCBVR(constantBuffers[0], 0);
+                graphicsContext.SetComputeSRVT(texture0, 2);
+                graphicsContext.SetPObject(ClearIrradianceMap);
 
                 int pow2a = 1;
                 for (int j = 0; j < texture1.m_mipLevels; j++)
                 {
-                    context.graphicsContext.SetComputeUAVT(texture1, j, 3);
-                    context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
+                    graphicsContext.SetComputeUAVT(texture1, j, 3);
+                    graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
                     pow2a *= 2;
                 }
                 pow2a = 1;
                 for (int j = 0; j < texture2.m_mipLevels; j++)
                 {
-                    context.graphicsContext.SetComputeUAVT(texture2, j, 3);
-                    context.graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
+                    graphicsContext.SetComputeUAVT(texture2, j, 3);
+                    graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
                     pow2a *= 2;
                 }
-                context.graphicsContext.SetPObject(IrradianceMap0);
+                graphicsContext.SetPObject(IrradianceMap0);
 
                 pow2a = 1;
                 for (int j = 0; j < texture1.m_mipLevels; j++)
                 {
                     for (int k = 0; k < itCount; k++)
                     {
-                        context.graphicsContext.SetComputeUAVT(texture1, j, 3);
-                        context.graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
-                        context.graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
+                        graphicsContext.SetComputeUAVT(texture1, j, 3);
+                        graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
+                        graphicsContext.Dispatch((int)(texture1.m_width + 7) / 8 / pow2a, (int)(texture1.m_height + 7) / 8 / pow2a, 6);
                     }
                     pow2a *= 2;
                 }
 
-                context.graphicsContext.SetComputeSRVT(texture0, 2);
-                context.graphicsContext.SetPObject(EnvironmentMap0);
+                graphicsContext.SetComputeSRVT(texture0, 2);
+                graphicsContext.SetPObject(EnvironmentMap0);
                 pow2a = 1;
                 for (int j = 0; j < texture2.m_mipLevels; j++)
                 {
                     for (int k = 0; k < itCount; k++)
                     {
-                        context.graphicsContext.SetComputeUAVT(texture2, j, 3);
-                        context.graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
-                        context.graphicsContext.SetComputeCBVR(constantBuffers[j], 1);
-                        context.graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
+                        graphicsContext.SetComputeUAVT(texture2, j, 3);
+                        graphicsContext.SetComputeCBVR(constantBuffers[k], 0);
+                        graphicsContext.SetComputeCBVR(constantBuffers[j], 1);
+                        graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
                     }
                     pow2a *= 2;
                 }
             }
-            context.graphicsContext.EndCommand();
-            context.graphicsContext.Execute();
+            graphicsContext.EndCommand();
+            graphicsContext.Execute();
             context.Clear();
         }
 

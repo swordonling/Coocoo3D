@@ -176,11 +176,20 @@
   <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
     <value>刷新模型缓存</value>
   </data>
+  <data name="Page_Common_Button_RefreshModelCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>重新加载模型</value>
+  </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>刷新着色器缓存</value>
   </data>
+  <data name="Page_Common_Button_RefreshShaderCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>重新加载着色器</value>
+  </data>
   <data name="Page_Common_Button_RefreshTextureCaches.Content" xml:space="preserve">
     <value>刷新纹理缓存</value>
+  </data>
+  <data name="Page_Common_Button_RefreshTextureCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>重新加载纹理</value>
   </data>
   <data name="Page_Common_Button_ResetPhysics.Content" xml:space="preserve">
     <value>重置物理</value>
@@ -203,6 +212,12 @@
   <data name="Page_Common_ComboBox_RenderQuality.Header" xml:space="preserve">
     <value>渲染质量</value>
   </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_Forward.Content" xml:space="preserve">
+    <value>前向</value>
+  </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_RayTracing.Content" xml:space="preserve">
+    <value>光线追踪</value>
+  </data>
   <data name="Page_Common_Switch_AO.Header" xml:space="preserve">
     <value>环境光遮蔽（仅光线追踪）</value>
   </data>
@@ -220,6 +235,9 @@
   </data>
   <data name="Page_Common_Switch_Shadow.Header" xml:space="preserve">
     <value>阴影</value>
+  </data>
+  <data name="Page_Common_Switch_ViewerUI.Header" xml:space="preserve">
+    <value>视图UI</value>
   </data>
   <data name="Page_Common_Switch_ZPrePass.Header" xml:space="preserve">
     <value>Z-Prepass（仅Forward）</value>

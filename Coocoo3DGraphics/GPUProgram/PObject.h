@@ -22,7 +22,7 @@ namespace Coocoo3DGraphics
 	{
 		mmd = 0,
 		postProcess = 1,
-		ui3d = 2,
+		skinned = 2,
 	};
 	public ref class PObject sealed
 	{

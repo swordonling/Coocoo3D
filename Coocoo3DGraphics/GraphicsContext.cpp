@@ -149,9 +149,9 @@ inline void UpdateCBStaticResource(ConstantBufferStatic^ buffer, ID3D12GraphicsC
 	bufferData.pData = (byte*)data + dataOffset;
 	bufferData.RowPitch = sizeInByte;
 	bufferData.SlicePitch = sizeInByte;
-	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffers[lastUpdateIndex].Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
-	UpdateSubresources(commmandList, buffer->m_constantBuffers[lastUpdateIndex].Get(), buffer->m_constantBufferUpload.Get(), 0, 0, 1, &bufferData);
-	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffers[lastUpdateIndex].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
+	UpdateSubresources(commmandList, buffer->m_constantBuffer.Get(), buffer->m_constantBufferUploads[lastUpdateIndex].Get(), 0, 0, 1, &bufferData);
+	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
@@ -494,6 +494,11 @@ void GraphicsContext::Draw(int vertexCount, int startVertexLocation)
 void GraphicsContext::DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation)
 {
 	m_commandList->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
+}
+
+void GraphicsContext::DrawIndexedInstanced(int indexCount, int startIndexLocation, int baseVertexLocation, int instanceCount, int startInstanceLocation)
+{
+	m_commandList->DrawIndexedInstanced(indexCount, instanceCount, startIndexLocation, baseVertexLocation, startInstanceLocation);
 }
 
 void GraphicsContext::Dispatch(int x, int y, int z)

@@ -43,6 +43,7 @@
                             <Flyout Placement="RightEdgeAlignedTop">
                                 <StackPanel>
                                     <!--<ToggleSwitch Header="显示选中物体骨骼" IsOn="{x:Bind VViewBone,Mode=TwoWay}"/>-->
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_ViewerUI" Header="Viewer UI" IsOn="{x:Bind VViewerUI,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_SaveCPUPower" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_MultiThreadRendering" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_HighResolutionShadow" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
@@ -66,8 +67,8 @@
                     <TextBlock x:Name="ViewFrameRate" Grid.Column="1"/>
                 </Grid>
                 <ComboBox x:Uid="Page_Common_ComboBox_RenderPipeline" SelectedIndex="0" SelectionChanged="VRenderPipeline_SelectionChanged">
-                    <ComboBoxItem Content="forward"/>
-                    <ComboBoxItem Content="光线追踪1"/>
+                    <ComboBoxItem x:Uid="Page_Common_RenderPipeline_ComboBoxItem_Forward" Content="forward"/>
+                    <ComboBoxItem x:Uid="Page_Common_RenderPipeline_ComboBoxItem_RayTracing" Content="ray tracing"/>
                 </ComboBox>
                 <!--<ComboBox Header="风格(仅forward渲染支持)" SelectedIndex="0" SelectionChanged="VRenderStyle_SelectionChanged">
                     <ComboBoxItem Content="写实"/>
@@ -83,9 +84,9 @@
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel>
-                                <Button x:Uid="Page_Common_Button_RefreshShaderCaches" Click="ReloadShaders_Click" ToolTipService.ToolTip="重新加载着色器"/>
-                                <Button x:Uid="Page_Common_Button_RefreshTextureCaches" Click="ReloadTextures_Click" ToolTipService.ToolTip="重新加载纹理"/>
-                                <Button x:Uid="Page_Common_Button_RefreshModelCaches" Click="ReloadModels_Click" ToolTipService.ToolTip="重新加载模型"/>
+                                <Button x:Uid="Page_Common_Button_RefreshShaderCaches" Click="ReloadShaders_Click"/>
+                                <Button x:Uid="Page_Common_Button_RefreshTextureCaches" Click="ReloadTextures_Click"/>
+                                <Button x:Uid="Page_Common_Button_RefreshModelCaches" Click="ReloadModels_Click"/>
                                 <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadShader" IsChecked="{x:Bind VAutoReloadShader,Mode=TwoWay}" Checked="ReloadShaders_Click"/>
                                 <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadTexture" IsChecked="{x:Bind VAutoReloadTexture,Mode=TwoWay}" Checked="ReloadTextures_Click"/>
                                 <CheckBox  x:Uid="Page_Common_ChechBox_AutoReloadModel" IsChecked="{x:Bind VAutoReloadModel,Mode=TwoWay}" Checked="ReloadModels_Click"/>

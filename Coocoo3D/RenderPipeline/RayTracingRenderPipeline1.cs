@@ -309,7 +309,7 @@ namespace Coocoo3D.RenderPipeline
 
                 graphicsContext.SetComputeUAVR(context.LightCacheBuffer, (context.dynamicContext.frameRenderIndex + 1) % 2, 8);
                 graphicsContext.SetComputeSRVR(context.LightCacheBuffer, context.dynamicContext.frameRenderIndex % 2, 9);
-                graphicsContext.DoRayTracing(RayTracingScene, context.width, context.height, 0);
+                graphicsContext.DoRayTracing(RayTracingScene, context.screenWidth, context.screenHeight, 0);
 
                 //graphicsContext.SetComputeUAVT(context.outputRTV, 0);
             }

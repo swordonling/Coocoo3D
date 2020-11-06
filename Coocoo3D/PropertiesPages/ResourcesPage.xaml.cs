@@ -76,7 +76,6 @@ namespace Coocoo3D.PropertiesPages
                 var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                 if (file.FileType.Equals(".pmx", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    await appBody.WaitForResourcesLoadedAsync();
                     try
                     {
                         await UI.UISharedCode.LoadEntityIntoScene(appBody, appBody.CurrentScene, file, viewFolderStack.Last());

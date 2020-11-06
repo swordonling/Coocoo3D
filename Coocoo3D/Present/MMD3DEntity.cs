@@ -17,9 +17,9 @@ namespace Coocoo3D.Present
     public class MMD3DEntity : ISceneObject, INotifyPropertyChanged
     {
         public Vector3 Position;
-        public Quaternion Rotation;
+        public Quaternion Rotation = Quaternion.Identity;
         public Vector3 PositionNextFrame;
-        public Quaternion RotationNextFrame;
+        public Quaternion RotationNextFrame = Quaternion.Identity;
         public bool NeedTransform;
 
         public string Name;
@@ -70,7 +70,7 @@ namespace Coocoo3D.FileFormat
 {
     public static partial class PMXFormatExtension
     {
-        public static void Reload2(this MMD3DEntity entity, ProcessingList processingList, ModelPack modelPack, List<Texture2D> textures,string ModelPath)
+        public static void Reload2(this MMD3DEntity entity, ProcessingList processingList, ModelPack modelPack, List<Texture2D> textures, string ModelPath)
         {
             var modelResource = modelPack.pmx;
             entity.Name = string.Format("{0} {1}", modelResource.Name, modelResource.NameEN);

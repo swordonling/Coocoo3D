@@ -308,6 +308,12 @@
     <FxCompile Include="Shaders\ImageProcess\G_PreFilterEnv.hlsl">
       <Filter>Shaders\ImageProcess</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PSWidgetUI1.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VSWidgetUI1.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\CameraDataDefine.hlsli">

@@ -61,7 +61,7 @@ namespace Coocoo3D.Core
     {
         public abstract bool Next(GameDriverContext context);
 
-        public virtual void AfterRender(GraphicsContext graphicsContext, GameDriverContext context)
+        public virtual void AfterRender(RenderPipelineContext  rpContext, GameDriverContext context)
         {
 
         }

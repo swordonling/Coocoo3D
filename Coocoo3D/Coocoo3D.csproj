@@ -149,7 +149,6 @@
     <Compile Include="Present\Lighting.cs" />
     <Compile Include="Present\MMD3DEntity.cs" />
     <Compile Include="RenderPipeline\PresentData.cs" />
-    <Compile Include="Present\WidgetRenderer.cs" />
     <Compile Include="PropertiesPages\CommonPage.xaml.cs">
       <DependentUpon>CommonPage.xaml</DependentUpon>
     </Compile>
@@ -192,6 +191,7 @@
     <Compile Include="RenderPipeline\RenderPipeline.cs" />
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="RenderPipeline\RPAssetsManager.cs" />
+    <Compile Include="RenderPipeline\WidgetRenderer.cs" />
     <Compile Include="ResourceWarp\ModelPack.cs" />
     <Compile Include="ResourceWarp\ShaderPack.cs" />
     <Compile Include="ResourceWarp\Texture2DPack.cs" />
@@ -215,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\Textures\brdflut.png" />
+    <Content Include="Assets\Textures\UI_1.png" />
     <Content Include="Assets\Textures\UI_0.png" />
     <Content Include="PhysXCommon_64.dll" />
     <Content Include="PhysXCooking_64.dll" />

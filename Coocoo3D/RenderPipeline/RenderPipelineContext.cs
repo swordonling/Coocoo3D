@@ -75,14 +75,17 @@ namespace Coocoo3D.RenderPipeline
         public int SkinningMeshBufferSize;
         public int frameRenderIndex;
 
-        public RPAssetsManager RPAssetsManager;
-        public DeviceResources deviceResources;
-        public GraphicsContext graphicsContext;
+        public RPAssetsManager RPAssetsManager = new RPAssetsManager();
+        public DeviceResources deviceResources = new DeviceResources();
+        public GraphicsContext graphicsContext = new GraphicsContext();
+        public GraphicsContext graphicsContext1 = new GraphicsContext();
         public GraphicsContext[] graphicsContexts;
 
-        //public Texture2D ui0Texture = new Texture2D();
+        public Texture2D UI1Texture = new Texture2D();
         public Texture2D BRDFLut = new Texture2D();
         public Texture2D postProcessBackground = new Texture2D();
+
+        public ReadBackTexture2D ReadBackTexture2D = new ReadBackTexture2D();
 
         public RenderPipelineDynamicContext dynamicContext = new RenderPipelineDynamicContext();
         public RenderPipelineDynamicContext dynamicContext1 = new RenderPipelineDynamicContext();
@@ -92,8 +95,10 @@ namespace Coocoo3D.RenderPipeline
         public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
         public DxgiFormat backBufferFormat = DxgiFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
 
-        public int width;
-        public int height;
+        public int screenWidth;
+        public int screenHeight;
+        public float dpi = 96.0f;
+        public float logicScale = 1;
 
         public RenderPipelineContext()
         {
@@ -110,6 +115,11 @@ namespace Coocoo3D.RenderPipeline
         ~RenderPipelineContext()
         {
             _bigBufferHandle.Free();
+        }
+        public void Reload()
+        {
+            graphicsContext.Reload(deviceResources);
+            graphicsContext1.Reload(deviceResources);
         }
 
         struct _Data1
@@ -167,8 +177,12 @@ namespace Coocoo3D.RenderPipeline
                 ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y);
                 processingList.UnsafeAdd(ScreenSizeDSVs[i]);
             }
-            width = x;
-            height = y;
+            ReadBackTexture2D.Reload(x, y, 4);
+            processingList.UnsafeAdd(ReadBackTexture2D);
+            screenWidth = x;
+            screenHeight = y;
+            dpi = deviceResources.GetDpi();
+            logicScale = dpi / 96.0f;
         }
 
         const int c_shadowMapResolutionLow = 2048;
@@ -221,9 +235,8 @@ namespace Coocoo3D.RenderPipeline
             processingList.AddObject(postProcessBackground);
 
             await ReloadTexture2DNoMip(BRDFLut, wic, processingList, "ms-appx:///Assets/Textures/brdflut.png");
-            //await ReloadTexture2D(ui0Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_0.png");
+            await ReloadTexture2DNoMip(UI1Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_1.png");
 
-            //uiPObject.Reload(deviceResources, PObjectType.ui3d, VSUIStandard, uiGeometryShader, uiPixelShader);
             Initilized = true;
         }
         private async Task ReloadTexture2D(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)

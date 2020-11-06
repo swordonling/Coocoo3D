@@ -21,6 +21,7 @@ namespace Coocoo3D.RenderPipeline
         public VertexShader VSMMDTransform = new VertexShader();
         public VertexShader VSSkyBox = new VertexShader();
         public VertexShader VSPostProcess = new VertexShader();
+        public VertexShader VSWidgetUI1 = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
         public PixelShader PSMMD_DisneyBrdf = new PixelShader();
         public PixelShader PSMMD_Toon1 = new PixelShader();
@@ -30,6 +31,7 @@ namespace Coocoo3D.RenderPipeline
         public PixelShader PSMMDAlphaClip1 = new PixelShader();
         public PixelShader PSSkyBox = new PixelShader();
         public PixelShader PSPostProcess = new PixelShader();
+        public PixelShader PSWidgetUI1 = new PixelShader();
         public PObject PObjectMMDSkinning = new PObject();
         public PObject PObjectMMD = new PObject();
         public PObject PObjectMMD_DisneyBrdf = new PObject();
@@ -40,6 +42,7 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectMMDError = new PObject();
         public PObject PObjectSkyBox = new PObject();
         public PObject PObjectPostProcess = new PObject();
+        public PObject PObjectWidgetUI1 = new PObject();
         public DxgiFormat RTFormat;
         public bool Ready;
         public void Reload(DeviceResources deviceResources)
@@ -66,6 +69,9 @@ namespace Coocoo3D.RenderPipeline
 
             await ReloadVertexShader(VSPostProcess, "ms-appx:///Coocoo3DGraphics/VSPostProcess.cso");
             await ReloadPixelShader(PSPostProcess, "ms-appx:///Coocoo3DGraphics/PSPostProcess.cso");
+
+            await ReloadVertexShader(VSWidgetUI1, "ms-appx:///Coocoo3DGraphics/VSWidgetUI1.cso");
+            await ReloadPixelShader(PSWidgetUI1, "ms-appx:///Coocoo3DGraphics/PSWidgetUI1.cso");
         }
         public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat backBufferFormat)
         {
@@ -84,14 +90,15 @@ namespace Coocoo3D.RenderPipeline
             uploadProcess.UL(PObjectMMDLoading, 0);
             uploadProcess.UL(PObjectMMDError, 0);
 
-            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
-
             PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
             PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0);
             uploadProcess.UL(PObjectMMDShadowDepth, 0);
             uploadProcess.UL(PObjectMMDDepth, 0);
 
+
+            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
             PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, backBufferFormat);
+            PObjectWidgetUI1.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI1, null, PSWidgetUI1, backBufferFormat);
             Ready = true;
         }
         protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)
@@ -126,6 +133,10 @@ namespace Coocoo3D.RenderPipeline
             foreach (var a in uploadProcess.pobjectLists[1])
             {
                 a.Upload(deviceResources, rootSignatureSkinning);
+            }
+            foreach (var a in uploadProcess.pobjectLists[2])
+            {
+                a.Upload(deviceResources, rootSignaturePostProcess);
             }
             foreach (var a in uploadProcess.computePObjectLists[0])
             {

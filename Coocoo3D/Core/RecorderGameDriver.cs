@@ -1,4 +1,5 @@
-﻿using Coocoo3DGraphics;
+﻿using Coocoo3D.RenderPipeline;
+using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,16 +19,15 @@ namespace Coocoo3D.Core
             DateTime now = DateTime.Now;
             LatestRenderTime = now;
 
+            ref RecordSettings recordSettings = ref context.recordSettings;
             if (switchEffect)
             {
                 switchEffect = false;
                 context.Playing = true;
                 context.PlaySpeed = 2.0f;
                 context.PlayTime = 0.0f;
-                ref RecordSettings recordSettings = ref context.recordSettings;
                 float logicSizeScale = context.DeviceResources.GetDpi() / 96.0f;
                 context.NewSize = new Windows.Foundation.Size(recordSettings.Width / logicSizeScale, recordSettings.Height / logicSizeScale);
-                context.AspectRatio = (float)recordSettings.Width / (float)recordSettings.Height;
                 context.RequireResize = true;
                 context.RequireInterruptRender = true;
                 context.RequireResetPhysics = true;
@@ -36,13 +36,11 @@ namespace Coocoo3D.Core
                 RenderCount = 0;
                 RecordCount = 0;
                 FrameIntervalF = 1 / MathF.Max(context.recordSettings.FPS, 1e-3f);
-
-                ReadBackTexture2D.Reload(recordSettings.Width, recordSettings.Height, 4);
-                context.ProcessingList.AddObject(ReadBackTexture2D);
             }
             else
             {
             }
+            context.AspectRatio = (float)recordSettings.Width / (float)recordSettings.Height;
 
             context.DeltaTime = FrameIntervalF;
             context.PlayTime = FrameIntervalF * RenderCount;
@@ -74,17 +72,17 @@ namespace Coocoo3D.Core
             }
         }
         Pack1[] packs = new Pack1[c_frameCount];
-        public override void AfterRender(GraphicsContext graphicsContext, GameDriverContext context)
+        public override void AfterRender(RenderPipelineContext rpContext, GameDriverContext context)
         {
             if (context.PlayTime >= StartTime && (RenderCount - c_frameCount) * FrameIntervalF <= StopTime)
             {
                 int index1 = RecordCount % c_frameCount;
-                graphicsContext.CopyBackBuffer(ReadBackTexture2D, index1);
+                rpContext.graphicsContext.CopyBackBuffer(rpContext.ReadBackTexture2D, index1);
                 if (RecordCount >= c_frameCount)
                 {
-                    ReadBackTexture2D.GetDataTolocal(index1);
+                    rpContext.ReadBackTexture2D.GetDataTolocal(index1);
                     if (packs[index1] == null)
-                        packs[index1] = new Pack1() { ReadBackTexture2D = ReadBackTexture2D, swapIndex = index1, WICFactory = context.WICFactory, saveFolder = saveFolder };
+                        packs[index1] = new Pack1() { ReadBackTexture2D = rpContext.ReadBackTexture2D, swapIndex = index1, WICFactory = context.WICFactory, saveFolder = saveFolder };
                     else if (!packs[index1].runningTask.IsCompleted)
                     {
                         packs[index1].runningTask.Wait();
@@ -113,7 +111,6 @@ namespace Coocoo3D.Core
         public int RecordCount = 0;
         public int RenderCount = 0;
         bool switchEffect;
-        public ReadBackTexture2D ReadBackTexture2D = new ReadBackTexture2D();
         public StorageFolder saveFolder;
         public void SwitchEffect()
         {

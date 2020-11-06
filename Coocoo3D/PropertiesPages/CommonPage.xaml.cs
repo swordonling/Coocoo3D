@@ -20,13 +20,8 @@ using Windows.Storage;
 using Coocoo3D.FileFormat;
 using Windows.UI.Popups;
 
-// https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
-
 namespace Coocoo3D.PropertiesPages
 {
-    /// <summary>
-    /// 可用于自身或导航至 Frame 内部的空白页。
-    /// </summary>
     public sealed partial class CommonPage : Page, INotifyPropertyChanged
     {
         public CommonPage()
@@ -238,6 +233,16 @@ namespace Coocoo3D.PropertiesPages
             }
         }
 
+        public bool VViewerUI
+        {
+            get => appBody.settings.ViewerUI;
+            set
+            {
+                appBody.settings.ViewerUI = value;
+                appBody.RequireRender();
+            }
+        }
+
         public float VSetFps
         {
             get => appBody.Fps; set
@@ -261,10 +266,7 @@ namespace Coocoo3D.PropertiesPages
 
         public bool VHighResolutionShadow
         {
-            get
-            {
-                return appBody.performaceSettings.HighResolutionShadow;
-            }
+            get => appBody.performaceSettings.HighResolutionShadow;
             set
             {
                 appBody.performaceSettings.HighResolutionShadow = value;

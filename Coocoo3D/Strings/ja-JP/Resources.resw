@@ -174,13 +174,22 @@
     <value>キャッシュを更新する</value>
   </data>
   <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
-    <value>Refresh Model Caches</value>
+    <value>リロードモデル</value>
+  </data>
+  <data name="Page_Common_Button_RefreshModelCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>リロードモデル</value>
   </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>シャドウキャッシュを更新する</value>
   </data>
+  <data name="Page_Common_Button_RefreshShaderCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload Shaders</value>
+  </data>
   <data name="Page_Common_Button_RefreshTextureCaches.Content" xml:space="preserve">
     <value>リフレッシュテクスチャキャッシュ</value>
+  </data>
+  <data name="Page_Common_Button_RefreshTextureCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>再読み込みテクスチャ</value>
   </data>
   <data name="Page_Common_Button_ResetPhysics.Content" xml:space="preserve">
     <value>リセット物理</value>
@@ -189,19 +198,25 @@
     <value>設定</value>
   </data>
   <data name="Page_Common_ChechBox_AutoReloadModel.Content" xml:space="preserve">
-    <value>Auto reload model</value>
+    <value>オートリロードモデル</value>
   </data>
   <data name="Page_Common_ChechBox_AutoReloadShader.Content" xml:space="preserve">
     <value>Auto reload shader</value>
   </data>
   <data name="Page_Common_ChechBox_AutoReloadTexture.Content" xml:space="preserve">
-    <value>Auto reload texture</value>
+    <value>オートリロードテクスチャ</value>
   </data>
   <data name="Page_Common_ComboBox_RenderPipeline.Header" xml:space="preserve">
     <value>レンダリングパイプライン</value>
   </data>
   <data name="Page_Common_ComboBox_RenderQuality.Header" xml:space="preserve">
     <value>品質</value>
+  </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_Forward.Content" xml:space="preserve">
+    <value>Forward</value>
+  </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_RayTracing.Content" xml:space="preserve">
+    <value>光線追跡</value>
   </data>
   <data name="Page_Common_Switch_AO.Header" xml:space="preserve">
     <value>アンビエント(Raytracing Only)</value>
@@ -220,6 +235,9 @@
   </data>
   <data name="Page_Common_Switch_Shadow.Header" xml:space="preserve">
     <value>影</value>
+  </data>
+  <data name="Page_Common_Switch_ViewerUI.Header" xml:space="preserve">
+    <value>Viewer UI</value>
   </data>
   <data name="Page_Common_Switch_ZPrePass.Header" xml:space="preserve">
     <value>Z-Prepass(Forward Only)</value>
@@ -255,7 +273,7 @@
     <value>クリアコート 光沢</value>
   </data>
   <data name="Page_Entity_Slider_Emission.Header" xml:space="preserve">
-    <value>Emission</value>
+    <value>発光</value>
   </data>
   <data name="Page_Entity_Slider_Metallic.Header" xml:space="preserve">
     <value>金属性の</value>

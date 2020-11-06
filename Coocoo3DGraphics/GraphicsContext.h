@@ -93,6 +93,7 @@ namespace Coocoo3DGraphics
 		void SetSOMeshNone();
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
+		void DrawIndexedInstanced(int indexCount, int startIndexLocation, int baseVertexLocation,int instanceCount,int startInstanceLocation);
 		void Dispatch(int x, int y, int z);
 		void DoRayTracing(RayTracingScene^ rayTracingScene, int width, int height, int raygenIndex);
 		void UploadMesh(MMDMesh^ mesh);

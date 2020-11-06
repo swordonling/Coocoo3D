@@ -176,11 +176,20 @@ Bone count: {2}</value>
   <data name="Page_Common_Button_RefreshModelCaches.Content" xml:space="preserve">
     <value>Refresh Model Caches</value>
   </data>
+  <data name="Page_Common_Button_RefreshModelCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload Models</value>
+  </data>
   <data name="Page_Common_Button_RefreshShaderCaches.Content" xml:space="preserve">
     <value>Refresh Shader Caches</value>
   </data>
+  <data name="Page_Common_Button_RefreshShaderCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload Shaders</value>
+  </data>
   <data name="Page_Common_Button_RefreshTextureCaches.Content" xml:space="preserve">
     <value>Refresh Texture Caches</value>
+  </data>
+  <data name="Page_Common_Button_RefreshTextureCaches.ToolTipService.ToolTip" xml:space="preserve">
+    <value>Reload Textures</value>
   </data>
   <data name="Page_Common_Button_ResetPhysics.Content" xml:space="preserve">
     <value>Reset Physics</value>
@@ -203,6 +212,12 @@ Bone count: {2}</value>
   <data name="Page_Common_ComboBox_RenderQuality.Header" xml:space="preserve">
     <value>Render Quality</value>
   </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_Forward.Content" xml:space="preserve">
+    <value>Forward</value>
+  </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_RayTracing.Content" xml:space="preserve">
+    <value>Ray tracing</value>
+  </data>
   <data name="Page_Common_Switch_AO.Header" xml:space="preserve">
     <value>Ambient Occlusion (Raytracing Only)</value>
   </data>
@@ -220,6 +235,9 @@ Bone count: {2}</value>
   </data>
   <data name="Page_Common_Switch_Shadow.Header" xml:space="preserve">
     <value>Shadow</value>
+  </data>
+  <data name="Page_Common_Switch_ViewerUI.Header" xml:space="preserve">
+    <value>Viewer UI</value>
   </data>
   <data name="Page_Common_Switch_ZPrePass.Header" xml:space="preserve">
     <value>Z-Prepass (Forward Only)</value>
@@ -289,9 +307,6 @@ Bone count: {2}</value>
   </data>
   <data name="Page_SkyBox_TextBox_SkyBoxLightMultiple.Header" xml:space="preserve">
     <value>Sky box light multiple</value>
-  </data>
-  <data name="String1" xml:space="preserve">
-    <value />
   </data>
   <data name="Tab_Title_Common" xml:space="preserve">
     <value>Common</value>

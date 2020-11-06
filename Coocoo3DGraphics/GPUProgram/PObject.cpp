@@ -63,18 +63,23 @@ void PObject::Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphi
 		state.InputLayout = { inputLayoutMMD, _countof(inputLayoutMMD) };
 	else if (type == eInputLayout::postProcess)
 		state.InputLayout = { inputLayoutPosOnly, _countof(inputLayoutPosOnly) };
+	else if (type == eInputLayout::skinned)
+		state.InputLayout = { inputLayoutSkinned, _countof(inputLayoutSkinned) };
 	state.pRootSignature = graphicsSignature->m_rootSignature.Get();
 	state.VS = CD3DX12_SHADER_BYTECODE(vertexShader->byteCode.Get());
 	if (m_geometryShader != nullptr)
 		state.GS = CD3DX12_SHADER_BYTECODE(m_geometryShader->byteCode.Get());
 	state.PS = CD3DX12_SHADER_BYTECODE(pixelShader->byteCode.Get());
 	state.BlendState = BlendDescSelect(blendState);
-	state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	if (type != eInputLayout::postProcess)
+	{
+		state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		state.DSVFormat = deviceResources->GetDepthBufferFormat();
+	}
 	state.SampleMask = UINT_MAX;
 	state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	state.NumRenderTargets = 1;
 	state.RTVFormats[0] = (DXGI_FORMAT)rtvFormat;
-	state.DSVFormat = deviceResources->GetDepthBufferFormat();
 	state.SampleDesc.Count = 1;
 
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
