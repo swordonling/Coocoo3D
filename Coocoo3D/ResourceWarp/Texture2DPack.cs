@@ -25,26 +25,7 @@ namespace Coocoo3D.ResourceWarp
             texture2D.Status = status;
         }
 
-        public async Task<bool> ReloadTexture1(StorageFolder folder, string relativePath)
-        {
-            this.relativePath = relativePath;
-            this.folder = folder;
-            Mark(GraphicsObjectStatus.loading);
-            IStorageItem storageItem = await folder.TryGetItemAsync(relativePath);
-            try
-            {
-                var attr = await storageItem.GetBasicPropertiesAsync();
-                lastModifiedTime = attr.DateModified;
-                return await ReloadTexture(storageItem);
-            }
-            catch
-            {
-                Mark(GraphicsObjectStatus.error);
-                return false;
-            }
-        }
-
-        public async Task<bool> ReloadTexture(IStorageItem storageItem)
+        public async Task<bool> ReloadTexture(IStorageItem storageItem, Uploader uploader)
         {
             Mark(GraphicsObjectStatus.loading);
             if (!(storageItem is StorageFile texFile))
@@ -54,8 +35,8 @@ namespace Coocoo3D.ResourceWarp
             }
             try
             {
-                texture2D.ReloadFromImage(await FileIO.ReadBufferAsync(texFile));
-                Mark(GraphicsObjectStatus.loaded);
+                uploader.Texture2D(await FileIO.ReadBufferAsync(texFile), true, true);
+                Status = GraphicsObjectStatus.loaded;
                 return true;
             }
             catch

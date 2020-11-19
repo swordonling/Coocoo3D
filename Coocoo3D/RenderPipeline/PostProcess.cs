@@ -52,7 +52,7 @@ namespace Coocoo3D.RenderPipeline
             if (!innerStruct.Equals(prevData))
             {
                 Marshal.StructureToPtr(innerStruct, Marshal.UnsafeAddrOfPinnedArrayElement(rcDataUploadBuffer, 0), true);
-                context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize,0);
+                context.graphicsContext.UpdateResource(postProcessDataBuffer, rcDataUploadBuffer, c_postProcessDataSize, 0);
                 prevData = innerStruct;
             }
         }
@@ -61,7 +61,7 @@ namespace Coocoo3D.RenderPipeline
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignaturePostProcess);
-            graphicsContext.SetRenderTargetScreenAndClear(context.dynamicContext.settings.backgroundColor);
+            graphicsContext.SetRenderTargetScreen(context.dynamicContext.settings.backgroundColor, context.ScreenSizeDSVs[1], true, true);
             graphicsContext.SetCBVR(postProcessDataBuffer, 0);
             graphicsContext.SetSRVT(context.outputRTV, 1);
             graphicsContext.SetSRVT(context.postProcessBackground, 2);

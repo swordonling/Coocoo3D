@@ -59,17 +59,11 @@ struct LightInfo
 	uint LightType;
 	float4 LightColor;
 };
-
-cbuffer cb1 : register(b1)
-{
-	float4x4 LightSpaceMatrices[4];
-	LightInfo Lightings[8];
-};
 cbuffer cb2 : register(b2)
 {
 	CAMERA_DATA_DEFINE;//is a macro
 };
-cbuffer cb3 : register(b3)
+cbuffer cb1 : register(b1)
 {
 	float4 _DiffuseColor;
 	float4 _SpecularColor;
@@ -92,6 +86,9 @@ cbuffer cb3 : register(b3)
 	float _SheenTint;
 	float _Clearcoat;
 	float _ClearcoatGloss;
+	float4 materialPreserved[6];
+	float4x4 LightSpaceMatrices[4];
+	LightInfo Lightings[8];
 };
 SamplerState s0 : register(s0);
 SamplerState s1 : register(s1);

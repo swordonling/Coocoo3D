@@ -128,6 +128,7 @@
     <Compile Include="Present\CameraMotion.cs" />
     <Compile Include="Core\GameDriver.cs" />
     <Compile Include="Core\GeneralGameDriver.cs" />
+    <Compile Include="RenderPipeline\DeferredRenderPipeline1.cs" />
     <Compile Include="RenderPipeline\ProcessingList.cs" />
     <Compile Include="Core\RecorderGameDriver.cs" />
     <Compile Include="Core\Scene.cs" />
@@ -192,9 +193,12 @@
     <Compile Include="RenderPipeline\RenderPipelineContext.cs" />
     <Compile Include="RenderPipeline\RPAssetsManager.cs" />
     <Compile Include="RenderPipeline\WidgetRenderer.cs" />
+    <Compile Include="ResourceWarp\MeshAppendUploadPack.cs" />
     <Compile Include="ResourceWarp\ModelPack.cs" />
     <Compile Include="ResourceWarp\ShaderPack.cs" />
     <Compile Include="ResourceWarp\Texture2DPack.cs" />
+    <Compile Include="ResourceWarp\Texture2DUploadPack.cs" />
+    <Compile Include="ResourceWarp\TextureCubeUploadPack.cs" />
     <Compile Include="UI\PlayControl.cs" />
     <Compile Include="Utility\CubicBezierCurve.cs" />
     <Compile Include="UI\UISharedCode.cs" />

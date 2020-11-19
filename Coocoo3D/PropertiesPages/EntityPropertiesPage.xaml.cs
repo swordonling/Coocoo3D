@@ -35,7 +35,7 @@ namespace Coocoo3D.PropertiesPages
             this.InitializeComponent();
         }
         Coocoo3DMain appBody;
-        MMD3DEntity mmd3dEntity;
+        MMD3DEntity entity;
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
@@ -43,12 +43,14 @@ namespace Coocoo3D.PropertiesPages
             if (e.Parameter is Coocoo3DMain _appBody)
             {
                 appBody = _appBody;
-                mmd3dEntity = _appBody.SelectedEntities[0];
+                entity = _appBody.SelectedEntities[0];
                 appBody.FrameUpdated += FrameUpdated;
-                _cacheP = mmd3dEntity.PositionNextFrame;
-                _cacheR = QuaternionToEularYXZ(mmd3dEntity.RotationNextFrame) * 180 / MathF.PI;
-                _cacheRQ = mmd3dEntity.RotationNextFrame;
-                ViewMaterials.ItemsSource = mmd3dEntity.rendererComponent.Materials;
+                _cacheP = entity.PositionNextFrame;
+                _cacheR = QuaternionToEularYXZ(entity.RotationNextFrame) * 180 / MathF.PI;
+                _cacheRQ = entity.RotationNextFrame;
+                ViewMaterials.ItemsSource = entity.rendererComponent.Materials;
+                ViewMorph.ItemsSource = entity.morphStateComponent.morphs;
+                ViewBone.ItemsSource = entity.boneComponent.bones;
             }
             else
             {
@@ -58,7 +60,7 @@ namespace Coocoo3D.PropertiesPages
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        PropertyChangedEventArgs eaVPX = new PropertyChangedEventArgs("VPX");//防止莫名其妙的gc
+        PropertyChangedEventArgs eaVPX = new PropertyChangedEventArgs("VPX");
         PropertyChangedEventArgs eaVPY = new PropertyChangedEventArgs("VPY");
         PropertyChangedEventArgs eaVPZ = new PropertyChangedEventArgs("VPZ");
         PropertyChangedEventArgs eaVRX = new PropertyChangedEventArgs("VRX");
@@ -66,20 +68,28 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVRZ = new PropertyChangedEventArgs("VRZ");
         private void FrameUpdated(object sender, EventArgs e)
         {
-            if (_cacheP != mmd3dEntity.PositionNextFrame)
+            if (_cacheP != entity.PositionNextFrame)
             {
-                _cacheP = mmd3dEntity.PositionNextFrame;
+                _cacheP = entity.PositionNextFrame;
                 PropertyChanged?.Invoke(this, eaVPX);
                 PropertyChanged?.Invoke(this, eaVPY);
                 PropertyChanged?.Invoke(this, eaVPZ);
             }
-            if (_cacheRQ != mmd3dEntity.RotationNextFrame)
+            if (_cacheRQ != entity.RotationNextFrame)
             {
-                _cacheRQ = mmd3dEntity.RotationNextFrame;
+                _cacheRQ = entity.RotationNextFrame;
                 _cacheR = QuaternionToEularYXZ(_cacheRQ) * 180 / MathF.PI;
                 PropertyChanged?.Invoke(this, eaVRX);
                 PropertyChanged?.Invoke(this, eaVRY);
                 PropertyChanged?.Invoke(this, eaVRZ);
+            }
+            if (currentSelectedMorph != null && !entity.LockMotion)
+            {
+                int index = entity.morphStateComponent.stringMorphIndexMap[currentSelectedMorph.Name];
+                if (_cahceMorphValue != entity.morphStateComponent.WeightOrigin[index])
+                {
+                    PropertyChanged?.Invoke(this, eaVMorphValue);
+                }
             }
         }
 
@@ -136,10 +146,23 @@ namespace Coocoo3D.PropertiesPages
         Vector3 _cacheR;
         Quaternion _cacheRQ;
 
+        PropertyChangedEventArgs eaVLockMotion = new PropertyChangedEventArgs("VLockMotion");
+        public bool VLockMotion
+        {
+            get => entity.LockMotion;
+            set
+            {
+                if (entity.LockMotion == value) return;
+                entity.LockMotion = value;
+                appBody.RequireRender(true);
+                PropertyChanged?.Invoke(this, eaVLockMotion);
+            }
+        }
+
         void UpdatePositionFromUI()
         {
-            mmd3dEntity.PositionNextFrame = _cacheP;
-            mmd3dEntity.NeedTransform = true;
+            entity.PositionNextFrame = _cacheP;
+            entity.NeedTransform = true;
             appBody.RequireRender();
         }
         void UpdateRotationFromUI()
@@ -148,21 +171,21 @@ namespace Coocoo3D.PropertiesPages
             var t1 = _cacheR / 180 * MathF.PI;
             _cacheRQ = Quaternion.CreateFromYawPitchRoll(t1.Y, t1.X, t1.Z);
 
-            mmd3dEntity.RotationNextFrame = _cacheRQ;
-            mmd3dEntity.NeedTransform = true;
+            entity.RotationNextFrame = _cacheRQ;
+            entity.NeedTransform = true;
             appBody.RequireRender();
         }
 
         PropertyChangedEventArgs eaName = new PropertyChangedEventArgs("Name");
         public string vName
         {
-            get => mmd3dEntity.Name;
-            set { mmd3dEntity.Name = value; mmd3dEntity.PropChange(eaName); }
+            get => entity.Name;
+            set { entity.Name = value; entity.PropChange(eaName); }
         }
         public string vDesc
         {
-            get => mmd3dEntity.Description;
-            set { mmd3dEntity.Description = value; }
+            get => entity.Description;
+            set { entity.Description = value; }
         }
         public string vModelInfo
         {
@@ -170,8 +193,48 @@ namespace Coocoo3D.PropertiesPages
             {
                 var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                 return string.Format(resourceLoader.GetString("Message_ModelInfo"),
-                    mmd3dEntity.rendererComponent.mesh.m_vertexCount, mmd3dEntity.rendererComponent.mesh.m_indexCount / 3, mmd3dEntity.boneComponent.bones.Count);
+                    entity.rendererComponent.mesh.m_vertexCount, entity.rendererComponent.mesh.m_indexCount / 3, entity.boneComponent.bones.Count);
             }
+        }
+
+        public MorphDesc currentSelectedMorph { get; set; }
+        PropertyChangedEventArgs eaMorph = new PropertyChangedEventArgs("currentSelectedMorph");
+        PropertyChangedEventArgs eaVMorphValue = new PropertyChangedEventArgs("VMorphValue");
+        public float _cahceMorphValue;
+        public float VMorphValue
+        {
+            get
+            {
+                if (currentSelectedMorph == null)
+                    return 0;
+                else
+                {
+                    int index = entity.morphStateComponent.stringMorphIndexMap[currentSelectedMorph.Name];
+                    _cahceMorphValue = entity.morphStateComponent.WeightOrigin[index];
+                    return _cahceMorphValue;
+                }
+            }
+            set
+            {
+                if (currentSelectedMorph == null)
+                    return;
+                else
+                {
+                    int index = entity.morphStateComponent.stringMorphIndexMap[currentSelectedMorph.Name];
+                    _cahceMorphValue = value;
+                    entity.morphStateComponent.WeightOrigin[index] = value;
+                    entity.morphStateComponent.WeightOriginA[index] = value;
+                    entity.morphStateComponent.WeightOriginB[index] = value;
+                    appBody.RequireRender(true);
+                }
+            }
+        }
+        private void ViewMorph_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.AddedItems.Count == 0) return;
+            currentSelectedMorph = (e.AddedItems[0] as MorphDesc);
+            PropertyChanged?.Invoke(this, eaMorph);
+            PropertyChanged?.Invoke(this, eaVMorphValue);
         }
 
 
@@ -233,7 +296,7 @@ namespace Coocoo3D.PropertiesPages
                     {
                         try
                         {
-                            await UI.UISharedCode.LoadVMD(appBody, storageFile, mmd3dEntity);
+                            await UI.UISharedCode.LoadVMD(appBody, storageFile, entity);
                         }
                         catch (Exception exception)
                         {
@@ -243,7 +306,7 @@ namespace Coocoo3D.PropertiesPages
                     }
                     if (".hlsl".Equals(extName, StringComparison.CurrentCultureIgnoreCase))
                     {
-                        UI.UISharedCode.LoadShaderForEntities1(appBody, storageFile, storageFolder, new MMD3DEntity[] { mmd3dEntity });
+                        UI.UISharedCode.LoadShaderForEntities1(appBody, storageFile, storageFolder, new MMD3DEntity[] { entity });
                     }
                 }
             }
@@ -279,20 +342,25 @@ namespace Coocoo3D.PropertiesPages
         }
 
         PropertyChangedEventArgs eaCurrentMat = new PropertyChangedEventArgs("CurrentMat");
-        MMDMatLit CurrentMat;
+        RuntimeMaterial CurrentMat;
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Button button = sender as Button;
-            CurrentMat = ((MMDMatLit)button.DataContext);
+            CurrentMat = ((RuntimeMaterial)button.DataContext);
             PropertyChanged?.Invoke(this, eaCurrentMat);
             flyout1.ShowAt(button);
+        }
+
+        private void Pivot_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
         }
     }
     public struct Bundle_Main_Entity_Mat
     {
         public Coocoo3DMain main;
         public MMD3DEntity entity;
-        public MMDMatLit matLit;
+        public RuntimeMaterial matLit;
     }
 }

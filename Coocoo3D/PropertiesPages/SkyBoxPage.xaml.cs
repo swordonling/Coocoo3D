@@ -1,5 +1,6 @@
 ﻿using Coocoo3D.Core;
 using Coocoo3D.RenderPipeline;
+using Coocoo3D.ResourceWarp;
 using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
@@ -103,20 +104,22 @@ namespace Coocoo3D.PropertiesPages
             }
             showInfo.Text = resourceLoader.GetString("Message_Operating");
             var rp = appBody.RPContext;
-            rp.EnvCubeMap.ReloadFromImage(appBody.wicFactory, imgSize[0].x, imgSize[0].y,
+            Uploader uploader = new Uploader();
+            uploader.TextureCube(imgSize[0].x, imgSize[0].y,
+                new IBuffer[] {
                 await FileIO.ReadBufferAsync(files[0]),
                 await FileIO.ReadBufferAsync(files[1]),
                 await FileIO.ReadBufferAsync(files[2]),
                 await FileIO.ReadBufferAsync(files[3]),
                 await FileIO.ReadBufferAsync(files[4]),
-                await FileIO.ReadBufferAsync(files[5]));
-            int t1 = appBody.RenderCount;
+                await FileIO.ReadBufferAsync(files[5])});
+            int t1 = appBody.CompletedRenderCount;
             if (prevRenderFrame == t1)
             {
 
             }
             prevRenderFrame = t1;
-            appBody.ProcessingList.AddObject(rp.EnvCubeMap);
+            appBody.ProcessingList.AddObject(new TextureCubeUploadPack(rp.EnvCubeMap, uploader));
             appBody.miscProcessContext.Add(new P_Env_Data() { source = rp.EnvCubeMap, IrradianceMap = rp.IrradianceMap, EnvMap = rp.EnvironmentMap, Level = level });
             appBody.RequireRender();
             showInfo.Text = resourceLoader.GetString("Message_Done");

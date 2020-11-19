@@ -21,6 +21,7 @@ namespace Coocoo3D.Present
         public Vector3 PositionNextFrame;
         public Quaternion RotationNextFrame = Quaternion.Identity;
         public bool NeedTransform;
+        public bool LockMotion;
 
         public string Name;
         public string Description;
@@ -31,9 +32,7 @@ namespace Coocoo3D.Present
         public MMDMotionComponent motionComponent = new MMDMotionComponent();
         public MMDMorphStateComponent morphStateComponent = new MMDMorphStateComponent();
 
-        public bool RenderReady = false;
         public bool ComponentReady = false;
-        public volatile bool needUpdateMotion = false;
 
         public event PropertyChangedEventHandler PropertyChanged;
         public void PropChange(PropertyChangedEventArgs e)
@@ -41,23 +40,28 @@ namespace Coocoo3D.Present
             PropertyChanged?.Invoke(this, e);
         }
 
+
+        public float PrevUpdateTime;
         public void SetMotionTime(float time)
         {
             if (!ComponentReady) return;
-            lock (motionComponent)
+            if (!LockMotion)
             {
-                morphStateComponent.SetPose(motionComponent, time);
+                PrevUpdateTime = time;
+                lock (motionComponent)
+                {
+                    morphStateComponent.SetPose(motionComponent, time);
+                    morphStateComponent.ComputeWeight();
+                    boneComponent.SetPose(motionComponent, morphStateComponent, time);
+                }
+            }
+            else
+            {
                 morphStateComponent.ComputeWeight();
-                boneComponent.SetPose(motionComponent, morphStateComponent, time);
+                boneComponent.SetPose2(morphStateComponent);
             }
             boneComponent.ComputeMatricesData();
             rendererComponent.SetPose(morphStateComponent);
-            needUpdateMotion = true;
-        }
-
-        public void UpdateGpuResources(GraphicsContext graphicsContext)
-        {
-            rendererComponent.UpdateGPUResources(graphicsContext);
         }
 
         public override string ToString()
@@ -83,13 +87,14 @@ namespace Coocoo3D.FileFormat
 
         public static void ReloadModel(this MMD3DEntity entity, ProcessingList processingList, ModelPack modelPack, List<Texture2D> textures)
         {
+            entity.ComponentReady = false;
             var modelResource = modelPack.pmx;
             entity.morphStateComponent.Reload(modelResource);
             entity.boneComponent.Reload(modelResource);
 
             entity.rendererComponent.Reload(modelPack);
-            processingList.AddObject(entity.rendererComponent.mesh);
-            processingList.AddObject(entity.rendererComponent.meshParticleBuffer);
+            processingList.AddObject(new MeshAppendUploadPack(entity.rendererComponent.meshAppend, entity.rendererComponent.meshPosData));
+            //processingList.AddObject(entity.rendererComponent.meshParticleBuffer);
             entity.rendererComponent.textures = textures;
 
             entity.ComponentReady = true;

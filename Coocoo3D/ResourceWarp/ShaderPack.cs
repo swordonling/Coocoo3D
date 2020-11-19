@@ -119,7 +119,7 @@ namespace Coocoo3D.ResourceWarp
                 PODraw.ReloadDrawing(BlendState.alpha,
                     haveVS1 ? vs1 : RPAssetsManager.VSMMDTransform,
                     haveGS1 ? gs1 : null,
-                    havePS1 ? ps1 : RPAssetsManager.PSMMD, RPAssetsManager.RTFormat);
+                    havePS1 ? ps1 : RPAssetsManager.PSMMD, RPAssetsManager.middleFormat, RPAssetsManager.depthFormat);
                 processingList.UL(PODraw, 0);
             }
             else
@@ -129,7 +129,7 @@ namespace Coocoo3D.ResourceWarp
                 POParticleDraw.ReloadDrawing(BlendState.alpha,
                     haveVSParticle ? vs2 : RPAssetsManager.VSMMDTransform,
                     haveGSParticle ? gs2 : null,
-                    havePSParticle ? ps2 : RPAssetsManager.PSMMD, RPAssetsManager.RTFormat);
+                    havePSParticle ? ps2 : RPAssetsManager.PSMMD, RPAssetsManager.middleFormat,RPAssetsManager.depthFormat);
                 processingList.UL(POParticleDraw, 0);
             }
             else

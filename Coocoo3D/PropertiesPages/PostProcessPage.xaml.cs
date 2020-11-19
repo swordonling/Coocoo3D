@@ -1,4 +1,6 @@
 ﻿using Coocoo3D.Core;
+using Coocoo3D.ResourceWarp;
+using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -113,8 +115,9 @@ namespace Coocoo3D.PropertiesPages
             {
                 return;
             }
-            appBody.RPContext.postProcessBackground.ReloadFromImage(await FileIO.ReadBufferAsync(file));
-            appBody.ProcessingList.AddObject(appBody.RPContext.postProcessBackground);
+            Uploader uploader = new Uploader();
+            uploader.Texture2D(await FileIO.ReadBufferAsync(file), true, true);
+            appBody.ProcessingList.AddObject(new Texture2DUploadPack(appBody.RPContext.postProcessBackground, uploader));
             appBody.RequireRender();
         }
 

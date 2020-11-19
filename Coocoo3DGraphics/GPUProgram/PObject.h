@@ -17,6 +17,7 @@ namespace Coocoo3DGraphics
 	{
 		none = 0,
 		alpha = 1,
+		add = 2,
 	};
 	public enum struct eInputLayout
 	{
@@ -28,30 +29,30 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		property GraphicsObjectStatus Status;
-		property Platform::Object^ LoadTask;
-		property Platform::String^ Path;
-		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, eInputLayout type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, eInputLayout type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat, DxgiFormat depthFormat);
 		//使用Upload上传GPU
-		void ReloadDepthOnly(VertexShader^ vs, PixelShader^ ps, int depthOffset);
+		void ReloadDepthOnly(VertexShader^ vs, PixelShader^ ps, int depthOffset, DxgiFormat depthFormat);
 		//使用Upload上传GPU
 		void ReloadSkinning(VertexShader^ vs, GeometryShader^ gs);
 		//使用Upload上传GPU
-		void ReloadDrawing(BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat);
+		void ReloadDrawing(BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat, DxgiFormat depthFormat);
+		void ReloadDrawing(BlendState blendState, VertexShader^ vs, GeometryShader^ gs, PixelShader^ ps, DxgiFormat rtvFormat, DxgiFormat depthFormat,int renderTargetCount);
 		bool Upload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature);
 		void Unload();
 	internal:
 		VertexShader^ m_vertexShader;
 		PixelShader^ m_pixelShader;
 		GeometryShader^ m_geometryShader;
-		static const UINT c_indexPipelineStateDepth = 6;
-		static const UINT c_indexPipelineStateSkinning = 7;
+		static const UINT c_indexPipelineStateSkinning = 0;
 
 		bool m_useStreamOutput;
 		bool m_isDepthOnly;
 		DXGI_FORMAT m_renderTargetFormat;
+		DXGI_FORMAT m_depthFormat;
 		BlendState m_blendState;
 		int m_depthBias;
-		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[10];
+		int m_renderTargetCount;
+		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[6];
 
 		inline void ClearState()
 		{
@@ -59,9 +60,11 @@ namespace Coocoo3DGraphics
 			m_pixelShader = nullptr;
 			m_geometryShader = nullptr;
 			m_renderTargetFormat = DXGI_FORMAT_UNKNOWN;
+			m_depthFormat = DXGI_FORMAT_UNKNOWN;
 			m_useStreamOutput = false;
 			m_blendState = BlendState::none;
 			m_depthBias = 0;
+			m_renderTargetCount = 0;
 		}
 	};
 }

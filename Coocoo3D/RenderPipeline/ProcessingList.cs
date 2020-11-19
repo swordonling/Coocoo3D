@@ -1,4 +1,5 @@
-﻿using Coocoo3DGraphics;
+﻿using Coocoo3D.ResourceWarp;
+using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,14 +21,16 @@ namespace Coocoo3D.RenderPipeline
                 source.Clear();
             }
         }
-        public List<ITexture> TextureLoadList = new List<ITexture>();
+        public List<TextureCubeUploadPack> TextureCubeLoadList = new List<TextureCubeUploadPack>();
+        public List<Texture2DUploadPack> Texture2DLoadList = new List<Texture2DUploadPack>();
         public List<IRenderTexture> RenderTextureUpdateList = new List<IRenderTexture>();
         public List<MMDMesh> MMDMeshLoadList = new List<MMDMesh>();
+        public List<MeshAppendUploadPack> MMDMeshLoadList2 = new List<MeshAppendUploadPack>();
         public List<StaticBuffer> staticBufferList = new List<StaticBuffer>();
         public List<ReadBackTexture2D> readBackTextureList = new List<ReadBackTexture2D>();
         public List<TwinBuffer> twinBufferList = new List<TwinBuffer>();
         public List<PObject>[] pobjectLists = new List<PObject>[] { new List<PObject>(), new List<PObject>(), new List<PObject>(), };
-        public List<ComputePO>[] computePObjectLists = new List<ComputePO>[] { new List<ComputePO>(),};
+        public List<ComputePO>[] computePObjectLists = new List<ComputePO>[] { new List<ComputePO>(), };
 
         public void AddObject(MMDMesh mesh)
         {
@@ -36,11 +39,25 @@ namespace Coocoo3D.RenderPipeline
                 MMDMeshLoadList.Add(mesh);
             }
         }
-        public void AddObject(ITexture texture)
+        public void AddObject(MeshAppendUploadPack mesh)
         {
-            lock (TextureLoadList)
+            lock (MMDMeshLoadList2)
             {
-                TextureLoadList.Add(texture);
+                MMDMeshLoadList2.Add(mesh);
+            }
+        }
+        public void AddObject(TextureCubeUploadPack texture)
+        {
+            lock (TextureCubeLoadList)
+            {
+                TextureCubeLoadList.Add(texture);
+            }
+        }
+        public void AddObject(Texture2DUploadPack texture)
+        {
+            lock (Texture2DLoadList)
+            {
+                Texture2DLoadList.Add(texture);
             }
         }
         public void AddObject(IRenderTexture texture)
@@ -89,9 +106,11 @@ namespace Coocoo3D.RenderPipeline
 
         public void MoveToAnother(ProcessingList another)
         {
-            Move1(TextureLoadList, another.TextureLoadList);
+            Move1(TextureCubeLoadList, another.TextureCubeLoadList);
+            Move1(Texture2DLoadList, another.Texture2DLoadList);
             Move1(RenderTextureUpdateList, another.RenderTextureUpdateList);
             Move1(MMDMeshLoadList, another.MMDMeshLoadList);
+            Move1(MMDMeshLoadList2, another.MMDMeshLoadList2);
             Move1(readBackTextureList, another.readBackTextureList);
             Move1(staticBufferList, another.staticBufferList);
             Move1(twinBufferList, another.twinBufferList);
@@ -103,9 +122,11 @@ namespace Coocoo3D.RenderPipeline
 
         public void Clear()
         {
-            TextureLoadList.Clear();
+            TextureCubeLoadList.Clear();
+            Texture2DLoadList.Clear();
             RenderTextureUpdateList.Clear();
             MMDMeshLoadList.Clear();
+            MMDMeshLoadList2.Clear();
             readBackTextureList.Clear();
             staticBufferList.Clear();
             twinBufferList.Clear();
@@ -124,16 +145,13 @@ namespace Coocoo3D.RenderPipeline
                 if (computePObjectLists[i].Count == 0)
                     return false;
 
-            return TextureLoadList.Count == 0 &&
+            return TextureCubeLoadList.Count == 0 &&
+                 Texture2DLoadList.Count == 0 &&
                 RenderTextureUpdateList.Count == 0 &&
                 MMDMeshLoadList.Count == 0 &&
+                MMDMeshLoadList2.Count == 0 &&
                 staticBufferList.Count == 0 &&
                 readBackTextureList.Count == 0;
-        }
-
-        public void UnsafeAdd(ITexture texture)
-        {
-            TextureLoadList.Add(texture);
         }
 
         public void UnsafeAdd(IRenderTexture texture)
@@ -153,17 +171,19 @@ namespace Coocoo3D.RenderPipeline
 
         public void _DealStep1(GraphicsContext graphicsContext)
         {
-            for (int i = 0; i < TextureLoadList.Count; i++)
-                graphicsContext.UploadTexture(TextureLoadList[i]);
+            for (int i = 0; i < TextureCubeLoadList.Count; i++)
+                graphicsContext.UploadTexture(TextureCubeLoadList[i].texture, TextureCubeLoadList[i].uploader);
+            for (int i = 0; i < Texture2DLoadList.Count; i++)
+                graphicsContext.UploadTexture(Texture2DLoadList[i].texture, Texture2DLoadList[i].uploader);
             for (int i = 0; i < MMDMeshLoadList.Count; i++)
                 graphicsContext.UploadMesh(MMDMeshLoadList[i]);
+            for (int i = 0; i < MMDMeshLoadList2.Count; i++)
+                graphicsContext.UploadMesh(MMDMeshLoadList2[i].mesh, MMDMeshLoadList2[i].data);
             for (int i = 0; i < staticBufferList.Count; i++)
-                graphicsContext.UploadBuffer(staticBufferList[i]);
+                graphicsContext.UploadBuffer1(staticBufferList[i]);
         }
         public void _DealStep2(GraphicsContext graphicsContext, DeviceResources deviceResources)
         {
-            for (int i = 0; i < TextureLoadList.Count; i++)
-                TextureLoadList[i].ReleaseUploadHeapResource();
             for (int i = 0; i < MMDMeshLoadList.Count; i++)
                 MMDMeshLoadList[i].ReleaseUploadHeapResource();
             for (int i = 0; i < staticBufferList.Count; i++)

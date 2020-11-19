@@ -16,6 +16,8 @@
 #include "StaticBuffer.h"
 #include "TwinBuffer.h"
 #include "MeshBuffer.h"
+#include "Uploader.h"
+#include <MMDMeshAppend.h>
 namespace Coocoo3DGraphics
 {
 	public enum struct D3D12ResourceStates
@@ -55,8 +57,8 @@ namespace Coocoo3DGraphics
 		void Reload(DeviceResources^ deviceResources);
 		void SetMaterial(Material^ material);
 		void SetPObject(PObject^ pObject, CullMode cullMode);
+		void SetPObject(PObject^ pObject, CullMode cullMode, bool wireframe);
 		void SetPObject(PObject^ pObject, int index);
-		void SetPObjectDepthOnly(PObject^ pObject);
 		void SetPObjectStreamOut(PObject^ pObject);
 		void SetPObject(ComputePO^ pObject);
 		void UpdateResource(ConstantBuffer^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
@@ -65,9 +67,7 @@ namespace Coocoo3DGraphics
 		void UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset);
 		void UpdateResourceRegion(ConstantBuffer^ buffer, UINT bufferDataOffset, const Platform::Array<Windows::Foundation::Numerics::float4x4>^ data, UINT sizeInByte, int dataOffset);
-		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData);
-		void UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
-		void UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData);
+		void UpdateVerticesPos(MMDMeshAppend^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData, int index);
 		void SetSRVR(StaticBuffer^ buffer, int index);
 		void SetSRVT(Texture2D^ texture, int index);
 		void SetSRVT(TextureCube^ texture, int index);
@@ -93,12 +93,14 @@ namespace Coocoo3DGraphics
 		void SetSOMeshNone();
 		void Draw(int vertexCount, int startVertexLocation);
 		void DrawIndexed(int indexCount, int startIndexLocation, int baseVertexLocation);
-		void DrawIndexedInstanced(int indexCount, int startIndexLocation, int baseVertexLocation,int instanceCount,int startInstanceLocation);
+		void DrawIndexedInstanced(int indexCount, int startIndexLocation, int baseVertexLocation, int instanceCount, int startInstanceLocation);
 		void Dispatch(int x, int y, int z);
 		void DoRayTracing(RayTracingScene^ rayTracingScene, int width, int height, int raygenIndex);
 		void UploadMesh(MMDMesh^ mesh);
-		void UploadTexture(ITexture^ texture);
-		void UploadBuffer(StaticBuffer^ buffer);
+		void UploadMesh(MMDMeshAppend^ mesh, const Platform::Array<byte>^ data);
+		void UploadTexture(TextureCube^ texture, Uploader^ uploader);
+		void UploadTexture(Texture2D^ texture, Uploader^ uploader);
+		void UploadBuffer1(StaticBuffer^ buffer);
 		void UpdateRenderTexture(IRenderTexture^ texture);
 		void UpdateReadBackTexture(ReadBackTexture2D^ texture);
 		void Copy(TextureCube^ source, RenderTextureCube^ dest);
@@ -108,17 +110,19 @@ namespace Coocoo3DGraphics
 		void BuildTopAccelerationStructures(RayTracingScene^ rayTracingAccelerationStructure);
 		void SetMesh(MMDMesh^ mesh);
 		void SetMeshVertex(MMDMesh^ mesh);
+		void SetMeshVertex1(MMDMesh^ mesh);
+		void SetMeshVertex(MMDMeshAppend^ mesh);
 		void SetMeshIndex(MMDMesh^ mesh);
 		void SetMesh(MeshBuffer^ mesh);
-		void SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color);
-		void SetAndClearDSV(RenderTexture2D^ texture);
-		void SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color);
-		void SetAndClearRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color);
+		void SetDSV(RenderTexture2D^ texture, bool clear);
+		void SetRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color, bool clear);
+		void SetRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV);
+		void SetRTVDSV(const Platform::Array < RenderTexture2D^>^ RTVs, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV);
 		void SetRootSignature(GraphicsSignature^ rootSignature);
 		void SetRootSignatureCompute(GraphicsSignature^ rootSignature);
 		void SetRootSignatureRayTracing(RayTracingScene^ rootSignature);
 		void ResourceBarrierScreen(D3D12ResourceStates before, D3D12ResourceStates after);
-		void SetRenderTargetScreenAndClearDepth();
+		void SetRenderTargetScreen(Windows::Foundation::Numerics::float4 color, RenderTexture2D^ DSV, bool clearScreen, bool clearDSV);
 		static void BeginAlloctor(DeviceResources^ deviceResources);
 		void SetDescriptorHeapDefault();
 		void BeginCommand();

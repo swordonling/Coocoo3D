@@ -1,5 +1,6 @@
 ﻿using Coocoo3D.Core;
 using Coocoo3D.Present;
+using Coocoo3D.ResourceWarp;
 using Coocoo3DGraphics;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace Coocoo3D.RenderPipeline
         public Settings settings;
         public InShaderSettings inShaderSettings;
         public List<MMD3DEntity> entities = new List<MMD3DEntity>();
+        public MMD3DEntity selectedEntity;
         public List<LightingData> lightings = new List<LightingData>();
         public List<CameraData> cameras = new List<CameraData>();
         public int VertexCount;
@@ -53,8 +55,24 @@ namespace Coocoo3D.RenderPipeline
     public class RenderPipelineContext
     {
         const int c_entityDataBufferSize = 65536;
-        byte[] bigBuffer = new byte[65536];
+        public byte[] bigBuffer = new byte[65536];
         GCHandle _bigBufferHandle;
+
+        const int c_maxCameraPerRender = 2;
+        public const int c_presentDataSize = 512;
+        public ConstantBuffer[] CameraDataBuffers = new ConstantBuffer[c_maxCameraPerRender];
+        public const int c_materialDataSize = 768;
+        public List<ConstantBuffer> MaterialBuffers = new List<ConstantBuffer>();
+        public void DesireMaterialBuffers(int count)
+        {
+            while (MaterialBuffers.Count < count)
+            {
+                ConstantBuffer constantBuffer = new ConstantBuffer();
+                constantBuffer.Reload(deviceResources, c_materialDataSize);
+                MaterialBuffers.Add(constantBuffer);
+            }
+        }
+
         public RenderTexture2D outputRTV = new RenderTexture2D();
         public RenderTexture2D[] ScreenSizeRenderTextures = new RenderTexture2D[4];
         public RenderTexture2D[] ScreenSizeDSVs = new RenderTexture2D[2];
@@ -69,11 +87,13 @@ namespace Coocoo3D.RenderPipeline
         public RenderTextureCube EnvironmentMap = new RenderTextureCube();
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
+        public MMDMesh cubeMesh = new MMDMesh();
         public int ndcQuadMeshIndexCount;
+        public int cubeMeshIndexCount;
         public MeshBuffer SkinningMeshBuffer = new MeshBuffer();
         public TwinBuffer LightCacheBuffer = new TwinBuffer();
         public int SkinningMeshBufferSize;
-        public int frameRenderIndex;
+        public int frameRenderCount;
 
         public RPAssetsManager RPAssetsManager = new RPAssetsManager();
         public DeviceResources deviceResources = new DeviceResources();
@@ -92,8 +112,9 @@ namespace Coocoo3D.RenderPipeline
 
         public List<ConstantBuffer> CBs_Bone = new List<ConstantBuffer>();
 
-        public DxgiFormat RTFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
-        public DxgiFormat backBufferFormat = DxgiFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+        public DxgiFormat middleFormat = DxgiFormat.DXGI_FORMAT_R16G16B16A16_UNORM;
+        public DxgiFormat swapChainFormat = DxgiFormat.DXGI_FORMAT_B8G8R8A8_UNORM;
+        public DxgiFormat depthFormat = DxgiFormat.DXGI_FORMAT_D24_UNORM_S8_UINT;
 
         public int screenWidth;
         public int screenHeight;
@@ -110,6 +131,10 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < ScreenSizeDSVs.Length; i++)
             {
                 ScreenSizeDSVs[i] = new RenderTexture2D();
+            }
+            for (int i = 0; i < CameraDataBuffers.Length; i++)
+            {
+                CameraDataBuffers[i] = new ConstantBuffer();
             }
         }
         ~RenderPipelineContext()
@@ -143,20 +168,33 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < count; i++)
             {
                 var entity = dynamicContext.entities[i];
-                data1.vertexCount = entity.rendererComponent.meshVertexCount;
-                data1.indexCount = entity.rendererComponent.meshIndexCount;
+                var rendererComponent = entity.rendererComponent;
+                data1.vertexCount = rendererComponent.meshVertexCount;
+                data1.indexCount = rendererComponent.meshIndexCount;
                 IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(bigBuffer, 0);
                 Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(world), ptr1, true);
-                Marshal.StructureToPtr(entity.rendererComponent.amountAB, ptr1 + 64, true);
-                Marshal.StructureToPtr(entity.rendererComponent.meshVertexCount, ptr1 + 68, true);
-                Marshal.StructureToPtr(entity.rendererComponent.meshIndexCount, ptr1 + 72, true);
+                Marshal.StructureToPtr(rendererComponent.amountAB, ptr1 + 64, true);
+                Marshal.StructureToPtr(rendererComponent.meshVertexCount, ptr1 + 68, true);
+                Marshal.StructureToPtr(rendererComponent.meshIndexCount, ptr1 + 72, true);
                 Marshal.StructureToPtr(data1, ptr1 + 80, true);
 
                 graphicsContext.UpdateResource(CBs_Bone[i], bigBuffer, 256, 0);
                 graphicsContext.UpdateResourceRegion(CBs_Bone[i], 256, dynamicContext.entities[i].boneComponent.boneMatricesData, 65280, 0);
-                data1.vertexStart += entity.rendererComponent.meshVertexCount;
-                data1.indexStart += entity.rendererComponent.meshIndexCount;
+                data1.vertexStart += rendererComponent.meshVertexCount;
+                data1.indexStart += rendererComponent.meshIndexCount;
+
+
+                if (rendererComponent.meshNeedUpdateA)
+                {
+                    graphicsContext.UpdateVerticesPos(rendererComponent.meshAppend, rendererComponent.meshPosData1, 0);
+                    rendererComponent.meshNeedUpdateA = false;
+                }
+                if (rendererComponent.meshNeedUpdateB)
+                {
+                    graphicsContext.UpdateVerticesPos(rendererComponent.meshAppend, rendererComponent.meshPosData2, 1);
+                    rendererComponent.meshNeedUpdateB = false;
+                }
             }
             #endregion
         }
@@ -165,16 +203,16 @@ namespace Coocoo3D.RenderPipeline
         {
             int x = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Width), 1);
             int y = Math.Max((int)Math.Round(deviceResources.GetOutputSize().Height), 1);
-            outputRTV.ReloadAsRTVUAV(x, y, RTFormat);
+            outputRTV.ReloadAsRTVUAV(x, y, middleFormat);
             processingList.UnsafeAdd(outputRTV);
             for (int i = 0; i < ScreenSizeRenderTextures.Length; i++)
             {
-                ScreenSizeRenderTextures[i].ReloadAsRTVUAV(x, y, RTFormat);
+                ScreenSizeRenderTextures[i].ReloadAsRTVUAV(x, y, middleFormat);
                 processingList.UnsafeAdd(ScreenSizeRenderTextures[i]);
             }
             for (int i = 0; i < ScreenSizeDSVs.Length; i++)
             {
-                ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y);
+                ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y,depthFormat);
                 processingList.UnsafeAdd(ScreenSizeDSVs[i]);
             }
             ReadBackTexture2D.Reload(x, y, 4);
@@ -194,13 +232,13 @@ namespace Coocoo3D.RenderPipeline
             HighResolutionShadowNow = highQuality;
             if (highQuality)
             {
-                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh);
-                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh);
+                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh, depthFormat);
+                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionHigh, c_shadowMapResolutionHigh, depthFormat);
             }
             else
             {
-                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
-                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+                ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow, depthFormat);
+                ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow, depthFormat);
             }
             processingList.UnsafeAdd(ShadowMap0);
             processingList.UnsafeAdd(ShadowMap1);
@@ -208,23 +246,35 @@ namespace Coocoo3D.RenderPipeline
 
         public bool Initilized = false;
         public Task LoadTask;
-        public async Task ReloadDefalutResources(WICFactory wic, ProcessingList processingList, MiscProcessContext miscProcessContext)
+        public async Task ReloadDefalutResources(ProcessingList processingList, MiscProcessContext miscProcessContext)
         {
-            ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
-            ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow);
+            for (int i = 0; i < c_maxCameraPerRender; i++)
+            {
+                CameraDataBuffers[i].Reload(deviceResources, c_presentDataSize);
+            }
+
+            ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow, depthFormat);
+            ShadowMap1.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow, depthFormat);
             processingList.AddObject(ShadowMap0);
             processingList.AddObject(ShadowMap1);
 
-            TextureLoading.ReloadPure(1, 1, new Vector4(0, 1, 1, 1));
-            TextureError.ReloadPure(1, 1, new Vector4(1, 0, 1, 1));
-            EnvCubeMap.ReloadPure(64, 64, new Vector4[] { new Vector4(0.2f, 0.16f, 0.16f, 1), new Vector4(0.16f, 0.2f, 0.16f, 1), new Vector4(0.2f, 0.2f, 0.2f, 1), new Vector4(0.16f, 0.2f, 0.2f, 1), new Vector4(0.2f, 0.2f, 0.16f, 1), new Vector4(0.16f, 0.16f, 0.2f, 1) });
+            Uploader upTexLoading = new Uploader();
+            Uploader upTexError = new Uploader();
+            upTexLoading.Texture2DPure(1, 1, new Vector4(0, 1, 1, 1));
+            upTexError.Texture2DPure(1, 1, new Vector4(1, 0, 1, 1)); ;
+            processingList.AddObject(new Texture2DUploadPack(TextureLoading, upTexLoading));
+            processingList.AddObject(new Texture2DUploadPack(TextureError, upTexError));
+            Uploader upTexPostprocessBackground = new Uploader();
+            upTexPostprocessBackground.Texture2DPure(64, 64, new Vector4(1, 1, 1, 0));
+            processingList.AddObject(new Texture2DUploadPack(postProcessBackground, upTexPostprocessBackground));
+
+            Uploader upTexEnvCube = new Uploader();
+            upTexEnvCube.TextureCubePure(32, 32, new Vector4[] { new Vector4(0.2f, 0.16f, 0.16f, 1), new Vector4(0.16f, 0.2f, 0.16f, 1), new Vector4(0.2f, 0.2f, 0.2f, 1), new Vector4(0.16f, 0.2f, 0.2f, 1), new Vector4(0.2f, 0.2f, 0.16f, 1), new Vector4(0.16f, 0.16f, 0.2f, 1) });
+
             IrradianceMap.ReloadAsRTVUAV(32, 32, 1, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
             EnvironmentMap.ReloadAsRTVUAV(1024, 1024, 7, DxgiFormat.DXGI_FORMAT_R16G16B16A16_FLOAT);
-            postProcessBackground.ReloadPure(64, 64, new Vector4(1, 1, 1, 0));
-            miscProcessContext.Add(new P_Env_Data() { source = EnvCubeMap, IrradianceMap = IrradianceMap, EnvMap = EnvironmentMap, Level = 16 }); ;
-            processingList.AddObject(TextureLoading);
-            processingList.AddObject(TextureError);
-            processingList.AddObject(EnvCubeMap);
+            miscProcessContext.Add(new P_Env_Data() { source = EnvCubeMap, IrradianceMap = IrradianceMap, EnvMap = EnvironmentMap, Level = 16 });
+            processingList.AddObject(new TextureCubeUploadPack(EnvCubeMap, upTexEnvCube));
             processingList.AddObject(IrradianceMap);
             processingList.AddObject(EnvironmentMap);
 
@@ -232,22 +282,26 @@ namespace Coocoo3D.RenderPipeline
             ndcQuadMeshIndexCount = ndcQuadMesh.m_indexCount;
             processingList.AddObject(ndcQuadMesh);
 
-            processingList.AddObject(postProcessBackground);
+            cubeMesh.ReloadCube();
+            cubeMeshIndexCount = cubeMesh.m_indexCount;
+            processingList.AddObject(cubeMesh);
 
-            await ReloadTexture2DNoMip(BRDFLut, wic, processingList, "ms-appx:///Assets/Textures/brdflut.png");
-            await ReloadTexture2DNoMip(UI1Texture, wic, processingList, "ms-appx:///Assets/Textures/UI_1.png");
+            await ReloadTexture2DNoMip(BRDFLut, processingList, "ms-appx:///Assets/Textures/brdflut.png");
+            await ReloadTexture2DNoMip(UI1Texture, processingList, "ms-appx:///Assets/Textures/UI_1.png");
 
             Initilized = true;
         }
-        private async Task ReloadTexture2D(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
+        private async Task ReloadTexture2D(Texture2D texture2D, ProcessingList processingList, string uri)
         {
-            texture2D.ReloadFromImage(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))));
-            processingList.AddObject(texture2D);
+            Uploader uploader = new Uploader();
+            uploader.Texture2D(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))), true, true);
+            processingList.AddObject(new Texture2DUploadPack(texture2D, uploader));
         }
-        private async Task ReloadTexture2DNoMip(Texture2D texture2D, WICFactory wic, ProcessingList processingList, string uri)
+        private async Task ReloadTexture2DNoMip(Texture2D texture2D, ProcessingList processingList, string uri)
         {
-            texture2D.ReloadFromImageNoMip(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))), false);
-            processingList.AddObject(texture2D);
+            Uploader uploader = new Uploader();
+            uploader.Texture2D(await FileIO.ReadBufferAsync(await StorageFile.GetFileFromApplicationUriAsync(new Uri(uri))), false, false);
+            processingList.AddObject(new Texture2DUploadPack(texture2D, uploader));
         }
     }
 }

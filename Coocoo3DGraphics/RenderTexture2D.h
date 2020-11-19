@@ -6,7 +6,7 @@ namespace Coocoo3DGraphics
 	public ref class RenderTexture2D sealed :public IRenderTexture
 	{
 	public:
-		void ReloadAsDepthStencil(int width, int height);
+		void ReloadAsDepthStencil(int width, int height, DxgiFormat format);
 		void ReloadAsRenderTarget(int width, int height, DxgiFormat format);
 		void ReloadAsRTVUAV(int width, int height, DxgiFormat format);
 	internal:

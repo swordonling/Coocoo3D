@@ -147,6 +147,8 @@
       <Filter>Extension</Filter>
     </ClCompile>
     <ClCompile Include="MeshBuffer.cpp" />
+    <ClCompile Include="Uploader.cpp" />
+    <ClCompile Include="MMDMeshAppend.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -231,6 +233,8 @@
       <Filter>Utility</Filter>
     </ClInclude>
     <ClInclude Include="MeshBuffer.h" />
+    <ClInclude Include="Uploader.h" />
+    <ClInclude Include="MMDMeshAppend.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\VSParticleStandard.hlsl">
@@ -243,12 +247,6 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\GSUIStandard.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\VSUIStandard.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\PSUIStandard.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PSMMDError.hlsl">
@@ -312,6 +310,27 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\VSWidgetUI1.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VSWidgetUI2.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSWidgetUI2.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSDeferredRenderGBuffer.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSDeferredRenderIBL.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSDeferredRenderDirectLight.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\PSDeferredRenderPointLight.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\VSDeferredRenderPointLight.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>

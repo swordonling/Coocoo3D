@@ -1,4 +1,4 @@
-cbuffer cb3 : register(b3)
+cbuffer cb1 : register(b1)
 {
 	float4 _DiffuseColor;
 	float4 _SpecularColor;

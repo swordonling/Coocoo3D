@@ -50,41 +50,31 @@ namespace Coocoo3DGraphics
 	public ref class MMDMesh sealed
 	{
 	public:
-		static MMDMesh^ Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<int>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt);
+		static MMDMesh^ Load1(const Platform::Array<byte>^ verticeData, const Platform::Array<int>^ indexData, int vertexStride, PrimitiveTopology pt);
 		//在上传GPU之前是无法使用的。使用GraphicsContext::void UploadMesh(MMDMesh^ mesh)上传。
-		void Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<byte>^ verticeData2, const Platform::Array<int>^ indexData, int vertexStride, int vertexStride2, PrimitiveTopology pt);
+		void Reload1(const Platform::Array<byte>^ verticeData, const Platform::Array<int>^ indexData, int vertexStride, PrimitiveTopology pt);
 		void ReloadNDCQuad();
+		void ReloadCube();
 		void ReleaseUploadHeapResource();
-		void CopyPosData(Platform::WriteOnlyArray<Windows::Foundation::Numerics::float3>^ Target);
+		static void CopyPosData(Platform::WriteOnlyArray<Windows::Foundation::Numerics::float3>^ Target, const Platform::Array<byte>^ source);
 		virtual ~MMDMesh();
 
 		property Platform::Array<byte>^ m_verticeData;
-		property Platform::Array<byte>^ m_verticeDataPos;
 		property int m_indexCount;
 		property int m_vertexCount;
 	internal:
+		const static UINT c_indexStride = sizeof(UINT);
 		UINT m_vertexStride;
-		UINT m_indexStride;
-		UINT m_vertexStride2;
 		Microsoft::WRL::ComPtr<ID3DBlob> m_indexData;
 
 		D3D_PRIMITIVE_TOPOLOGY m_primitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBuffer;
 		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBufferPos0[c_frameCount];
-		Microsoft::WRL::ComPtr<ID3D12Resource>				m_vertexBufferPos1[c_frameCount];
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferPosView0[c_frameCount];
-		D3D12_VERTEX_BUFFER_VIEW m_vertexBufferPosView1[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource>				m_indexBuffer;
 		D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload0[c_frameCount];
-		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferPosUpload1[c_frameCount];
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_vertexBufferUpload;
 		Microsoft::WRL::ComPtr<ID3D12Resource> m_indexBufferUpload;
-		int lastUpdateIndex0 = 0;
-		int lastUpdateIndex1 = 0;
 	};
 }
 

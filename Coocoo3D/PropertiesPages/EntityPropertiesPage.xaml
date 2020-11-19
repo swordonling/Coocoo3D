@@ -8,6 +8,7 @@
     xmlns:mu="using:Microsoft.UI.Xaml.Controls"
     xmlns:ccom="using:Coocoo3DGraphics"
     xmlns:ccc="using:Coocoo3D.Components"
+    xmlns:sys="using:System"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     AllowDrop="True"
@@ -92,7 +93,7 @@
                 </ScrollViewer>
             </Grid>
         </Flyout>
-        <DataTemplate x:Key="itemMaterial" x:DataType="ccc:MMDMatLit">
+        <DataTemplate x:Key="itemMaterial" x:DataType="ccc:RuntimeMaterial">
             <Button Content="{x:Bind}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="Button_Click"/>
         </DataTemplate>
         <ControlTemplate x:Name="ScrollViewerScrollBarlessTemplate" TargetType="ScrollViewer">
@@ -106,44 +107,42 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <StackPanel Grid.Row="0">
-            <TextBox Height="100" x:Name="pageHeader" FontSize="18" Text="{x:Bind vName,Mode=TwoWay}" PlaceholderText="名称" TextWrapping="Wrap" AcceptsReturn="True"/>
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <mu:NumberBox Grid.Column="0" Header="X" Value="{x:Bind VPX,Mode=TwoWay}" AcceptsExpression="True"/>
-                <mu:NumberBox Grid.Column="1" Header="Y" Value="{x:Bind VPY,Mode=TwoWay}" AcceptsExpression="True"/>
-                <mu:NumberBox Grid.Column="2" Header="Z" Value="{x:Bind VPZ,Mode=TwoWay}" AcceptsExpression="True"/>
-                <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="X" Value="{x:Bind VRX,Mode=TwoWay}" AcceptsExpression="True"/>
-                <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
-                <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
-            </Grid>
-        </StackPanel>
-        <Pivot Grid.Row="1">
+        <TextBox Height="80" x:Name="pageHeader" FontSize="18" Text="{x:Bind vName,Mode=TwoWay}" PlaceholderText="名称" TextWrapping="Wrap" AcceptsReturn="True"/>
+        <Pivot Grid.Row="1" SelectionChanged="Pivot_SelectionChanged">
             <PivotItem x:Uid="Page_Entity_PivotItem_Description">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <ScrollViewer Height="300" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto" IsHorizontalRailEnabled="True">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <mu:NumberBox Grid.Column="0" Header="X" Value="{x:Bind VPX,Mode=TwoWay}" AcceptsExpression="True"/>
+                        <mu:NumberBox Grid.Column="1" Header="Y" Value="{x:Bind VPY,Mode=TwoWay}" AcceptsExpression="True"/>
+                        <mu:NumberBox Grid.Column="2" Header="Z" Value="{x:Bind VPZ,Mode=TwoWay}" AcceptsExpression="True"/>
+                        <mu:NumberBox Grid.Row="1" Grid.Column="0" Header="X" Value="{x:Bind VRX,Mode=TwoWay}" AcceptsExpression="True"/>
+                        <mu:NumberBox Grid.Row="1" Grid.Column="1" Header="Y" Value="{x:Bind VRY,Mode=TwoWay}" AcceptsExpression="True"/>
+                        <mu:NumberBox Grid.Row="1" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
+                    </Grid>
+                    <ScrollViewer Height="300" Grid.Row="1" HorizontalScrollBarVisibility="Visible" HorizontalScrollMode="Enabled" IsHorizontalRailEnabled="True">
                         <TextBlock x:Name="ViewDescription" Text="{x:Bind vDesc}" IsTextSelectionEnabled="True"/>
                     </ScrollViewer>
-                    <ScrollViewer Height="100" Grid.Row="1">
+                    <ScrollViewer Height="100" Grid.Row="2">
                         <TextBlock x:Name="ViewModelInfo" Text="{x:Bind vModelInfo}" IsTextSelectionEnabled="True"/>
                     </ScrollViewer>
                 </Grid>
             </PivotItem>
             <PivotItem x:Uid="Page_Entity_PivotItem_Materials">
                 <ListView x:Name="ViewMaterials" SelectionMode="Single" ItemTemplate="{StaticResource itemMaterial}">
-
                     <ListView.ItemContainerStyle>
                         <Style TargetType="ListViewItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -152,7 +151,47 @@
                         </Style>
                     </ListView.ItemContainerStyle>
                 </ListView>
-
+            </PivotItem>
+            <PivotItem x:Uid="Page_Entity_PivotItem_Morph" Header="Morph">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <ToggleSwitch x:Uid="Page_Entity_Switch_LockMotion" Header="Lock Motion" IsOn="{x:Bind VLockMotion, Mode=TwoWay}"/>
+                        <Slider IsEnabled="{x:Bind VLockMotion,Mode=OneWay}" Header="{x:Bind currentSelectedMorph.Name,Mode=OneWay}" Minimum="0" Maximum="1" StepFrequency="0.01" Value="{x:Bind VMorphValue,Mode=TwoWay}"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" x:Name="ViewMorph" SelectionMode="Single" SelectionChanged="ViewMorph_SelectionChanged">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Margin" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
+            </PivotItem>
+            <PivotItem x:Uid="Page_Entity_PivotItem_Bone" Header="Bone">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel>
+                        <ToggleSwitch x:Uid="Page_Entity_Switch_LockMotion" Header="Lock Motion" IsOn="{x:Bind VLockMotion, Mode=TwoWay}"/>
+                    </StackPanel>
+                    <ListView Grid.Row="1" x:Name="ViewBone" SelectionMode="Single">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Margin" Value="0"/>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                    </ListView>
+                </Grid>
             </PivotItem>
         </Pivot>
     </Grid>

@@ -28,7 +28,7 @@ PSIn main(VSIn input)
 {
 	PSIn output;
 	UIInfo data = _uiInfo[input.instance];
-	output.Pos = input.Pos;
+	output.Pos = float4(input.Pos.xyz, 1);
 	output.Pos.xy = ((input.Pos.xy + float2(1, 1)) / 2 * data.size + data.offset) * 2 / _ScreenSize - float2(1, 1);
 
 	output.uv = (input.Pos.xy * 0.5f + 0.5f);

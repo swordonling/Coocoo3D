@@ -21,6 +21,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -36,6 +37,7 @@
                     <mu:NumberBox Grid.Row="2" Grid.Column="2" Header="Z" Value="{x:Bind VRZ,Mode=TwoWay}" AcceptsExpression="True"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="0" Header="fov" Value="{x:Bind VFOV,Mode=TwoWay}" AcceptsExpression="True" Minimum="0.1" Maximum="179.9"/>
                     <mu:NumberBox Grid.Row="3" Grid.Column="1" x:Uid="Page_Common_TextBox_Distance" Value="{x:Bind VD,Mode=TwoWay}" AcceptsExpression="True"/>
+                    <mu:NumberBox Grid.Row="4" Grid.Column="0" x:Uid="Page_Common_TextBox_PlaySpeed" Header="Play Speed" Value="{x:Bind VPlaySpeed,Mode=TwoWay}" AcceptsExpression="True"/>
                 </Grid>
                 <StackPanel Orientation="Horizontal">
                     <Button x:Uid="Page_Common_Button_Settings">
@@ -47,8 +49,9 @@
                                     <ToggleSwitch x:Uid="Page_Common_Switch_SaveCPUPower" IsOn="{x:Bind VSaveCpuPower,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_MultiThreadRendering" IsOn="{x:Bind VMultiThreadRendering,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_HighResolutionShadow" IsOn="{x:Bind VHighResolutionShadow,Mode=TwoWay}"/>
-                                    <ToggleSwitch Header="VSync" IsOn="{x:Bind VVSync,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_VSync" Header="VSync" IsOn="{x:Bind VVSync,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_ZPrePass" IsOn="{x:Bind VZPrepass,Mode=TwoWay}"/>
+                                    <ToggleSwitch x:Uid="Page_Common_Switch_Wireframe" IsOn="{x:Bind VWireframe,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_AO" IsOn="{x:Bind VEnableAO,Mode=TwoWay}"/>
                                     <ToggleSwitch x:Uid="Page_Common_Switch_Shadow" IsOn="{x:Bind VEnableShadow,Mode=TwoWay}"/>
                                     <ComboBox x:Uid="Page_Common_ComboBox_RenderQuality" x:Name="vQuality" SelectionChanged="VQuality_SelectionChanged" SelectedIndex="0"/>
@@ -68,6 +71,7 @@
                 </Grid>
                 <ComboBox x:Uid="Page_Common_ComboBox_RenderPipeline" SelectedIndex="0" SelectionChanged="VRenderPipeline_SelectionChanged">
                     <ComboBoxItem x:Uid="Page_Common_RenderPipeline_ComboBoxItem_Forward" Content="forward"/>
+                    <ComboBoxItem x:Uid="Page_Common_RenderPipeline_ComboBoxItem_Deferred" Content="deferred"/>
                     <ComboBoxItem x:Uid="Page_Common_RenderPipeline_ComboBoxItem_RayTracing" Content="ray tracing"/>
                 </ComboBox>
                 <!--<ComboBox Header="风格(仅forward渲染支持)" SelectedIndex="0" SelectionChanged="VRenderStyle_SelectionChanged">

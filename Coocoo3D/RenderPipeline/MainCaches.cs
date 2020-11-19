@@ -27,101 +27,93 @@ namespace Coocoo3D.RenderPipeline
         {
             if (textureTaskLocker.GetLocker())
             {
-                Task.Run(async () =>
-                {
-                    List<Texture2DPack> packs = new List<Texture2DPack>();
-                    lock (TextureCaches)
-                        foreach (var texturePack in TextureCaches.Values)
-                            if (texturePack.Status == GraphicsObjectStatus.loaded || texturePack.Status == GraphicsObjectStatus.error)
-                                packs.Add(texturePack);
+                List<Texture2DPack> packs = new List<Texture2DPack>();
+                lock (TextureCaches)
+                    foreach (var texturePack in TextureCaches.Values)
+                        packs.Add(texturePack);
 
-                    for (int i = 0; i < packs.Count; i++)
+                for (int i = 0; i < packs.Count; i++)
+                {
+                    var tex = packs[i];
+                    if (tex.loadLocker.GetLocker())
                     {
-                        var tex = packs[i];
-                        if (tex.loadLocker.GetLocker())
+                        Task.Factory.StartNew(async (object a) =>
                         {
+                            Texture2DPack texturePack1 = (Texture2DPack)a;
                             try
                             {
-                                var file = await tex.folder.GetFileAsync(tex.relativePath);
+                                var file = await texturePack1.folder.GetFileAsync(texturePack1.relativePath);
                                 var attr = await file.GetBasicPropertiesAsync();
-                                if (attr.DateModified != tex.lastModifiedTime || tex.Status != GraphicsObjectStatus.loaded)
+                                if (attr.DateModified != texturePack1.lastModifiedTime || texturePack1.texture2D.Status != GraphicsObjectStatus.loaded)
                                 {
-                                    tex.lastModifiedTime = attr.DateModified;
+                                    Uploader uploader = new Uploader();
+                                    if (await texturePack1.ReloadTexture(file, uploader))
+                                        processingList.AddObject(new Texture2DUploadPack(texturePack1.texture2D, uploader));
                                     _RequireRender();
-                                    _ = Task.Run(async () =>
-                                    {
-                                        if (await tex.ReloadTexture(file))
-                                            processingList.AddObject(tex.texture2D);
-                                        _RequireRender();
-                                        tex.loadLocker.FreeLocker();
-                                    });
+                                    texturePack1.lastModifiedTime = attr.DateModified;
                                 }
-                                else
-                                    tex.loadLocker.FreeLocker();
                             }
                             catch
                             {
-                                tex.Mark(GraphicsObjectStatus.error);
+                                texturePack1.Mark(GraphicsObjectStatus.error);
                                 _RequireRender();
-                                tex.loadLocker.FreeLocker();
                             }
-                        }
+                            finally
+                            {
+                                texturePack1.loadLocker.FreeLocker();
+                            }
+                        }, tex);
                     }
-
-                    textureTaskLocker.FreeLocker();
-                });
+                }
+                textureTaskLocker.FreeLocker();
             }
         }
-
         public void ReloadShaders(ProcessingList processingList, RPAssetsManager RPAssetsManager, Action _RequireRender)
         {
             if (shaderTaskLocker.GetLocker())
             {
-                Task.Run(async () =>
-                {
-                    List<RPShaderPack> packs = new List<RPShaderPack>();
-                    lock (RPShaderPackCaches)
-                        foreach (var shaderPack in RPShaderPackCaches.Values)
-                            if (shaderPack.Status == GraphicsObjectStatus.loaded || shaderPack.Status == GraphicsObjectStatus.error)
-                                packs.Add(shaderPack);
+                List<RPShaderPack> packs = new List<RPShaderPack>();
+                lock (RPShaderPackCaches)
+                    foreach (var shaderPack in RPShaderPackCaches.Values)
+                        packs.Add(shaderPack);
 
-                    for (int i = 0; i < packs.Count; i++)
+                for (int i = 0; i < packs.Count; i++)
+                {
+                    var shaderPack1 = packs[i];
+                    if (shaderPack1.loadLocker.GetLocker())
                     {
-                        var shaderPack = packs[i];
-                        if (shaderPack.loadLocker.GetLocker())
+                        Task.Factory.StartNew(async (object a) =>
                         {
+                            RPShaderPack pack1 = (RPShaderPack)a;
                             try
                             {
-                                var file = await shaderPack.folder.GetFileAsync(shaderPack.relativePath);
+                                var file = await pack1.folder.GetFileAsync(pack1.relativePath);
                                 var attr = await file.GetBasicPropertiesAsync();
-                                if (attr.DateModified != shaderPack.lastModifiedTime || shaderPack.Status == GraphicsObjectStatus.error)
+                                if (attr.DateModified != pack1.lastModifiedTime || pack1.Status == GraphicsObjectStatus.error)
                                 {
-                                    shaderPack.lastModifiedTime = attr.DateModified;
-                                    shaderPack.Mark(GraphicsObjectStatus.loading);
+                                    pack1.lastModifiedTime = attr.DateModified;
+                                    pack1.Mark(GraphicsObjectStatus.loading);
                                     _RequireRender();
-                                    _ = Task.Run(async () =>
+                                    if (await pack1.Reload(file, RPAssetsManager, processingList))
                                     {
-                                        if (await shaderPack.Reload(file, RPAssetsManager, processingList))
-                                        {
 
-                                        }
-                                        _RequireRender();
-                                        shaderPack.loadLocker.FreeLocker();
-                                    });
+                                    }
+                                    _RequireRender();
                                 }
-                                else
-                                    shaderPack.loadLocker.FreeLocker();
                             }
                             catch
                             {
-                                shaderPack.Mark(GraphicsObjectStatus.error);
+                                pack1.Mark(GraphicsObjectStatus.error);
                                 _RequireRender();
-                                shaderPack.loadLocker.FreeLocker();
                             }
-                        }
+                            finally
+                            {
+                                pack1.loadLocker.FreeLocker();
+                            }
+                        }, shaderPack1);
                     }
-                    shaderTaskLocker.FreeLocker();
-                });
+                }
+                shaderTaskLocker.FreeLocker();
             }
         }
     }

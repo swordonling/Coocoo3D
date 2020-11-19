@@ -12,7 +12,7 @@ struct PSIn
 PSIn main(VSIn input)
 {
 	PSIn output;
-	output.Pos = input.Pos;
+	output.Pos = float4(input.Pos.xyz, 1);
 	output.Pos.z = 1-1e-6;
 	output.uv = input.Pos.xy;
 	//output.uv.y = 1 - output.uv.y;

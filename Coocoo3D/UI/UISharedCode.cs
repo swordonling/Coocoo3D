@@ -39,6 +39,7 @@ namespace Coocoo3D.UI
                         pack.folder = storageFolder;
                         pack.relativePath = relatePath;
                         reader.Dispose();
+                        appBody.ProcessingList.AddObject(pack.GetMesh());
                         pack.Status = GraphicsObjectStatus.loaded;
                         pack.LoadTask = null;
                     });
@@ -49,6 +50,8 @@ namespace Coocoo3D.UI
             entity.Reload2(appBody.ProcessingList, pack, GetTextureList(appBody, storageFolder, pack.pmx), pmxPath);
             scene.AddSceneObject(entity);
             appBody.RequireRender();
+
+            appBody.mainCaches.ReloadTextures(appBody.ProcessingList, appBody.RequireRender);
         }
         public static void NewLighting(Coocoo3DMain appBody)
         {
@@ -148,25 +151,14 @@ namespace Coocoo3D.UI
                 for (int i = 0; i < pmx.Textures.Count; i++)
                 {
                     Texture2DPack tex = appBody.mainCaches.TextureCaches.GetOrCreate(paths[i]);
-                    LoadTexture(appBody, tex, storageFolder, relativePaths[i]);
+                    if (tex.Status != GraphicsObjectStatus.loaded)
+                        tex.Mark(GraphicsObjectStatus.loading);
+                    tex.relativePath = relativePaths[i];
+                    tex.folder = storageFolder;
                     textures.Add(tex.texture2D);
                 }
             }
             return textures;
-        }
-        /// <summary>异步加载纹理</summary>
-        public static void LoadTexture(Coocoo3DMain appBody, Texture2DPack texturePack, StorageFolder storageFolder, string relativePath)
-        {
-            if (texturePack.Status != GraphicsObjectStatus.loaded && texturePack.loadLocker.GetLocker())
-            {
-                _ = Task.Run(async () =>
-                {
-                    if (await texturePack.ReloadTexture1(storageFolder, relativePath))
-                        appBody.ProcessingList.AddObject(texturePack.texture2D);
-                    appBody.RequireRender();
-                    texturePack.loadLocker.FreeLocker();
-                });
-            }
         }
     }
 }

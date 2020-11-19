@@ -104,18 +104,18 @@ void GraphicsContext::SetMaterial(Material^ material)
 void GraphicsContext::SetPObject(PObject^ pObject, CullMode cullMode)
 {
 	int a = (int)cullMode;
+	m_commandList->SetPipelineState(pObject->m_pipelineState[a].Get());
+}
 
+void GraphicsContext::SetPObject(PObject^ pObject, CullMode cullMode, bool wireframe)
+{
+	int a = (int)cullMode + (wireframe ? 3 : 0);
 	m_commandList->SetPipelineState(pObject->m_pipelineState[a].Get());
 }
 
 void GraphicsContext::SetPObject(PObject^ pObject, int index)
 {
 	m_commandList->SetPipelineState(pObject->m_pipelineState[index].Get());
-}
-
-void GraphicsContext::SetPObjectDepthOnly(PObject^ pObject)
-{
-	m_commandList->SetPipelineState(pObject->m_pipelineState[PObject::c_indexPipelineStateDepth].Get());
 }
 
 void GraphicsContext::SetPObjectStreamOut(PObject^ pObject)
@@ -140,7 +140,7 @@ void GraphicsContext::UpdateResource(ConstantBuffer^ buffer, const Platform::Arr
 	memcpy(buffer->m_mappedConstantBuffer + buffer->lastUpdateIndex * buffer->Size, data->begin() + dataOffset, sizeInByte);
 }
 
-inline void UpdateCBStaticResource(ConstantBufferStatic^ buffer, ID3D12GraphicsCommandList* commmandList, void* data, UINT sizeInByte, int dataOffset)
+inline void UpdateCBStaticResource(ConstantBufferStatic^ buffer, ID3D12GraphicsCommandList* commandList, void* data, UINT sizeInByte, int dataOffset)
 {
 	buffer->lastUpdateIndex = (buffer->lastUpdateIndex + 1) % c_frameCount;
 	int lastUpdateIndex = buffer->lastUpdateIndex;
@@ -149,9 +149,9 @@ inline void UpdateCBStaticResource(ConstantBufferStatic^ buffer, ID3D12GraphicsC
 	bufferData.pData = (byte*)data + dataOffset;
 	bufferData.RowPitch = sizeInByte;
 	bufferData.SlicePitch = sizeInByte;
-	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
-	UpdateSubresources(commmandList, buffer->m_constantBuffer.Get(), buffer->m_constantBufferUploads[lastUpdateIndex].Get(), 0, 0, 1, &bufferData);
-	commmandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST));
+	UpdateSubresources(commandList, buffer->m_constantBuffer.Get(), buffer->m_constantBufferUploads[lastUpdateIndex].Get(), 0, 0, 1, &bufferData);
+	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(buffer->m_constantBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 
 void GraphicsContext::UpdateResource(ConstantBufferStatic^ buffer, const Platform::Array<byte>^ data, UINT sizeInByte, int dataOffset)
@@ -185,25 +185,11 @@ inline void _UpdateVerticesPos(ID3D12GraphicsCommandList* commandList, ID3D12Res
 	commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 }
 
-void GraphicsContext::UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<byte>^ verticeData)
+void GraphicsContext::UpdateVerticesPos(MMDMeshAppend^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData, int index)
 {
-	mesh->lastUpdateIndex0++;
-	mesh->lastUpdateIndex0 %= c_frameCount;
-	_UpdateVerticesPos(m_commandList.Get(), mesh->m_vertexBufferPos0[mesh->lastUpdateIndex0].Get(), mesh->m_vertexBufferPosUpload0->Get(), verticeData->begin(), verticeData->Length);
-}
-
-void GraphicsContext::UpdateVerticesPos0(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData)
-{
-	mesh->lastUpdateIndex0++;
-	mesh->lastUpdateIndex0 %= c_frameCount;
-	_UpdateVerticesPos(m_commandList.Get(), mesh->m_vertexBufferPos0[mesh->lastUpdateIndex0].Get(), mesh->m_vertexBufferPosUpload0->Get(), verticeData->begin(), verticeData->Length * sizeof(Windows::Foundation::Numerics::float3));
-}
-
-void GraphicsContext::UpdateVerticesPos1(MMDMesh^ mesh, const Platform::Array<Windows::Foundation::Numerics::float3>^ verticeData)
-{
-	mesh->lastUpdateIndex1++;
-	mesh->lastUpdateIndex1 %= c_frameCount;
-	_UpdateVerticesPos(m_commandList.Get(), mesh->m_vertexBufferPos1[mesh->lastUpdateIndex1].Get(), mesh->m_vertexBufferPosUpload1->Get(), verticeData->begin(), verticeData->Length * sizeof(Windows::Foundation::Numerics::float3));
+	mesh->lastUpdateIndexs[index]++;
+	mesh->lastUpdateIndexs[index] %= c_frameCount;
+	_UpdateVerticesPos(m_commandList.Get(), mesh->m_vertexBufferPos[index].Get(), mesh->m_vertexBufferPosUpload[index][mesh->lastUpdateIndexs[index]].Get(), verticeData->begin(), verticeData->Length * 12);
 }
 
 void GraphicsContext::SetSRVR(StaticBuffer^ buffer, int index)
@@ -563,69 +549,9 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
 	}
-	if (mesh->m_verticeDataPos->Length > 0)
-	{
-		CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_verticeDataPos->Length);
-		for (int i = 0; i < c_frameCount; i++)
-		{
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&defaultHeapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&vertexBufferDesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&mesh->m_vertexBufferPos0[i])));
-			NAME_D3D12_OBJECT(mesh->m_vertexBufferPos0[i]);
-
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&uploadHeapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&vertexBufferDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&mesh->m_vertexBufferPosUpload0[i])));
-			NAME_D3D12_OBJECT(mesh->m_vertexBufferPosUpload0[i]);
-		}
-		for (int i = 0; i < c_frameCount; i++)
-		{
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&defaultHeapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&vertexBufferDesc,
-				D3D12_RESOURCE_STATE_COPY_DEST,
-				nullptr,
-				IID_PPV_ARGS(&mesh->m_vertexBufferPos1[i])));
-			NAME_D3D12_OBJECT(mesh->m_vertexBufferPos1[i]);
-
-			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-				&uploadHeapProperties,
-				D3D12_HEAP_FLAG_NONE,
-				&vertexBufferDesc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&mesh->m_vertexBufferPosUpload1[i])));
-			NAME_D3D12_OBJECT(mesh->m_vertexBufferPosUpload1[i]);
-		}
-
-		D3D12_SUBRESOURCE_DATA vertexData = {};
-		vertexData.pData = mesh->m_verticeDataPos->begin();
-		vertexData.RowPitch = mesh->m_verticeDataPos->Length;
-		vertexData.SlicePitch = vertexData.RowPitch;
-		for (int i = 0; i < c_frameCount; i++)
-			UpdateSubresources(m_commandList.Get(), mesh->m_vertexBufferPos0[i].Get(), mesh->m_vertexBufferPosUpload0[i].Get(), 0, 0, 1, &vertexData);
-		for (int i = 0; i < c_frameCount; i++)
-			UpdateSubresources(m_commandList.Get(), mesh->m_vertexBufferPos1[i].Get(), mesh->m_vertexBufferPosUpload1[i].Get(), 0, 0, 1, &vertexData);
-		CD3DX12_RESOURCE_BARRIER barriers[c_frameCount * 2];
-		for (int i = 0; i < c_frameCount; i++)
-			barriers[i] = { CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBufferPos0[i].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ) };
-		for (int i = 0; i < c_frameCount; i++)
-			barriers[i + c_frameCount] = { CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBufferPos1[i].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ) };
-
-		m_commandList->ResourceBarrier(c_frameCount * 2, barriers);
-	}
 	if (mesh->m_indexCount > 0)
 	{
-		CD3DX12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * mesh->m_indexStride);
+		CD3DX12_RESOURCE_DESC indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->m_indexCount * mesh->c_indexStride);
 		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
 			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
@@ -646,13 +572,12 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 
 		D3D12_SUBRESOURCE_DATA indexData = {};
 		indexData.pData = mesh->m_indexData->GetBufferPointer();
-		indexData.RowPitch = mesh->m_indexCount * mesh->m_indexStride;
+		indexData.RowPitch = mesh->m_indexCount * mesh->c_indexStride;
 		indexData.SlicePitch = indexData.RowPitch;
 
 		UpdateSubresources(m_commandList.Get(), mesh->m_indexBuffer.Get(), mesh->m_indexBufferUpload.Get(), 0, 0, 1, &indexData);
 		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER));
 	}
-	mesh->lastUpdateIndex0 = 0;
 
 	// 创建顶点/索引缓冲区视图。
 	if (mesh->m_verticeData->Length > 0)
@@ -661,168 +586,213 @@ void GraphicsContext::UploadMesh(MMDMesh^ mesh)
 		mesh->m_vertexBufferView.StrideInBytes = mesh->m_vertexStride;
 		mesh->m_vertexBufferView.SizeInBytes = mesh->m_vertexStride * mesh->m_vertexCount;
 	}
-	if (mesh->m_verticeDataPos->Length > 0)
-	{
-		for (int i = 0; i < c_frameCount; i++)
-		{
-			mesh->m_vertexBufferPosView0[i].BufferLocation = mesh->m_vertexBufferPos0[i]->GetGPUVirtualAddress();
-			mesh->m_vertexBufferPosView0[i].StrideInBytes = mesh->m_vertexStride2;
-			mesh->m_vertexBufferPosView0[i].SizeInBytes = mesh->m_vertexStride2 * mesh->m_vertexCount;
-
-			mesh->m_vertexBufferPosView1[i].BufferLocation = mesh->m_vertexBufferPos1[i]->GetGPUVirtualAddress();
-			mesh->m_vertexBufferPosView1[i].StrideInBytes = mesh->m_vertexStride2;
-			mesh->m_vertexBufferPosView1[i].SizeInBytes = mesh->m_vertexStride2 * mesh->m_vertexCount;
-		}
-	}
 	if (mesh->m_indexCount > 0)
 	{
 		mesh->m_indexBufferView.BufferLocation = mesh->m_indexBuffer->GetGPUVirtualAddress();
-		mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount * mesh->m_indexStride;
+		mesh->m_indexBufferView.SizeInBytes = mesh->m_indexCount * mesh->c_indexStride;
 		mesh->m_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	}
 }
 
-void GraphicsContext::UploadTexture(ITexture^ texture)
+void GraphicsContext::UploadMesh(MMDMeshAppend^ mesh, const Platform::Array<byte>^ data)
 {
-	Texture2D^ tex2D = dynamic_cast<Texture2D^>(texture);
-	TextureCube^ texCube = dynamic_cast<TextureCube^>(texture);
-
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
-	if (tex2D != nullptr)
+	CD3DX12_RESOURCE_DESC vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh->c_vertexStride * mesh->m_posCount);
+	CD3DX12_HEAP_PROPERTIES defaultHeapProperties(D3D12_HEAP_TYPE_DEFAULT);
+	CD3DX12_HEAP_PROPERTIES uploadHeapProperties(D3D12_HEAP_TYPE_UPLOAD);
+	for (int i = 0; i < mesh->c_bufferCount; i++)
 	{
-		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.MipLevels = tex2D->m_mipLevels;
-		textureDesc.Format = tex2D->m_format;
-		textureDesc.Width = tex2D->m_width;
-		textureDesc.Height = tex2D->m_height;
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		textureDesc.DepthOrArraySize = 1;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
 		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			&defaultHeapProperties,
 			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
+			&vertexBufferDesc,
 			D3D12_RESOURCE_STATE_COPY_DEST,
 			nullptr,
-			IID_PPV_ARGS(&tex2D->m_texture)));
-		NAME_D3D12_OBJECT(tex2D->m_texture);
-
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(tex2D->m_textureData->Length),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&tex2D->m_textureUpload)));
-		std::vector<D3D12_SUBRESOURCE_DATA>subresources;
-
-		subresources.reserve(textureDesc.MipLevels);
-		byte* pdata = tex2D->m_textureData->begin();
-		int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
-		for (int i = 0; i < textureDesc.MipLevels; i++)
-		{
-			D3D12_SUBRESOURCE_DATA subresourcedata = {};
-			subresourcedata.pData = pdata;
-			subresourcedata.RowPitch = tex2D->m_imageMipsData[i].width * bitsPerPixel / 8;
-			subresourcedata.SlicePitch = tex2D->m_imageMipsData[i].width * tex2D->m_imageMipsData[i].height * bitsPerPixel / 8;
-			pdata += tex2D->m_imageMipsData[i].width * tex2D->m_imageMipsData[i].height * bitsPerPixel / 8;
-
-			subresources.push_back(subresourcedata);
-		}
-
-		UpdateSubresources(m_commandList.Get(), tex2D->m_texture.Get(), tex2D->m_textureUpload.Get(), 0, 0, textureDesc.MipLevels, subresources.data());
-
-		CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(tex2D->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-		m_commandList->ResourceBarrier(1, &textureResourceBarrier);
-		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		tex2D->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = tex2D->m_format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
-		d3dDevice->CreateShaderResourceView(tex2D->m_texture.Get(), &srvDesc, CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * tex2D->m_heapRefIndex));
+			IID_PPV_ARGS(&mesh->m_vertexBufferPos[i])));
+		NAME_D3D12_OBJECT(mesh->m_vertexBufferPos[i]);
 	}
-	else if (texCube != nullptr)
+	for (int i = 0; i < mesh->c_bufferCount; i++)
 	{
-		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.MipLevels = texCube->m_mipLevels;
-		textureDesc.Format = texCube->m_format;
-		textureDesc.Width = texCube->m_width;
-		textureDesc.Height = texCube->m_height;
-		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		textureDesc.DepthOrArraySize = 6;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.SampleDesc.Quality = 0;
-		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-		int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&textureDesc,
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&texCube->m_texture)));
-
-		DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(texCube->m_textureData->Length),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&texCube->m_textureUpload)));
-		NAME_D3D12_OBJECT(texCube->m_texture);
-
-		std::vector<D3D12_SUBRESOURCE_DATA>subresources;
-
-		subresources.reserve(textureDesc.MipLevels * 6);
-
-		D3D12_SUBRESOURCE_DATA textureDatas[6] = {};
-		for (int i = 0; i < 6; i++)
+		for (int j = 0; j < c_frameCount; j++)
 		{
-			//textureDatas[i].pData = texCube->m_textureData->begin() + (texCube->m_textureData->Length / 6) * i;
-			//textureDatas[i].RowPitch = texCube->m_width * bitsPerPixel / 8;
-			//textureDatas[i].SlicePitch = texCube->m_width * texCube->m_height * bitsPerPixel / 8;
-
-			byte* pdata = texCube->m_textureData->begin() + (texCube->m_textureData->Length / 6) * i;
-			for (int j = 0; j < textureDesc.MipLevels; j++)
-			{
-				D3D12_SUBRESOURCE_DATA subresourcedata = {};
-				subresourcedata.pData = pdata;
-				subresourcedata.RowPitch = texCube->m_imageMipsData[j].width * bitsPerPixel / 8;
-				subresourcedata.SlicePitch = texCube->m_imageMipsData[j].width * texCube->m_imageMipsData[j].height * bitsPerPixel / 8;
-				pdata += texCube->m_imageMipsData[j].width * texCube->m_imageMipsData[j].height * bitsPerPixel / 8;
-
-				subresources.push_back(subresourcedata);
-			}
+			DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+				&uploadHeapProperties,
+				D3D12_HEAP_FLAG_NONE,
+				&vertexBufferDesc,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&mesh->m_vertexBufferPosUpload[i][j])));
+			NAME_D3D12_OBJECT(mesh->m_vertexBufferPosUpload[i][j]);
 		}
+	}
+	for (int i = 0; i < mesh->c_bufferCount; i++)
+	{
+		D3D12_SUBRESOURCE_DATA vertexData = {};
+		vertexData.pData = data->begin();
+		vertexData.RowPitch = data->Length;
+		vertexData.SlicePitch = vertexData.RowPitch;
 
-		UpdateSubresources(m_commandList.Get(), texCube->m_texture.Get(), texCube->m_textureUpload.Get(), 0, 0, textureDesc.MipLevels * 6, subresources.data());
-
-		CD3DX12_RESOURCE_BARRIER textureResourceBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(texCube->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-		m_commandList->ResourceBarrier(1, &textureResourceBarrier);
-
-		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		texCube->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Format = texCube->m_format;
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
-		srvDesc.TextureCube.MipLevels = textureDesc.MipLevels;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texCube->m_heapRefIndex);
-		d3dDevice->CreateShaderResourceView(texCube->m_texture.Get(), &srvDesc, handle);
-
+		UpdateSubresources(m_commandList.Get(), mesh->m_vertexBufferPos[i].Get(), mesh->m_vertexBufferPosUpload[i][0].Get(), 0, 0, 1, &vertexData);
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(mesh->m_vertexBufferPos[i].Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	}
+	for (int i = 0; i < mesh->c_bufferCount; i++)
+	{
+		mesh->m_vertexBufferPosViews[i].BufferLocation = mesh->m_vertexBufferPos[i]->GetGPUVirtualAddress();
+		mesh->m_vertexBufferPosViews[i].StrideInBytes = mesh->c_vertexStride;
+		mesh->m_vertexBufferPosViews[i].SizeInBytes = mesh->c_vertexStride * mesh->m_posCount;
 	}
 }
 
-void GraphicsContext::UploadBuffer(StaticBuffer^ buffer)
+void GraphicsContext::UploadTexture(TextureCube^ texture, Uploader^ uploader)
+{
+	texture->m_width = uploader->m_width;
+	texture->m_height = uploader->m_height;
+	texture->m_mipLevels = uploader->m_mipLevels;
+	texture->m_format = uploader->m_format;
+
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.MipLevels = uploader->m_mipLevels;
+	textureDesc.Format = uploader->m_format;
+	textureDesc.Width = uploader->m_width;
+	textureDesc.Height = uploader->m_height;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	textureDesc.DepthOrArraySize = 6;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+	int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
+	DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&texture->m_texture)));
+
+	DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(uploader->m_data.size()),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&uploader->m_buffer)));
+	NAME_D3D12_OBJECT(uploader->m_buffer);
+
+	std::vector<D3D12_SUBRESOURCE_DATA>subresources;
+
+	subresources.reserve(textureDesc.MipLevels * 6);
+
+	D3D12_SUBRESOURCE_DATA textureDatas[6] = {};
+	for (int i = 0; i < 6; i++)
+	{
+		UINT width = textureDesc.Width;
+		UINT height = textureDesc.Height;
+		byte* pdata = uploader->m_data.data() + (uploader->m_data.size() / 6) * i;
+		for (int j = 0; j < textureDesc.MipLevels; j++)
+		{
+			D3D12_SUBRESOURCE_DATA subresourcedata = {};
+			subresourcedata.pData = pdata;
+			subresourcedata.RowPitch = width * bitsPerPixel / 8;
+			subresourcedata.SlicePitch = width * height * bitsPerPixel / 8;
+			pdata += width * height * bitsPerPixel / 8;
+
+			subresources.push_back(subresourcedata);
+			width /= 2;
+			height /= 2;
+		}
+	}
+
+	UpdateSubresources(m_commandList.Get(), texture->m_texture.Get(), uploader->m_buffer.Get(), 0, 0, textureDesc.MipLevels * 6, subresources.data());
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	texture->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+	srvDesc.TextureCube.MipLevels = textureDesc.MipLevels;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texture->m_heapRefIndex);
+	d3dDevice->CreateShaderResourceView(texture->m_texture.Get(), &srvDesc, handle);
+	texture->Status = GraphicsObjectStatus::loaded;
+}
+
+void GraphicsContext::UploadTexture(Texture2D^ texture, Uploader^ uploader)
+{
+	texture->m_width = uploader->m_width;
+	texture->m_height = uploader->m_height;
+	texture->m_mipLevels = uploader->m_mipLevels;
+	texture->m_format = uploader->m_format;
+
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+
+	D3D12_RESOURCE_DESC textureDesc = {};
+	textureDesc.MipLevels = uploader->m_mipLevels;
+	textureDesc.Format = uploader->m_format;
+	textureDesc.Width = uploader->m_width;
+	textureDesc.Height = uploader->m_height;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	textureDesc.DepthOrArraySize = 1;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+
+	DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+		D3D12_HEAP_FLAG_NONE,
+		&textureDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&texture->m_texture)));
+	NAME_D3D12_OBJECT(texture->m_texture);
+
+	DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer(uploader->m_data.size()),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&uploader->m_buffer)));
+
+	std::vector<D3D12_SUBRESOURCE_DATA>subresources;
+	subresources.reserve(textureDesc.MipLevels);
+
+	byte* pdata = uploader->m_data.data();
+	int bitsPerPixel = DeviceResources::BitsPerPixel(textureDesc.Format);
+	UINT width = textureDesc.Width;
+	UINT height = textureDesc.Height;
+	for (int i = 0; i < textureDesc.MipLevels; i++)
+	{
+		D3D12_SUBRESOURCE_DATA subresourcedata = {};
+		subresourcedata.pData = pdata;
+		subresourcedata.RowPitch = width * bitsPerPixel / 8;
+		subresourcedata.SlicePitch = width * height * bitsPerPixel / 8;
+		pdata += width * height * bitsPerPixel / 8;
+
+		subresources.push_back(subresourcedata);
+		width /= 2;
+		height /= 2;
+	}
+
+	UpdateSubresources(m_commandList.Get(), texture->m_texture.Get(), uploader->m_buffer.Get(), 0, 0, textureDesc.MipLevels, subresources.data());
+
+	m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(texture->m_texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	texture->m_heapRefIndex = _InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = textureDesc.MipLevels;
+	d3dDevice->CreateShaderResourceView(texture->m_texture.Get(), &srvDesc, CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * texture->m_heapRefIndex));
+	texture->Status = GraphicsObjectStatus::loaded;
+}
+
+void GraphicsContext::UploadBuffer1(StaticBuffer^ buffer)
 {
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 
@@ -902,7 +872,7 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 			textureDesc.SampleDesc.Quality = 0;
 			textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
-			if (tex2D->m_dsvFormat == DXGI_FORMAT_D32_FLOAT)
+			if (tex2D->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
 			{
 				CD3DX12_CLEAR_VALUE clearValue(tex2D->m_dsvFormat, 1.0f, 0);
 				DX::ThrowIfFailed(d3dDevice->CreateCommittedResource(
@@ -1222,8 +1192,6 @@ void GraphicsContext::SetMesh(MMDMesh^ mesh)
 {
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
-	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferPosView0[mesh->lastUpdateIndex0]);
-	m_commandList->IASetVertexBuffers(2, 1, &mesh->m_vertexBufferPosView1[mesh->lastUpdateIndex1]);
 	m_commandList->IASetIndexBuffer(&mesh->m_indexBufferView);
 }
 
@@ -1231,8 +1199,18 @@ void GraphicsContext::SetMeshVertex(MMDMesh^ mesh)
 {
 	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
 	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
-	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferPosView0[mesh->lastUpdateIndex0]);
-	m_commandList->IASetVertexBuffers(2, 1, &mesh->m_vertexBufferPosView1[mesh->lastUpdateIndex1]);
+}
+
+void GraphicsContext::SetMeshVertex1(MMDMesh^ mesh)
+{
+	m_commandList->IASetPrimitiveTopology(mesh->m_primitiveTopology);
+	m_commandList->IASetVertexBuffers(0, 1, &mesh->m_vertexBufferView);
+}
+
+void GraphicsContext::SetMeshVertex(MMDMeshAppend^ mesh)
+{
+	m_commandList->IASetVertexBuffers(1, 1, &mesh->m_vertexBufferPosViews[0]);
+	m_commandList->IASetVertexBuffers(2, 1, &mesh->m_vertexBufferPosViews[1]);
 }
 
 void GraphicsContext::SetMeshIndex(MMDMesh^ mesh)
@@ -1254,24 +1232,7 @@ void GraphicsContext::SetMesh(MeshBuffer^ mesh)
 	m_commandList->IASetVertexBuffers(0, 1, &vbv);
 }
 
-void GraphicsContext::SetRenderTargetScreenAndClear(Windows::Foundation::Numerics::float4 color)
-{
-	// 设置视区和剪刀矩形。
-	D3D12_VIEWPORT viewport = m_deviceResources->GetScreenViewport();
-	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
-	m_commandList->RSSetViewports(1, &viewport);
-	m_commandList->RSSetScissorRects(1, &scissorRect);
-
-
-	float _color[4] = { color.x,color.y,color.z,color.w };
-	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = m_deviceResources->GetRenderTargetView();
-	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = m_deviceResources->GetDepthStencilView();
-	m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
-	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
-}
-
-void GraphicsContext::SetAndClearDSV(RenderTexture2D^ texture)
+void GraphicsContext::SetDSV(RenderTexture2D^ texture, bool clear)
 {
 	// 设置视区和剪刀矩形。
 	D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(
@@ -1291,11 +1252,41 @@ void GraphicsContext::SetAndClearDSV(RenderTexture2D^ texture)
 	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), texture->m_dsvHeapRefIndex, incrementSize);
-	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	if (clear)
+		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	m_commandList->OMSetRenderTargets(0, nullptr, false, &depthStencilView);
 }
 
-void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color)
+void GraphicsContext::SetRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color, bool clear)
+{
+	// 设置视区和剪刀矩形。
+	D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(
+		0.0f,
+		0.0f,
+		RTV->m_width,
+		RTV->m_height
+	);
+	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
+	m_commandList->RSSetViewports(1, &viewport);
+	m_commandList->RSSetScissorRects(1, &scissorRect);
+
+
+	if (RTV->prevResourceState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(RTV->m_texture.Get(), RTV->prevResourceState, D3D12_RESOURCE_STATE_RENDER_TARGET));
+	RTV->prevResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), RTV->m_rtvHeapRefIndex, incrementSize);
+
+	float _color[4] = { color.x,color.y,color.z,color.w };
+	if (clear)
+		m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
+	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, nullptr);
+}
+
+void GraphicsContext::SetRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV)
 {
 	if ((RTV->m_width > DSV->m_width) || (RTV->m_height > DSV->m_height))
 	{
@@ -1328,37 +1319,60 @@ void GraphicsContext::SetAndClearRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ D
 	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), DSV->m_dsvHeapRefIndex, incrementSize);
 
 	float _color[4] = { color.x,color.y,color.z,color.w };
-	m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
-	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	if (clearRTV)
+		m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
+	if (clearDSV)
+		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
 }
 
-void GraphicsContext::SetAndClearRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color)
+void GraphicsContext::SetRTVDSV(const Platform::Array<RenderTexture2D^>^ RTVs, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV)
 {
+	if ((RTVs[0]->m_width > DSV->m_width) || (RTVs[0]->m_height > DSV->m_height))
+	{
+		throw ref new Platform::NotImplementedException();
+	}
 	// 设置视区和剪刀矩形。
 	D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(
 		0.0f,
 		0.0f,
-		RTV->m_width,
-		RTV->m_height
+		RTVs[0]->m_width,
+		RTVs[0]->m_height
 	);
 	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
 	m_commandList->RSSetViewports(1, &viewport);
 	m_commandList->RSSetScissorRects(1, &scissorRect);
 
-
-	if (RTV->prevResourceState != D3D12_RESOURCE_STATE_RENDER_TARGET)
-		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(RTV->m_texture.Get(), RTV->prevResourceState, D3D12_RESOURCE_STATE_RENDER_TARGET));
-	RTV->prevResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	for (int i = 0; i < RTVs->Length; i++)
+	{
+		auto RTV = RTVs[i];
+		if (RTV->prevResourceState != D3D12_RESOURCE_STATE_RENDER_TARGET)
+			m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(RTV->m_texture.Get(), RTV->prevResourceState, D3D12_RESOURCE_STATE_RENDER_TARGET));
+		RTV->prevResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	}
+	if (DSV->prevResourceState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(DSV->m_texture.Get(), DSV->prevResourceState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	DSV->prevResourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
 	auto d3dDevice = m_deviceResources->GetD3DDevice();
 
-	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), RTV->m_rtvHeapRefIndex, incrementSize);
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), DSV->m_dsvHeapRefIndex, incrementSize);
 
+	D3D12_CPU_DESCRIPTOR_HANDLE* rtvs1 = (D3D12_CPU_DESCRIPTOR_HANDLE*)malloc(sizeof(D3D12_CPU_DESCRIPTOR_HANDLE) * RTVs->Length);
+	for (int i = 0; i < RTVs->Length; i++)
+	{
+		UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		rtvs1[i] = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), RTVs[i]->m_rtvHeapRefIndex, incrementSize);
+	}
 	float _color[4] = { color.x,color.y,color.z,color.w };
-	m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
-	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, nullptr);
+	if (clearRTV)
+		for (int i = 0; i < RTVs->Length; i++)
+			m_commandList->ClearRenderTargetView(rtvs1[i], _color, 0, nullptr);
+	if (clearDSV)
+		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	m_commandList->OMSetRenderTargets(RTVs->Length, rtvs1, false, &depthStencilView);
+	free(rtvs1);
 }
 
 void GraphicsContext::SetRootSignature(GraphicsSignature^ rootSignature)
@@ -1383,15 +1397,33 @@ void GraphicsContext::ResourceBarrierScreen(D3D12ResourceStates before, D3D12Res
 	m_commandList->ResourceBarrier(1, &resourceBarrier);
 }
 
-void GraphicsContext::SetRenderTargetScreenAndClearDepth()
+void GraphicsContext::SetRenderTargetScreen(Windows::Foundation::Numerics::float4 color, RenderTexture2D^ DSV, bool clearScreen, bool clearDSV)
 {
+	if ((m_deviceResources->GetOutputSize().Width > DSV->m_width) || (m_deviceResources->GetOutputSize().Height > DSV->m_height))
+	{
+		throw ref new Platform::NotImplementedException();
+	}
+	if (DSV->prevResourceState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
+		m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(DSV->m_texture.Get(), DSV->prevResourceState, D3D12_RESOURCE_STATE_DEPTH_WRITE));
+	DSV->prevResourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+	auto d3dDevice = m_deviceResources->GetD3DDevice();
+	UINT incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), DSV->m_dsvHeapRefIndex, incrementSize);
+
+	// 设置视区和剪刀矩形。
 	D3D12_VIEWPORT viewport = m_deviceResources->GetScreenViewport();
 	D3D12_RECT scissorRect = { 0, 0, static_cast<LONG>(viewport.Width), static_cast<LONG>(viewport.Height) };
 	m_commandList->RSSetViewports(1, &viewport);
 	m_commandList->RSSetScissorRects(1, &scissorRect);
+
+
+	float _color[4] = { color.x,color.y,color.z,color.w };
 	D3D12_CPU_DESCRIPTOR_HANDLE renderTargetView = m_deviceResources->GetRenderTargetView();
-	D3D12_CPU_DESCRIPTOR_HANDLE depthStencilView = m_deviceResources->GetDepthStencilView();
-	m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+	if (clearScreen)
+		m_commandList->ClearRenderTargetView(renderTargetView, _color, 0, nullptr);
+	if (clearDSV)
+		m_commandList->ClearDepthStencilView(depthStencilView, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 	m_commandList->OMSetRenderTargets(1, &renderTargetView, false, &depthStencilView);
 }
 

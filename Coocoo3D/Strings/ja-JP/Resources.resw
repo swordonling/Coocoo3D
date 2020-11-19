@@ -212,6 +212,9 @@
   <data name="Page_Common_ComboBox_RenderQuality.Header" xml:space="preserve">
     <value>品質</value>
   </data>
+  <data name="Page_Common_RenderPipeline_ComboBoxItem_Deferred.Content" xml:space="preserve">
+    <value>繰延する</value>
+  </data>
   <data name="Page_Common_RenderPipeline_ComboBoxItem_Forward.Content" xml:space="preserve">
     <value>Forward</value>
   </data>
@@ -239,6 +242,12 @@
   <data name="Page_Common_Switch_ViewerUI.Header" xml:space="preserve">
     <value>Viewer UI</value>
   </data>
+  <data name="Page_Common_Switch_VSync.Header" xml:space="preserve">
+    <value>ビデオの同期</value>
+  </data>
+  <data name="Page_Common_Switch_Wireframe.Header" xml:space="preserve">
+    <value>ワイヤーフレーム</value>
+  </data>
   <data name="Page_Common_Switch_ZPrePass.Header" xml:space="preserve">
     <value>Z-Prepass(Forward Only)</value>
   </data>
@@ -247,6 +256,9 @@
   </data>
   <data name="Page_Common_TextBox_FPSLimit.Header" xml:space="preserve">
     <value>FPS制限</value>
+  </data>
+  <data name="Page_Common_TextBox_PlaySpeed.Header" xml:space="preserve">
+    <value>速度を上げる</value>
   </data>
   <data name="Page_Common_Text_Camera.Text" xml:space="preserve">
     <value>カメラ</value>
@@ -257,11 +269,17 @@
   <data name="Page_Empty_Text_View.Text" xml:space="preserve">
     <value>プロパティを表示するオブジェクトを選択します。</value>
   </data>
+  <data name="Page_Entity_PivotItem_Bone.Header" xml:space="preserve">
+    <value>骨</value>
+  </data>
   <data name="Page_Entity_PivotItem_Description.Header" xml:space="preserve">
     <value>説明</value>
   </data>
   <data name="Page_Entity_PivotItem_Materials.Header" xml:space="preserve">
     <value>材質</value>
+  </data>
+  <data name="Page_Entity_PivotItem_Morph.Header" xml:space="preserve">
+    <value>モーフ</value>
   </data>
   <data name="Page_Entity_Slider_Anisotropic.Header" xml:space="preserve">
     <value>Anisotropic</value>
@@ -295,6 +313,9 @@
   </data>
   <data name="Page_Entity_Slider_Subsurface.Header" xml:space="preserve">
     <value>Subsurface</value>
+  </data>
+  <data name="Page_Entity_Switch_LockMotion.Header" xml:space="preserve">
+    <value>Lock Motion</value>
   </data>
   <data name="Page_Entity_Text_MaterialInfo.Text" xml:space="preserve">
     <value>材質情報</value>

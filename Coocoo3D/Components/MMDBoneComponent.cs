@@ -21,7 +21,7 @@ namespace Coocoo3D.Components
         GCHandle gch_boneMatricesData1;
 
         public List<BoneEntity> bones = new List<BoneEntity>();
-        public Dictionary<string, BoneEntity> stringBoneMap = new Dictionary<string, BoneEntity>();
+        public List<BoneKeyFrame> cachedBoneKeyFrames = new List<BoneKeyFrame>();
 
         public List<Physics3DRigidBody> physics3DRigidBodys = new List<Physics3DRigidBody>();
         public List<Physics3DJoint> physics3DJoints = new List<Physics3DJoint>();
@@ -63,20 +63,24 @@ namespace Coocoo3D.Components
         }
         public void SetPose(MMDMotionComponent motionComponent, MMDMorphStateComponent morphStateComponent, float time)
         {
-            foreach (var pair in stringBoneMap)
+            foreach (var bone in bones)
             {
-                var keyframe = motionComponent.GetBoneMotion(pair.Key, time);
-                pair.Value.rotation = keyframe.rotation;
-                pair.Value.dynamicPosition = keyframe.translation;
+                var keyframe = motionComponent.GetBoneMotion(bone.Name, time);
+                bone.rotation = keyframe.rotation;
+                bone.dynamicPosition = keyframe.translation;
+                cachedBoneKeyFrames[bone.index] = keyframe;
             }
             UpdateAllMatrix();
-
+            SetPose(morphStateComponent);
+        }
+        public void SetPose(MMDMorphStateComponent morphStateComponent)
+        {
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
                 if (morphStateComponent.morphs[i].Type == MorphType.Bone)
                 {
                     MorphBoneDesc[] morphBoneStructs = morphStateComponent.morphs[i].MorphBones;
-                    float computedWeight = morphStateComponent.computedWeights[i];
+                    float computedWeight = morphStateComponent.WeightComputed[i];
                     for (int j = 0; j < morphBoneStructs.Length; j++)
                     {
                         var morphBoneStruct = morphBoneStructs[j];
@@ -91,6 +95,19 @@ namespace Coocoo3D.Components
                 IK(i, bones);
             }
             UpdateAppendBones();
+
+        }
+
+        public void SetPose2(MMDMorphStateComponent morphStateComponent)
+        {
+            for(int i=0;i<bones.Count;i++)
+            {
+                var keyframe = cachedBoneKeyFrames[i];
+                bones[i].rotation = keyframe.rotation;
+                bones[i].dynamicPosition = keyframe.translation;
+            }
+            UpdateAllMatrix();
+            SetPose(morphStateComponent);
         }
 
         public void SetPhysicsPose(Physics3DScene physics3DScene)
@@ -818,7 +835,7 @@ namespace Coocoo3D.FileFormat
         public static void Reload(this MMDBoneComponent boneComponent, PMXFormat modelResource)
         {
             boneComponent.bones.Clear();
-            boneComponent.stringBoneMap.Clear();
+            boneComponent.cachedBoneKeyFrames.Clear();
             var _bones = modelResource.Bones;
             for (int i = 0; i < _bones.Count; i++)
             {
@@ -912,8 +929,7 @@ namespace Coocoo3D.FileFormat
                     boneEntity.IsAppendTranslation = false;
                 }
                 boneComponent.bones.Add(boneEntity);
-                if (boneComponent.stringBoneMap.ContainsKey(_bone.Name)) continue;
-                boneComponent.stringBoneMap.Add(_bone.Name, boneEntity);
+                boneComponent.cachedBoneKeyFrames.Add(new BoneKeyFrame());
             }
 
             boneComponent.BakeSequenceProcessMatrixsIndex();

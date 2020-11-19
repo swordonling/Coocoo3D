@@ -39,8 +39,8 @@ namespace Coocoo3D.Core
                                 var attr = await file.GetBasicPropertiesAsync();
                                 if (attr.DateModified != pack.lastModifiedTime)
                                 {
-                                    pack.lastModifiedTime = attr.DateModified;
                                     updatePacks.Add(pack);
+                                    pack.lastModifiedTime = attr.DateModified;
                                 }
                             }
                             catch
@@ -54,7 +54,7 @@ namespace Coocoo3D.Core
                     {
                         var file = await updatePacks[i].folder.GetFileAsync(updatePacks[i].relativePath);
                         ModelPack pack = new ModelPack();
-                        pack.LoadTask = LoadPMX(file, updatePacks[i].folder, pack);
+                        pack.LoadTask = LoadPMX(file, updatePacks[i].folder, pack, processingList);
                         newPacks.Add(pack);
                     }
                     for (int i = 0; i < newPacks.Count; i++)
@@ -70,10 +70,12 @@ namespace Coocoo3D.Core
                             {
                                 if (scene.Entities[j].ModelPath == pack.fullPath)
                                 {
-                                    scene.Entities[j].ReloadModel(processingList, pack, GetTextureList(processingList, mainCaches, pack.folder, pack.pmx, gameDriverContext.RequireRender));
+                                    scene.Entities[j].ReloadModel(processingList, pack, GetTextureList(processingList, mainCaches, pack.folder, pack.pmx));
                                     scene.EntityRefreshList.Add(scene.Entities[j]);
                                     gameDriverContext.RequireResetPhysics = true;
                                     gameDriverContext.RequireRender(true);
+
+                                    mainCaches.ReloadTextures(processingList, gameDriverContext.RequireRender);
                                 }
                             }
                         }
@@ -98,7 +100,7 @@ namespace Coocoo3D.Core
             }
         }
 
-        static async Task LoadPMX(StorageFile file, StorageFolder folder, ModelPack pack)
+        static async Task LoadPMX(StorageFile file, StorageFolder folder, ModelPack pack, ProcessingList processingList)
         {
             string path = file.Path;
             BinaryReader reader = new BinaryReader((await file.OpenReadAsync()).AsStreamForRead());
@@ -107,13 +109,15 @@ namespace Coocoo3D.Core
             pack.folder = folder;
             pack.relativePath = file.Name;
             reader.Dispose();
+            processingList.AddObject(pack.GetMesh());
             pack.Status = GraphicsObjectStatus.loaded;
+
             pack.LoadTask = null;
         }
 
 
 
-        public static List<Texture2D> GetTextureList(ProcessingList processingList, MainCaches mainCaches, StorageFolder storageFolder, PMXFormat pmx, Action _RequireRender)
+        public static List<Texture2D> GetTextureList(ProcessingList processingList, MainCaches mainCaches, StorageFolder storageFolder, PMXFormat pmx)
         {
             List<Texture2D> textures = new List<Texture2D>();
             List<string> paths = new List<string>();
@@ -130,24 +134,15 @@ namespace Coocoo3D.Core
                 for (int i = 0; i < pmx.Textures.Count; i++)
                 {
                     Texture2DPack tex = mainCaches.TextureCaches.GetOrCreate(paths[i]);
-                    LoadTexture(processingList, tex, storageFolder, relativePaths[i], _RequireRender);
+                    if (tex.Status != GraphicsObjectStatus.loaded)
+                        tex.Mark(GraphicsObjectStatus.loading);
+                    tex.relativePath = relativePaths[i];
+                    tex.folder = storageFolder;
+
                     textures.Add(tex.texture2D);
                 }
             }
             return textures;
-        }
-        public static void LoadTexture(ProcessingList processingList, Texture2DPack texturePack, StorageFolder storageFolder, string relativePath, Action _RequireRender)
-        {
-            if (texturePack.Status != GraphicsObjectStatus.loaded && texturePack.loadLocker.GetLocker())
-            {
-                _ = Task.Run(async () =>
-                {
-                    if (await texturePack.ReloadTexture1(storageFolder, relativePath))
-                        processingList.AddObject(texturePack.texture2D);
-                    _RequireRender();
-                    texturePack.loadLocker.FreeLocker();
-                });
-            }
         }
     }
 }

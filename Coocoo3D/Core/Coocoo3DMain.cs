@@ -62,7 +62,7 @@ namespace Coocoo3D.Core
         public CoreDispatcher Dispatcher;
         public event EventHandler FrameUpdated;
 
-        public volatile int RenderCount = 0;
+        public volatile int CompletedRenderCount = 0;
         public volatile int VirtualRenderCount = 0;
         private async void Tick(ThreadPoolTimer timer)
         {
@@ -79,6 +79,7 @@ namespace Coocoo3D.Core
             ExtendShadowMapRange = 64,
             ZPrepass = false,
             ViewerUI = true,
+            Wireframe = false,
         };
         public InShaderSettings inShaderSettings = new InShaderSettings()
         {
@@ -113,19 +114,19 @@ namespace Coocoo3D.Core
             RPContext.LoadTask = Task.Run(async () =>
             {
                 await RPAssetsManager.ReloadAssets();
-                await RPContext.ReloadDefalutResources(wicFactory, ProcessingList, miscProcessContext);
+                await RPContext.ReloadDefalutResources(ProcessingList, miscProcessContext);
                 RPAssetsManager.Reload(deviceResources);
                 forwardRenderPipeline1.Reload(deviceResources);
+                deferredRenderPipeline1.Reload(deviceResources);
                 postProcess.Reload(deviceResources);
                 widgetRenderer.Reload(deviceResources);
                 RPContext.SkinningMeshBuffer.Reload(deviceResources, 0);
                 if (deviceResources.IsRayTracingSupport())
                     rayTracingRenderPipeline1.Reload(deviceResources);
 
-                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, RPContext.RTFormat, RPContext.backBufferFormat);
+                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, RPContext.middleFormat, RPContext.swapChainFormat, RPContext.depthFormat);
 
                 await miscProcess.ReloadAssets(deviceResources);
-                //widgetRenderer.Init(mainCaches, defaultResources, mainCaches.textureCaches);
                 if (deviceResources.IsRayTracingSupport())
                     await rayTracingRenderPipeline1.ReloadAssets(deviceResources);
                 RequireRender();
@@ -138,14 +139,14 @@ namespace Coocoo3D.Core
 
             CurrentScene = new Scene();
             Dispatcher = CoreWindow.GetForCurrentThread().Dispatcher;
-            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 10.0));
+            threadPoolTimer = ThreadPoolTimer.CreatePeriodicTimer(Tick, TimeSpan.FromSeconds(1 / 30.0));
             RenderLoop = ThreadPool.RunAsync((IAsyncAction action) =>
               {
                   while (action.Status == AsyncStatus.Started)
                   {
                       DateTime now = DateTime.Now;
                       if (now - LatestRenderTime < GameDriverContext.FrameInterval) continue;
-                      bool actualRender = RenderFrame2();
+                      bool actualRender = RenderFrame();
                       if (performaceSettings.SaveCpuPower && (!performaceSettings.VSync || !actualRender))//开启VSync下不需要sleep，以免帧生成不均匀
                           System.Threading.Thread.Sleep(1);
                   }
@@ -154,6 +155,7 @@ namespace Coocoo3D.Core
         #region Rendering
         public RPAssetsManager RPAssetsManager { get => RPContext.RPAssetsManager; }
         ForwardRenderPipeline1 forwardRenderPipeline1 = new ForwardRenderPipeline1();
+        DeferredRenderPipeline1 deferredRenderPipeline1 = new DeferredRenderPipeline1();
         RayTracingRenderPipeline1 rayTracingRenderPipeline1 = new RayTracingRenderPipeline1();
         public PostProcess postProcess = new PostProcess();
         WidgetRenderer widgetRenderer = new WidgetRenderer();
@@ -213,7 +215,7 @@ namespace Coocoo3D.Core
         //System.Diagnostics.Stopwatch stopwatch1 = new System.Diagnostics.Stopwatch();
         public GraphicsContext graphicsContext { get => RPContext.graphicsContext; }
         Task RenderTask1;
-        private bool RenderFrame2()
+        private bool RenderFrame()
         {
             if (!GameDriver.Next(GameDriverContext))
             {
@@ -224,9 +226,9 @@ namespace Coocoo3D.Core
                 #region Render Preparing
 
                 RPContext.dynamicContext1.ClearCollections();
-                RPContext.dynamicContext1.frameRenderIndex = RPContext.frameRenderIndex;
+                RPContext.dynamicContext1.frameRenderIndex = RPContext.frameRenderCount;
                 RPContext.dynamicContext1.EnableDisplay = GameDriverContext.EnableDisplay;
-                RPContext.frameRenderIndex++;
+                RPContext.frameRenderCount++;
                 CurrentScene.DealProcessList(physics3DScene);
                 lock (CurrentScene)
                 {
@@ -236,6 +238,7 @@ namespace Coocoo3D.Core
                         RPContext.dynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
                     }
                 }
+                RPContext.dynamicContext1.selectedEntity = SelectedEntities.FirstOrDefault();
 
                 var entities = RPContext.dynamicContext1.entities;
                 for (int i = 0; i < entities.Count; i++)
@@ -282,10 +285,7 @@ namespace Coocoo3D.Core
                     {
                         entities[i].boneComponent.SetPhysicsPose(physics3DScene);
                     }
-                    if (t1 >= 0)
-                        physics3DScene.Simulate(t1);
-                    else
-                        physics3DScene.Simulate(-t1);
+                    physics3DScene.Simulate(t1 >= 0 ? t1 : -t1);
 
                     physics3DScene.FetchResults();
                     for (int i = 0; i < entities.Count; i++)
@@ -329,15 +329,15 @@ namespace Coocoo3D.Core
                 if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender || SceneObjectVertexCount > RPContext.SkinningMeshBufferSize)
                 {
                     GameDriverContext.RequireInterruptRender = false;
+                    deviceResources.WaitForGpu();
                     if (GameDriverContext.NeedReloadModel)
                     {
-                        deviceResources.WaitForGpu();
                         GameDriverContext.NeedReloadModel = false;
                         ModelReloader.ReloadModels(CurrentScene, mainCaches, _processingList, GameDriverContext);
                     }
+                    RPContext.ChangeShadowMapsQuality(_processingList, performaceSettings.HighResolutionShadow);
                     GraphicsContext.BeginAlloctor(deviceResources);
                     graphicsContext.BeginCommand();
-                    RPContext.ChangeShadowMapsQuality(_processingList, performaceSettings.HighResolutionShadow);
                     _processingList._DealStep1(graphicsContext);
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
@@ -378,10 +378,6 @@ namespace Coocoo3D.Core
                     graphicsContext.SetDescriptorHeapDefault();
 
                     var entities1 = RPContext.dynamicContext.entities;
-                    for (int i = 0; i < entities1.Count; i++)
-                    {
-                        entities1[i].UpdateGpuResources(graphicsContext);
-                    }
 
                     var currentRenderPipeline = _currentRenderPipeline;//避免在渲染时切换
 
@@ -390,25 +386,23 @@ namespace Coocoo3D.Core
                     {
                         currentRenderPipeline.PrepareRenderData(RPContext);
                         postProcess.PrepareRenderData(RPContext);
-                        if (settings.ViewerUI)
-                            widgetRenderer.PrepareRenderData(RPContext);
+                        widgetRenderer.PrepareRenderData(RPContext);
+                        RPContext.UpdateGPUResource();
                     }
                     #endregion
 
                     void _RenderFunction()
                     {
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-                        RPContext.UpdateGPUResource();
                         currentRenderPipeline.RenderCamera(RPContext, 1);
                         postProcess.RenderCamera(RPContext, 1);
                         GameDriver.AfterRender(RPContext, GameDriverContext);
-                        if (settings.ViewerUI)
-                            widgetRenderer.RenderCamera(RPContext, 1);
+                        widgetRenderer.RenderCamera(RPContext, 1);
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                         graphicsContext.EndCommand();
                         graphicsContext.Execute();
                         deviceResources.Present(performaceSettings.VSync);
-                        RenderCount++;
+                        CompletedRenderCount++;
                     }
                     if (thisFrameReady)
                     {
@@ -441,6 +435,10 @@ namespace Coocoo3D.Core
                     _currentRenderPipeline = forwardRenderPipeline1;
                 }
                 if (currentRenderPipelineIndex == 1)
+                {
+                    _currentRenderPipeline = deferredRenderPipeline1;
+                }
+                if (currentRenderPipelineIndex == 2)
                 {
                     _currentRenderPipeline = rayTracingRenderPipeline1;
                 }
@@ -481,5 +479,6 @@ namespace Coocoo3D.Core
         public bool ZPrepass;
         public uint RenderStyle;
         public bool ViewerUI;
+        public bool Wireframe;
     }
 }

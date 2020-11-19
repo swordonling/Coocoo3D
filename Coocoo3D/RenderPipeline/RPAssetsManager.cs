@@ -22,6 +22,8 @@ namespace Coocoo3D.RenderPipeline
         public VertexShader VSSkyBox = new VertexShader();
         public VertexShader VSPostProcess = new VertexShader();
         public VertexShader VSWidgetUI1 = new VertexShader();
+        public VertexShader VSWidgetUI2 = new VertexShader();
+        public VertexShader VSDeferredRenderPointLight = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
         public PixelShader PSMMD_DisneyBrdf = new PixelShader();
         public PixelShader PSMMD_Toon1 = new PixelShader();
@@ -29,9 +31,14 @@ namespace Coocoo3D.RenderPipeline
         public PixelShader PSMMDError = new PixelShader();
         public PixelShader PSMMDAlphaClip = new PixelShader();
         public PixelShader PSMMDAlphaClip1 = new PixelShader();
+        public PixelShader PSDeferredRenderGBuffer = new PixelShader();
+        public PixelShader PSDeferredRenderIBL = new PixelShader();
+        public PixelShader PSDeferredRenderDirectLight = new PixelShader();
+        public PixelShader PSDeferredRenderPointLight = new PixelShader();
         public PixelShader PSSkyBox = new PixelShader();
         public PixelShader PSPostProcess = new PixelShader();
         public PixelShader PSWidgetUI1 = new PixelShader();
+        public PixelShader PSWidgetUI2 = new PixelShader();
         public PObject PObjectMMDSkinning = new PObject();
         public PObject PObjectMMD = new PObject();
         public PObject PObjectMMD_DisneyBrdf = new PObject();
@@ -40,16 +47,22 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectMMDDepth = new PObject();
         public PObject PObjectMMDLoading = new PObject();
         public PObject PObjectMMDError = new PObject();
+        public PObject PObjectDeferredRenderGBuffer = new PObject();
+        public PObject PObjectDeferredRenderIBL = new PObject();
+        public PObject PObjectDeferredRenderDirectLight = new PObject();
+        public PObject PObjectDeferredRenderPointLight = new PObject();
         public PObject PObjectSkyBox = new PObject();
         public PObject PObjectPostProcess = new PObject();
         public PObject PObjectWidgetUI1 = new PObject();
-        public DxgiFormat RTFormat;
+        public PObject PObjectWidgetUI2 = new PObject();
+        public DxgiFormat middleFormat;
+        public DxgiFormat depthFormat;
         public bool Ready;
         public void Reload(DeviceResources deviceResources)
         {
             rootSignature.ReloadMMD(deviceResources);
             rootSignatureSkinning.ReloadSkinning(deviceResources);
-            rootSignaturePostProcess.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.SRVTable, GSD.SRVTable });
+            rootSignaturePostProcess.Reload(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.SRVTable, GSD.SRVTable, GSD.CBV });
             rootSignatureCompute.ReloadCompute(deviceResources, new GraphicSignatureDesc[] { GSD.CBV, GSD.CBV, GSD.CBV, GSD.SRV, GSD.UAV, GSD.UAV });
         }
         public async Task ReloadAssets()
@@ -66,39 +79,60 @@ namespace Coocoo3D.RenderPipeline
             await ReloadPixelShader(PSMMDAlphaClip1, "ms-appx:///Coocoo3DGraphics/PSMMDAlphaClip1.cso");
             await ReloadPixelShader(PSSkyBox, "ms-appx:///Coocoo3DGraphics/PSSkyBox.cso");
 
+            await ReloadVertexShader(VSDeferredRenderPointLight, "ms-appx:///Coocoo3DGraphics/VSDeferredRenderPointLight.cso");
+            await ReloadPixelShader(PSDeferredRenderGBuffer, "ms-appx:///Coocoo3DGraphics/PSDeferredRenderGBuffer.cso");
+            await ReloadPixelShader(PSDeferredRenderIBL, "ms-appx:///Coocoo3DGraphics/PSDeferredRenderIBL.cso");
+            await ReloadPixelShader(PSDeferredRenderDirectLight, "ms-appx:///Coocoo3DGraphics/PSDeferredRenderDirectLight.cso");
+            await ReloadPixelShader(PSDeferredRenderPointLight, "ms-appx:///Coocoo3DGraphics/PSDeferredRenderPointLight.cso");
 
             await ReloadVertexShader(VSPostProcess, "ms-appx:///Coocoo3DGraphics/VSPostProcess.cso");
             await ReloadPixelShader(PSPostProcess, "ms-appx:///Coocoo3DGraphics/PSPostProcess.cso");
 
             await ReloadVertexShader(VSWidgetUI1, "ms-appx:///Coocoo3DGraphics/VSWidgetUI1.cso");
+            await ReloadVertexShader(VSWidgetUI2, "ms-appx:///Coocoo3DGraphics/VSWidgetUI2.cso");
             await ReloadPixelShader(PSWidgetUI1, "ms-appx:///Coocoo3DGraphics/PSWidgetUI1.cso");
+            await ReloadPixelShader(PSWidgetUI2, "ms-appx:///Coocoo3DGraphics/PSWidgetUI2.cso");
         }
-        public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat backBufferFormat)
+        public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat swapChainFormat, DxgiFormat depthFormat)
         {
-            RTFormat = format;
+            Ready = false;
+            middleFormat = format;
+            this.depthFormat = depthFormat;
+
             PObjectMMDSkinning.ReloadSkinning(VSMMDSkinning2, null);
             uploadProcess.UL(PObjectMMDSkinning, 1);
 
-            PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format);
-            PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format);
-            PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format);
-            PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format);
-            PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format);
+            PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format, depthFormat);
+            PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format, depthFormat);
+            PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format, depthFormat);
+            PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format, depthFormat);
+            PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format, depthFormat);
             uploadProcess.UL(PObjectMMD, 0);
             uploadProcess.UL(PObjectMMD_DisneyBrdf, 0);
             uploadProcess.UL(PObjectMMD_Toon1, 0);
             uploadProcess.UL(PObjectMMDLoading, 0);
             uploadProcess.UL(PObjectMMDError, 0);
 
-            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
-            PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0);
+            PObjectDeferredRenderGBuffer.ReloadDrawing(BlendState.none, VSMMDTransform, null, PSDeferredRenderGBuffer, format, depthFormat, 3);
+            PObjectDeferredRenderIBL.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderIBL, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectDeferredRenderDirectLight.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderDirectLight, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectDeferredRenderPointLight.ReloadDrawing(BlendState.add, VSDeferredRenderPointLight, null, PSDeferredRenderPointLight, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            uploadProcess.UL(PObjectDeferredRenderGBuffer, 0);
+            uploadProcess.UL(PObjectDeferredRenderIBL, 0);
+            uploadProcess.UL(PObjectDeferredRenderDirectLight, 0);
+            uploadProcess.UL(PObjectDeferredRenderPointLight, 0);
+
+            //PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
+            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, null, 2500, depthFormat);
+            PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0, depthFormat);
             uploadProcess.UL(PObjectMMDShadowDepth, 0);
             uploadProcess.UL(PObjectMMDDepth, 0);
 
 
-            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format);
-            PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, backBufferFormat);
-            PObjectWidgetUI1.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI1, null, PSWidgetUI1, backBufferFormat);
+            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectWidgetUI1.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI1, null, PSWidgetUI1, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectWidgetUI2.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI2, null, PSWidgetUI2, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             Ready = true;
         }
         protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)

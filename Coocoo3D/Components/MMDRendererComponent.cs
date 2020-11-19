@@ -16,13 +16,15 @@ namespace Coocoo3D.Components
     public class MMDRendererComponent
     {
         public MMDMesh mesh;
+        public MMDMeshAppend meshAppend = new MMDMeshAppend();
         public int meshVertexCount;
         public int meshIndexCount;
+        public byte[] meshPosData;//ref type
 
-        public TwinBuffer meshParticleBuffer = new TwinBuffer();
-        public List<MMDMatLit> Materials = new List<MMDMatLit>();
-        public List<MMDMatLit.InnerStruct> materialsBaseData = new List<MMDMatLit.InnerStruct>();
-        public List<MMDMatLit.InnerStruct> computedMaterialsData = new List<MMDMatLit.InnerStruct>();
+        public TwinBuffer meshParticleBuffer;
+        public List<RuntimeMaterial> Materials = new List<RuntimeMaterial>();
+        public List<RuntimeMaterial.InnerStruct> materialsBaseData = new List<RuntimeMaterial.InnerStruct>();
+        public List<RuntimeMaterial.InnerStruct> computedMaterialsData = new List<RuntimeMaterial.InnerStruct>();
         public List<Texture2D> textures = new List<Texture2D>();
 
         public PObject POSkinning;
@@ -32,25 +34,14 @@ namespace Coocoo3D.Components
 
         public Vector3[] meshPosData1;
         public Vector3[] meshPosData2;
-        public GCHandle gch_meshPosData1;
-        public GCHandle gch_meshPosData2;
-        bool meshNeedUpdateA;
-        bool meshNeedUpdateB;
+        public bool meshNeedUpdateA;
+        public bool meshNeedUpdateB;
         bool flip;
         bool prevflip;
         public float amountAB;
 
-        public List<MorphVertexDesc[]> vertexMorph1;
-        public List<MorphVertexDesc[]> vertexMorph2;
-
-        public MMDRendererComponent()
-        {
-        }
-        ~MMDRendererComponent()
-        {
-            if (gch_meshPosData1.IsAllocated) gch_meshPosData1.Free();
-            if (gch_meshPosData2.IsAllocated) gch_meshPosData2.Free();
-        }
+        public List<MorphVertexDesc[]> vertexMorphsA;
+        public List<MorphVertexDesc[]> vertexMorphsB;
 
 
         public void SetPose(MMDMorphStateComponent morphStateComponent)
@@ -71,20 +62,23 @@ namespace Coocoo3D.Components
                 {
                     MorphVertexDesc[] morphVertexStructs2 = morphStateComponent.morphs[i].MorphVertexs;
 
-                    MorphVertexDesc[] morphVertexStructsA = vertexMorph1[i];
-                    MorphVertexDesc[] morphVertexStructsB = vertexMorph2[i];
+                    MorphVertexDesc[] morphVertexA = vertexMorphsA[i];
+                    MorphVertexDesc[] morphVertexB = vertexMorphsB[i];
                     if (!flip)
                     {
                         if (morphStateComponent.ComputedWeightNotEqualsPrevA(i, out float computedWeightA))
                         {
-                            for (int j = 0; j < morphVertexStructsA.Length; j++)
-                                morphVertexStructsA[j].Offset = morphVertexStructs2[j].Offset * computedWeightA;
+                            //for optimization
+                            if (computedWeightA != 0)
+                                for (int j = 0; j < morphVertexA.Length; j++)
+                                    morphVertexA[j].Offset = morphVertexStructs2[j].Offset * computedWeightA;
                             meshNeedUpdateA = true;
                         }
                         if (morphStateComponent.ComputedWeightNotEqualsPrevB(i, out float computedWeightB))
                         {
-                            for (int j = 0; j < morphVertexStructsB.Length; j++)
-                                morphVertexStructsB[j].Offset = morphVertexStructs2[j].Offset * computedWeightB;
+                            if (computedWeightB != 0)
+                                for (int j = 0; j < morphVertexB.Length; j++)
+                                    morphVertexB[j].Offset = morphVertexStructs2[j].Offset * computedWeightB;
                             meshNeedUpdateB = true;
                         }
                     }
@@ -92,14 +86,16 @@ namespace Coocoo3D.Components
                     {
                         if (morphStateComponent.ComputedWeightNotEqualsPrevA(i, out float computedWeightA))
                         {
-                            for (int j = 0; j < morphVertexStructsB.Length; j++)
-                                morphVertexStructsB[j].Offset = morphVertexStructs2[j].Offset * computedWeightA;
+                            if (computedWeightA != 0)
+                                for (int j = 0; j < morphVertexB.Length; j++)
+                                    morphVertexB[j].Offset = morphVertexStructs2[j].Offset * computedWeightA;
                             meshNeedUpdateB = true;
                         }
                         if (morphStateComponent.ComputedWeightNotEqualsPrevB(i, out float computedWeightB))
                         {
-                            for (int j = 0; j < morphVertexStructsA.Length; j++)
-                                morphVertexStructsA[j].Offset = morphVertexStructs2[j].Offset * computedWeightB;
+                            if (computedWeightB != 0)
+                                for (int j = 0; j < morphVertexA.Length; j++)
+                                    morphVertexA[j].Offset = morphVertexStructs2[j].Offset * computedWeightB;
                             meshNeedUpdateA = true;
                         }
                     }
@@ -107,40 +103,27 @@ namespace Coocoo3D.Components
             }
             if (meshNeedUpdateA)
             {
-                mesh.CopyPosData(meshPosData1);
-                ComputeMorphVertex(meshPosData1, vertexMorph1);
+                MMDMesh.CopyPosData(meshPosData1, meshPosData);
+                ComputeMorphVertex(meshPosData1, vertexMorphsA, flip ? morphStateComponent.WeightComputedB : morphStateComponent.WeightComputedA);
             }
             if (meshNeedUpdateB)
             {
-                mesh.CopyPosData(meshPosData2);
-                ComputeMorphVertex(meshPosData2, vertexMorph2);
+                MMDMesh.CopyPosData(meshPosData2, meshPosData);
+                ComputeMorphVertex(meshPosData2, vertexMorphsB, flip ? morphStateComponent.WeightComputedA : morphStateComponent.WeightComputedB);
             }
         }
 
-        private static void ComputeMorphVertex(Vector3[] vector3s, List<MorphVertexDesc[]> morphX)
+        private static void ComputeMorphVertex(Vector3[] output, List<MorphVertexDesc[]> morphs, float[] weightTest)
         {
-            for (int i = 0; i < morphX.Count; i++)
+            for (int i = 0; i < morphs.Count; i++)
             {
-                if (morphX[i] == null) continue;
-                MorphVertexDesc[] morphVertexStructs = morphX[i];
-                for (int j = 0; j < morphVertexStructs.Length; j++)
-                {
-                    vector3s[morphVertexStructs[j].VertexIndex] += morphVertexStructs[j].Offset;
-                }
-            }
-        }
-
-        public void UpdateGPUResources(GraphicsContext graphicsContext)
-        {
-            if (meshNeedUpdateA)
-            {
-                graphicsContext.UpdateVerticesPos0(mesh, meshPosData1);
-                meshNeedUpdateA = false;
-            }
-            if (meshNeedUpdateB)
-            {
-                graphicsContext.UpdateVerticesPos1(mesh, meshPosData2);
-                meshNeedUpdateB = false;
+                if (morphs[i] == null) continue;
+                MorphVertexDesc[] morphVertexStructs = morphs[i];
+                if (weightTest[i] != 0)
+                    for (int j = 0; j < morphVertexStructs.Length; j++)
+                    {
+                        output[morphVertexStructs[j].VertexIndex] += morphVertexStructs[j].Offset;
+                    }
             }
         }
 
@@ -152,15 +135,15 @@ namespace Coocoo3D.Components
             }
             for (int i = 0; i < morphStateComponent.morphs.Count; i++)
             {
-                if (morphStateComponent.morphs[i].Type == MorphType.Material && morphStateComponent.computedWeights[i] != morphStateComponent.prevComputedWeights[i])
+                if (morphStateComponent.morphs[i].Type == MorphType.Material && morphStateComponent.WeightComputed[i] != morphStateComponent.WeightComputedPrev[i])
                 {
                     MorphMaterialDesc[] morphMaterialStructs = morphStateComponent.morphs[i].MorphMaterials;
-                    float computedWeight = morphStateComponent.computedWeights[i];
+                    float computedWeight = morphStateComponent.WeightComputed[i];
                     for (int j = 0; j < morphMaterialStructs.Length; j++)
                     {
                         MorphMaterialDesc morphMaterialStruct = morphMaterialStructs[j];
                         int k = morphMaterialStruct.MaterialIndex;
-                        MMDMatLit.InnerStruct struct1 = computedMaterialsData[k];
+                        RuntimeMaterial.InnerStruct struct1 = computedMaterialsData[k];
                         if (morphMaterialStruct.MorphMethon == MorphMaterialMethon.Add)
                         {
                             struct1.AmbientColor += morphMaterialStruct.Ambient * computedWeight;
@@ -190,18 +173,6 @@ namespace Coocoo3D.Components
                 }
             }
         }
-
-        bool MemEqual(byte[] a, int aIndex, byte[] b, int bIndex, int length)
-        {
-            for (int i = 0; i < length; i++)
-            {
-                if (a[i + aIndex] != b[i + bIndex])
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
     }
     public enum DrawFlag
     {
@@ -211,7 +182,7 @@ namespace Coocoo3D.Components
         DrawSelfShadow = 8,
         DrawEdge = 16,
     }
-    public class MMDMatLit
+    public class RuntimeMaterial
     {
         public const int c_materialDataSize = 256;
 
@@ -271,21 +242,26 @@ namespace Coocoo3D.FileFormat
         public static void ReloadModel(this MMDRendererComponent rendererComponent, ModelPack modelPack)
         {
             rendererComponent.Materials.Clear();
+            rendererComponent.materialsBaseData.Clear();
+            rendererComponent.computedMaterialsData.Clear();
+
             rendererComponent.mesh = modelPack.GetMesh();
+            rendererComponent.meshPosData = modelPack.verticesDataPosPart;
             rendererComponent.meshVertexCount = rendererComponent.mesh.m_vertexCount;
             rendererComponent.meshIndexCount = rendererComponent.mesh.m_indexCount;
-            rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_indexCount / 3 * 128);
+            //rendererComponent.meshParticleBuffer = new TwinBuffer();
+            //rendererComponent.meshParticleBuffer.Reload(rendererComponent.mesh.m_vertexCount * 32);
             rendererComponent.meshPosData1 = new Vector3[rendererComponent.mesh.m_vertexCount];
             rendererComponent.meshPosData2 = new Vector3[rendererComponent.mesh.m_vertexCount];
-            rendererComponent.gch_meshPosData1 = GCHandle.Alloc(rendererComponent.meshPosData1);
-            rendererComponent.gch_meshPosData2 = GCHandle.Alloc(rendererComponent.meshPosData2);
+
+            rendererComponent.meshAppend.Reload(rendererComponent.meshVertexCount);
 
             var modelResource = modelPack.pmx;
             for (int i = 0; i < modelResource.Materials.Count; i++)
             {
                 var mmdMat = modelResource.Materials[i];
 
-                MMDMatLit mat = new MMDMatLit
+                RuntimeMaterial mat = new RuntimeMaterial
                 {
                     Name = mmdMat.Name,
                     NameEN = mmdMat.NameEN,
@@ -310,27 +286,54 @@ namespace Coocoo3D.FileFormat
             }
 
             int morphCount = modelResource.Morphs.Count;
-            rendererComponent.vertexMorph1 = new List<MorphVertexDesc[]>();
-            rendererComponent.vertexMorph2 = new List<MorphVertexDesc[]>();
+            rendererComponent.vertexMorphsA = new List<MorphVertexDesc[]>();
+            rendererComponent.vertexMorphsB = new List<MorphVertexDesc[]>();
             for (int i = 0; i < morphCount; i++)
             {
                 if (modelResource.Morphs[i].Type == PMX_MorphType.Vertex)
                 {
                     MorphVertexDesc[] morphVertexStructs = new MorphVertexDesc[modelResource.Morphs[i].MorphVertexs.Length];
-                    PMX_MorphVertexDesc[] morphVertexStructs2 = modelResource.Morphs[i].MorphVertexs;
+                    PMX_MorphVertexDesc[] sourceMorph = modelResource.Morphs[i].MorphVertexs;
                     for (int j = 0; j < morphVertexStructs.Length; j++)
                     {
-                        morphVertexStructs[j].VertexIndex = morphVertexStructs2[j].VertexIndex;
+                        morphVertexStructs[j].VertexIndex = sourceMorph[j].VertexIndex;
                     }
-                    rendererComponent.vertexMorph1.Add(morphVertexStructs);
-                    rendererComponent.vertexMorph2.Add(morphVertexStructs);
+                    rendererComponent.vertexMorphsA.Add(morphVertexStructs);
+                    rendererComponent.vertexMorphsB.Add(morphVertexStructs);
                 }
                 else
                 {
-                    rendererComponent.vertexMorph1.Add(null);
-                    rendererComponent.vertexMorph2.Add(null);
+                    rendererComponent.vertexMorphsA.Add(null);
+                    rendererComponent.vertexMorphsB.Add(null);
                 }
             }
+            //Dictionary<int, int> reportFrequency = new Dictionary<int, int>(10000);
+            //for (int i = 0; i < morphCount; i++)
+            //{
+            //    if (modelResource.Morphs[i].Type == PMX_MorphType.Vertex)
+            //    {
+            //        PMX_MorphVertexDesc[] sourceMorph = modelResource.Morphs[i].MorphVertexs;
+            //        for (int j = 0; j < sourceMorph.Length; j++)
+            //        {
+            //            if (!reportFrequency.TryAdd(sourceMorph[j].VertexIndex, 1))
+            //            {
+            //                reportFrequency[sourceMorph[j].VertexIndex]++;
+            //            }
+            //        }
+            //    }
+            //}
+            //int[] freqResult = new int[32];
+            //foreach (int value1 in reportFrequency.Values)
+            //{
+            //    if (value1 < 32)
+            //    {
+            //        freqResult[value1]++;
+            //    }
+            //    else
+            //    {
+
+            //    }
+            //}
         }
     }
 }

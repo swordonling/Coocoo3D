@@ -44,6 +44,7 @@ namespace Coocoo3D.PropertiesPages
                 _cacheRot = appBody.camera.Angle;
                 _cacheFOV = appBody.camera.Fov;
                 _cacheDistance = appBody.camera.Distance;
+                _cachePlaySpeed = appBody.GameDriverContext.PlaySpeed;
                 var resourceLoader = Windows.ApplicationModel.Resources.ResourceLoader.GetForCurrentView();
                 string raytracingSupportMsg;
                 if (appBody.deviceResources.IsRayTracingSupport())
@@ -77,6 +78,7 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVFOV = new PropertyChangedEventArgs("VFOV");
         PropertyChangedEventArgs eaVD = new PropertyChangedEventArgs("VD");
         PropertyChangedEventArgs eaVCameraMotionOn = new PropertyChangedEventArgs("VCameraMotionOn");
+        PropertyChangedEventArgs eaVPlaySpeed = new PropertyChangedEventArgs("VPlaySpeed");
         //long[] txs = new long[8];
         int prevRenderCount = 0;
         int prevVirtualRenderCount = 0;
@@ -111,10 +113,15 @@ namespace Coocoo3D.PropertiesPages
                 _cacheCameraMotionOn = appBody.camera.CameraMotionOn;
                 PropertyChanged?.Invoke(this, eaVCameraMotionOn);
             }
+            if (_cachePlaySpeed != appBody.GameDriverContext.PlaySpeed)
+            {
+                _cachePlaySpeed = appBody.GameDriverContext.PlaySpeed;
+                PropertyChanged?.Invoke(this, eaVPlaySpeed);
+            }
             DateTime Now = DateTime.Now;
             if (Now - PrevUpdateTime > TimeSpan.FromSeconds(1))
             {
-                int capRenderCount = appBody.RenderCount;
+                int capRenderCount = appBody.CompletedRenderCount;
                 int capVRenderCount = appBody.VirtualRenderCount;
                 if (capVRenderCount - prevVirtualRenderCount > 0)
                 {
@@ -219,6 +226,15 @@ namespace Coocoo3D.PropertiesPages
             appBody.camera.Angle = _cacheRot;
             appBody.RequireRender();
         }
+        float _cachePlaySpeed;
+        public float VPlaySpeed
+        {
+            get => _cachePlaySpeed; set
+            {
+                _cachePlaySpeed = value;
+                appBody.GameDriverContext.PlaySpeed = value;
+            }
+        }
 
         public bool VViewBone
         {
@@ -289,6 +305,15 @@ namespace Coocoo3D.PropertiesPages
                 appBody.RequireRender();
             }
         }
+
+        public bool VWireframe
+        {
+            get => appBody.settings.Wireframe; set
+            {
+                appBody.settings.Wireframe = value;
+                appBody.RequireRender();
+            }
+        }
         public bool VEnableAO
         {
             get => appBody.inShaderSettings.EnableAO; set
@@ -336,7 +361,7 @@ namespace Coocoo3D.PropertiesPages
         {
             if (appBody == null) return;
             int selectedIndex = (sender as ComboBox).SelectedIndex;
-            if (!appBody.deviceResources.IsRayTracingSupport() && selectedIndex == 1)
+            if (!appBody.deviceResources.IsRayTracingSupport() && selectedIndex == 2)
             {
                 (sender as ComboBox).SelectedIndex = 0;
             }
@@ -366,10 +391,10 @@ namespace Coocoo3D.PropertiesPages
             appBody.RequireRender(true);
         }
 
-        private void NewFun_Click(object sender, RoutedEventArgs e)
-        {
-            appBody.UseNewFun = !appBody.UseNewFun;
-        }
+        //private void NewFun_Click(object sender, RoutedEventArgs e)
+        //{
+        //    appBody.UseNewFun = !appBody.UseNewFun;
+        //}
 
         private bool StrEq(string a, string b)
         {
