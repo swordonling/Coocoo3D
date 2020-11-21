@@ -21,45 +21,19 @@ namespace Coocoo3D.RenderPipeline
 
         public const int c_presentDataSize = 512;
         public const int c_offsetPresentData = c_offsetLightingData + c_lightingDataSize;
-        public const int c_lightCameraCount = 2;
         public void Reload(DeviceResources deviceResources)
         {
-            for (int i = 0; i < c_lightCameraCount; i++)
-            {
-                LightCameraDataBuffers[i].Reload(deviceResources, c_presentDataSize);
-            }
             Ready = true;
         }
-        #region graphics assets
-        public void Unload()
-        {
-            for (int i = 0; i < c_lightCameraCount; i++)
-            {
-                LightCameraDataBuffers[i].Unload();
-            }
-        }
-        #endregion
 
         Random randomGenerator = new Random();
 
         public PresentData[] cameraPresentDatas = new PresentData[c_maxCameraPerRender];
-        public ConstantBuffer[] LightCameraDataBuffers = new ConstantBuffer[c_lightCameraCount];
 
         struct _Counters
         {
             public int material;
             public int vertex;
-        }
-
-        public ForwardRenderPipeline1()
-        {
-            for (int i = 0; i < c_lightCameraCount; i++)
-            {
-                LightCameraDataBuffers[i] = new ConstantBuffer();
-            }
-        }
-        ~ForwardRenderPipeline1()
-        {
         }
 
         bool HasMainLight;
@@ -97,13 +71,14 @@ namespace Coocoo3D.RenderPipeline
             Matrix4x4 lightCameraMatrix1 = Matrix4x4.Identity;
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(context.bigBuffer, c_offsetPresentData);
             HasMainLight = false;
+            var LightCameraDataBuffers = context.LightCameraDataBuffers;
             if (lightings.Count > 0 && lightings[0].LightingType == LightingType.Directional)
             {
-                lightCameraMatrix0 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(2, camera.LookAtPoint, camera.Distance));
+                lightCameraMatrix0 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(2, camera.LookAtPoint - camera.Pos, camera.Distance));
                 Marshal.StructureToPtr(lightCameraMatrix0, pBufferData, true);
                 graphicsContext.UpdateResource(LightCameraDataBuffers[0], context.bigBuffer, c_presentDataSize, c_offsetPresentData);
 
-                lightCameraMatrix1 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(settings.ExtendShadowMapRange, camera.LookAtPoint, camera.Angle, camera.Distance));
+                lightCameraMatrix1 = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(settings.ExtendShadowMapRange, camera.LookAtPoint - camera.Pos, camera.Angle, camera.Distance));
                 Marshal.StructureToPtr(lightCameraMatrix1, pBufferData, true);
                 graphicsContext.UpdateResource(LightCameraDataBuffers[1], context.bigBuffer, c_presentDataSize, c_offsetPresentData);
                 HasMainLight = true;
@@ -117,7 +92,7 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < lightings.Count; i++)
             {
                 LightingData data1 = lightings[i];
-                Marshal.StructureToPtr(data1.GetPositionOrDirection(), pBufferData, true);
+                Marshal.StructureToPtr(data1.GetPositionOrDirection(camera.Pos), pBufferData, true);
                 Marshal.StructureToPtr((uint)data1.LightingType, pBufferData + 12, true);
                 Marshal.StructureToPtr(data1.Color, pBufferData + 16, true);
 
@@ -244,6 +219,7 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetPObject(context.RPAssetsManager.PObjectMMDShadowDepth, CullMode.none);
                 graphicsContext.SetDSV(context.ShadowMap0, true);
                 _Counters counterShadow0 = new _Counters();
+                var LightCameraDataBuffers = context.LightCameraDataBuffers;
                 for (int i = 0; i < Entities.Count; i++)
                     _RenderEntityShadow(Entities[i].rendererComponent, LightCameraDataBuffers[0], context.CBs_Bone[i], ref counterShadow0);
                 graphicsContext.SetDSV(context.ShadowMap1, true);
@@ -259,7 +235,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetRTVDSV(context.outputRTV, context.ScreenSizeDSVs[0], Vector4.Zero, false, true);
             graphicsContext.SetCBVR(context.CameraDataBuffers[cameraIndex], 2);
             graphicsContext.SetSRVT(context.ShadowMap0, 5);
-            graphicsContext.SetSRVT(context.EnvCubeMap, 6);
+            graphicsContext.SetSRVT(context.SkyBox, 6);
             graphicsContext.SetSRVT(context.IrradianceMap, 7);
             graphicsContext.SetSRVT(context.BRDFLut, 8);
             graphicsContext.SetSRVT(context.ShadowMap1, 9);

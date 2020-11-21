@@ -60,6 +60,10 @@ namespace Coocoo3D.UI
             lighting.Name = resourceLoader.GetString("Object_Name_Lighting");
             lighting.Color = new Vector4(3, 3, 3, 1);
             lighting.Rotation = Quaternion.CreateFromYawPitchRoll(0, 1.570796326794f, 0);
+            lighting.Position = new Vector3(0, 1, 0);
+            lighting.Range = 10;
+            if (appBody.CurrentScene.Lightings.Count > 0)
+                lighting.LightingType = LightingType.Point;
             appBody.CurrentScene.AddSceneObject(lighting);
             appBody.RequireRender();
         }

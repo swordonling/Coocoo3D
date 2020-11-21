@@ -26,6 +26,28 @@ cbuffer cbAnimMatrices : register(b0)
 };
 cbuffer cb1 : register(b1)
 {
+	float4 _DiffuseColor;
+	float4 _SpecularColor;
+	float3 _AmbientColor;
+	float _EdgeScale;
+	float4 _EdgeColor;
+
+	float4 _Texture;
+	float4 _SubTexture;
+	float4 _ToonTexture;
+	uint notUse;
+	float _Metallic;
+	float _Roughness;
+	float _Emission;
+	float _Subsurface;
+	float _Specular;
+	float _SpecularTint;
+	float _Anisotropic;
+	float _Sheen;
+	float _SheenTint;
+	float _Clearcoat;
+	float _ClearcoatGloss;
+	float4 materialPreserved[6];
 	float4x4 LightSpaceMatrices[4];
 	LightInfo Lightings[4];
 };
@@ -252,30 +274,6 @@ VSSkinnedOut VS(VSSkinnedIn input)
 	return output;
 }
 
-cbuffer cb3 : register(b3)
-{
-	float4 _DiffuseColor;
-	float4 _SpecularColor;
-	float3 _AmbientColor;
-	float _EdgeScale;
-	float4 _EdgeColor;
-
-	float4 _Texture;
-	float4 _SubTexture;
-	float4 _ToonTexture;
-	uint notUse;
-	float _Metallic;
-	float _Roughness;
-	float _Emission;
-	float _Subsurface;
-	float _Specular;
-	float _SpecularTint;
-	float _Anisotropic;
-	float _Sheen;
-	float _SheenTint;
-	float _Clearcoat;
-	float _ClearcoatGloss;
-};
 SamplerState s0 : register(s0);
 SamplerState s1 : register(s1);
 SamplerComparisonState sampleShadowMap0 : register(s2);

@@ -21,6 +21,7 @@ namespace Coocoo3D.RenderPipeline
         public List<MMD3DEntity> entities = new List<MMD3DEntity>();
         public MMD3DEntity selectedEntity;
         public List<LightingData> lightings = new List<LightingData>();
+        public List<LightingData> selectedLightings = new List<LightingData>();
         public List<CameraData> cameras = new List<CameraData>();
         public int VertexCount;
         public int frameRenderIndex;
@@ -49,6 +50,7 @@ namespace Coocoo3D.RenderPipeline
         {
             entities.Clear();
             lightings.Clear();
+            selectedLightings.Clear();
             cameras.Clear();
         }
     }
@@ -58,9 +60,11 @@ namespace Coocoo3D.RenderPipeline
         public byte[] bigBuffer = new byte[65536];
         GCHandle _bigBufferHandle;
 
-        const int c_maxCameraPerRender = 2;
+        public const int c_maxCameraPerRender = 2;
+        public const int c_lightCameraCount = 2;
         public const int c_presentDataSize = 512;
         public ConstantBuffer[] CameraDataBuffers = new ConstantBuffer[c_maxCameraPerRender];
+        public ConstantBuffer[] LightCameraDataBuffers = new ConstantBuffer[c_lightCameraCount];
         public const int c_materialDataSize = 768;
         public List<ConstantBuffer> MaterialBuffers = new List<ConstantBuffer>();
         public void DesireMaterialBuffers(int count)
@@ -82,14 +86,16 @@ namespace Coocoo3D.RenderPipeline
 
         public Texture2D TextureLoading = new Texture2D();
         public Texture2D TextureError = new Texture2D();
-        public TextureCube EnvCubeMap = new TextureCube();
+        public TextureCube SkyBox = new TextureCube();
         public RenderTextureCube IrradianceMap = new RenderTextureCube();
         public RenderTextureCube EnvironmentMap = new RenderTextureCube();
 
         public MMDMesh ndcQuadMesh = new MMDMesh();
         public MMDMesh cubeMesh = new MMDMesh();
+        public MMDMesh cubeWireMesh = new MMDMesh();
         public int ndcQuadMeshIndexCount;
         public int cubeMeshIndexCount;
+        public int cubeWireMeshIndexCount;
         public MeshBuffer SkinningMeshBuffer = new MeshBuffer();
         public TwinBuffer LightCacheBuffer = new TwinBuffer();
         public int SkinningMeshBufferSize;
@@ -136,6 +142,10 @@ namespace Coocoo3D.RenderPipeline
             {
                 CameraDataBuffers[i] = new ConstantBuffer();
             }
+            for (int i = 0; i < LightCameraDataBuffers.Length; i++)
+            {
+                LightCameraDataBuffers[i] = new ConstantBuffer();
+            }
         }
         ~RenderPipelineContext()
         {
@@ -165,6 +175,7 @@ namespace Coocoo3D.RenderPipeline
                 CBs_Bone.Add(constantBuffer);
             }
             _Data1 data1 = new _Data1();
+            Vector3 camPos = dynamicContext.cameras[0].Pos;
             for (int i = 0; i < count; i++)
             {
                 var entity = dynamicContext.entities[i];
@@ -172,7 +183,7 @@ namespace Coocoo3D.RenderPipeline
                 data1.vertexCount = rendererComponent.meshVertexCount;
                 data1.indexCount = rendererComponent.meshIndexCount;
                 IntPtr ptr1 = Marshal.UnsafeAddrOfPinnedArrayElement(bigBuffer, 0);
-                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position);
+                Matrix4x4 world = Matrix4x4.CreateFromQuaternion(entity.Rotation) * Matrix4x4.CreateTranslation(entity.Position - camPos);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(world), ptr1, true);
                 Marshal.StructureToPtr(rendererComponent.amountAB, ptr1 + 64, true);
                 Marshal.StructureToPtr(rendererComponent.meshVertexCount, ptr1 + 68, true);
@@ -212,7 +223,7 @@ namespace Coocoo3D.RenderPipeline
             }
             for (int i = 0; i < ScreenSizeDSVs.Length; i++)
             {
-                ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y,depthFormat);
+                ScreenSizeDSVs[i].ReloadAsDepthStencil(x, y, depthFormat);
                 processingList.UnsafeAdd(ScreenSizeDSVs[i]);
             }
             ReadBackTexture2D.Reload(x, y, 4);
@@ -248,9 +259,13 @@ namespace Coocoo3D.RenderPipeline
         public Task LoadTask;
         public async Task ReloadDefalutResources(ProcessingList processingList, MiscProcessContext miscProcessContext)
         {
-            for (int i = 0; i < c_maxCameraPerRender; i++)
+            for (int i = 0; i < CameraDataBuffers.Length; i++)
             {
                 CameraDataBuffers[i].Reload(deviceResources, c_presentDataSize);
+            }
+            for (int i = 0; i < LightCameraDataBuffers.Length; i++)
+            {
+                LightCameraDataBuffers[i].Reload(deviceResources, c_presentDataSize);
             }
 
             ShadowMap0.ReloadAsDepthStencil(c_shadowMapResolutionLow, c_shadowMapResolutionLow, depthFormat);
@@ -273,8 +288,8 @@ namespace Coocoo3D.RenderPipeline
 
             IrradianceMap.ReloadAsRTVUAV(32, 32, 1, DxgiFormat.DXGI_FORMAT_R32G32B32A32_FLOAT);
             EnvironmentMap.ReloadAsRTVUAV(1024, 1024, 7, DxgiFormat.DXGI_FORMAT_R16G16B16A16_FLOAT);
-            miscProcessContext.Add(new P_Env_Data() { source = EnvCubeMap, IrradianceMap = IrradianceMap, EnvMap = EnvironmentMap, Level = 16 });
-            processingList.AddObject(new TextureCubeUploadPack(EnvCubeMap, upTexEnvCube));
+            miscProcessContext.Add(new P_Env_Data() { source = SkyBox, IrradianceMap = IrradianceMap, EnvMap = EnvironmentMap, Level = 16 });
+            processingList.AddObject(new TextureCubeUploadPack(SkyBox, upTexEnvCube));
             processingList.AddObject(IrradianceMap);
             processingList.AddObject(EnvironmentMap);
 
@@ -285,6 +300,10 @@ namespace Coocoo3D.RenderPipeline
             cubeMesh.ReloadCube();
             cubeMeshIndexCount = cubeMesh.m_indexCount;
             processingList.AddObject(cubeMesh);
+
+            cubeWireMesh.ReloadCubeWire();
+            cubeWireMeshIndexCount = cubeWireMesh.m_indexCount;
+            processingList.AddObject(cubeWireMesh);
 
             await ReloadTexture2DNoMip(BRDFLut, processingList, "ms-appx:///Assets/Textures/brdflut.png");
             await ReloadTexture2DNoMip(UI1Texture, processingList, "ms-appx:///Assets/Textures/UI_1.png");

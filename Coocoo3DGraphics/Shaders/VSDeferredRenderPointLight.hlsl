@@ -4,6 +4,7 @@ struct LightInfo
 	float3 LightPos;
 	uint LightType;
 	float4 LightColor;
+	float LightRange;
 };
 cbuffer cb1 : register(b1)
 {
@@ -30,7 +31,7 @@ PSIn main(VSIn input)
 {
 	PSIn output;
 	float4 lightColor = Lightings[0].LightColor;
-	float3 Pos = input.Pos * sqrt(max(max(max(lightColor.r, lightColor.g), lightColor.b), 0.01)) * 10 + Lightings[0].LightPos;
+	float3 Pos = input.Pos * Lightings[0].LightRange * 2 + Lightings[0].LightPos;
 	output.Pos = mul(float4(Pos, 1), g_mWorldToProj);
 	output.wPos = Pos;
 	//output.uv.y/= g_aspectRatio;

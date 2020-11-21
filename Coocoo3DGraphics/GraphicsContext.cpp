@@ -938,10 +938,10 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 		if (texCube->m_texture == nullptr)
 		{
 			texCube->m_srvRefIndex = InterlockedIncrement(&m_deviceResources->m_cbvSrvUavHeapAllocCount) - 1;
-			//if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
-			//{
-			//	texture->m_dsvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_dsvHeapAllocCount)-1;
-			//}
+			if (texCube->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
+			{
+				texCube->m_dsvHeapRefIndex = InterlockedAdd((volatile LONG*)&m_deviceResources->m_dsvHeapAllocCount, 6) - 6;
+			}
 			//if (texture->m_rtvFormat != DXGI_FORMAT_UNKNOWN)
 			//{
 			//	texture->m_rtvHeapRefIndex = _InterlockedIncrement(&m_deviceResources->m_rtvHeapAllocCount)-1;
@@ -1002,13 +1002,19 @@ void GraphicsContext::UpdateRenderTexture(IRenderTexture^ texture)
 		CD3DX12_CPU_DESCRIPTOR_HANDLE handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_cbvSrvUavHeap->GetCPUDescriptorHandleForHeapStart());
 		handle.Offset(incrementSize * texCube->m_srvRefIndex);
 		d3dDevice->CreateShaderResourceView(texCube->m_texture.Get(), &srvDesc, handle);
-		//if (texture->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
-		//{
-		//	incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		//	handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-		//	handle.Offset(incrementSize * texture->m_dsvHeapRefIndex);
-		//	d3dDevice->CreateDepthStencilView(texture->m_texture.Get(), nullptr, handle);
-		//}
+		if (texCube->m_dsvFormat != DXGI_FORMAT_UNKNOWN)
+		{
+			for (int i = 0; i < 6; i++)
+			{
+				D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+				dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+				dsvDesc.Texture2DArray.ArraySize = 1;
+				dsvDesc.Texture2DArray.FirstArraySlice = i;
+				incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+				handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_deviceResources->m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), incrementSize * (texCube->m_dsvHeapRefIndex + i));
+				d3dDevice->CreateDepthStencilView(texCube->m_texture.Get(), &dsvDesc, handle);
+			}
+		}
 		//if (texture->m_rtvFormat != DXGI_FORMAT_UNKNOWN)
 		//{
 		//	incrementSize = d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);

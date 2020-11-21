@@ -45,6 +45,7 @@ namespace Coocoo3D.PropertiesPages
                 _cachePos = lighting.Position;
                 _cacheRot = QuaternionToEularYXZ(lighting.Rotation) / MathF.PI * 180;
                 _cacheRotQ = lighting.Rotation;
+                _cachedRange = lighting.Range;
                 if (lighting.LightingType == LightingType.Directional)
                     radio1.IsChecked = true;
                 else if (lighting.LightingType == LightingType.Point)
@@ -67,6 +68,7 @@ namespace Coocoo3D.PropertiesPages
         PropertyChangedEventArgs eaVCG = new PropertyChangedEventArgs("VCG");
         PropertyChangedEventArgs eaVCB = new PropertyChangedEventArgs("VCB");
         PropertyChangedEventArgs eaVCA = new PropertyChangedEventArgs("VCA");
+        PropertyChangedEventArgs eaVRange = new PropertyChangedEventArgs("VRange");
 
         private void FrameUpdated(object sender, EventArgs e)
         {
@@ -92,6 +94,11 @@ namespace Coocoo3D.PropertiesPages
                 PropertyChanged?.Invoke(this, eaVCG);
                 PropertyChanged?.Invoke(this, eaVCB);
                 PropertyChanged?.Invoke(this, eaVCA);
+            }
+            if (_cachedRange != lighting.Range)
+            {
+                _cachedRange = lighting.Range;
+                PropertyChanged?.Invoke(this, eaVRange);
             }
         }
 
@@ -212,6 +219,16 @@ namespace Coocoo3D.PropertiesPages
             }
         }
         Vector4 _cacheColor;
+        public float VRange
+        {
+            get => _cachedRange; set
+            {
+                lighting.Range = value;
+                _cachedRange = value;
+                appBody.RequireRender();
+            }
+        }
+        float _cachedRange;
 
 
         void UpdateColorFromUI()
@@ -239,7 +256,7 @@ namespace Coocoo3D.PropertiesPages
         private void RadioButton_Checked(object sender, RoutedEventArgs e)
         {
             RadioButton radioButton = sender as RadioButton;
-            if((string)radioButton.Tag== "directional")
+            if ((string)radioButton.Tag == "directional")
             {
                 lighting.LightingType = LightingType.Directional;
             }
@@ -247,6 +264,17 @@ namespace Coocoo3D.PropertiesPages
             {
                 lighting.LightingType = LightingType.Point;
             }
+            appBody.RequireRender();
+        }
+        Random random = new Random();
+        private void RandomPositionButton_Click(object sender, RoutedEventArgs e)
+        {
+            lighting.Position.X = (float)random.Next(int.MinValue, int.MaxValue) / int.MaxValue * 100;
+            lighting.Position.Z = (float)random.Next(int.MinValue, int.MaxValue) / int.MaxValue * 100;
+            _cachePos = lighting.Position;
+            PropertyChanged?.Invoke(this, eaVPX);
+            PropertyChanged?.Invoke(this, eaVPY);
+            PropertyChanged?.Invoke(this, eaVPZ);
             appBody.RequireRender();
         }
     }

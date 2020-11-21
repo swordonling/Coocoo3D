@@ -62,7 +62,7 @@ namespace Coocoo3D.Present
             Matrix4x4 rotateMatrix = Matrix4x4.CreateFromYawPitchRoll(-Angle.Y, -Angle.X, -Angle.Z);
             var pos = Vector3.Transform(Vector3.UnitZ * Distance, rotateMatrix * Matrix4x4.CreateTranslation(LookAtPoint));
             var up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotateMatrix));
-            vMatrix = Matrix4x4.CreateLookAt(pos, LookAtPoint, up);
+            vMatrix = Matrix4x4.CreateLookAt(Vector3.Zero, LookAtPoint - pos, up);//将相机置于原点
             pMatrix = Matrix4x4.CreatePerspectiveFieldOfView(Fov, AspectRatio, 0.1f, 5000) * Matrix4x4.CreateScale(-1, 1, 1);
             vpMatrix = Matrix4x4.Multiply(vMatrix, pMatrix);
             _pos = pos;

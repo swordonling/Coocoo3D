@@ -21,6 +21,7 @@ namespace Coocoo3D.Present
         public Vector3 Position;
         public Quaternion Rotation;
         public Vector4 Color;
+        public float Range;
 
         public int CompareTo(LightingData other)
         {
@@ -86,9 +87,9 @@ namespace Coocoo3D.Present
             }
             return vpMatrix;
         }
-        public Vector3 GetPositionOrDirection()
+        public Vector3 GetPositionOrDirection(Vector3 pos1)
         {
-            Vector3 result = LightingType == LightingType.Directional ? Vector3.Transform(-Vector3.UnitZ, Rotation) : Position;
+            Vector3 result = LightingType == LightingType.Directional ? Vector3.Transform(-Vector3.UnitZ, Rotation) : Position - pos1;
             return result;
         }
     }
@@ -103,6 +104,7 @@ namespace Coocoo3D.Present
 
         public Matrix4x4 vpMatrix;
         public Matrix4x4 rotateMatrix;
+        public float Range;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public void PropChange(PropertyChangedEventArgs e)
@@ -123,6 +125,7 @@ namespace Coocoo3D.Present
                 Position = Position,
                 Rotation = Rotation,
                 Color = Color,
+                Range = Range,
             };
         }
     }

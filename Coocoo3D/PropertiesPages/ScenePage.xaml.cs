@@ -59,29 +59,33 @@ namespace Coocoo3D.PropertiesPages
         private void ViewSceneObjects_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             IList<object> selectedItem = (sender as ListView).SelectedItems;
-            appBody.SelectedEntities.Clear();
-            appBody.SelectedLighting.Clear();
-            for (int i = 0; i < selectedItem.Count; i++)
+            lock (appBody.selectedObjcetLock)
             {
-                if (selectedItem[i] is MMD3DEntity entity)
-                    appBody.SelectedEntities.Add(entity);
-                else if (selectedItem[i] is Lighting lighting)
-                    appBody.SelectedLighting.Add(lighting);
-            }
-            if (selectedItem.Count == 1)
-            {
-                if (appBody.SelectedEntities.Count == 1)
+                appBody.SelectedEntities.Clear();
+                appBody.SelectedLighting.Clear();
+                for (int i = 0; i < selectedItem.Count; i++)
                 {
-                    appBody.ShowDetailPage(typeof(EntityPropertiesPage), appBody);
+                    if (selectedItem[i] is MMD3DEntity entity)
+                        appBody.SelectedEntities.Add(entity);
+                    else if (selectedItem[i] is Lighting lighting)
+                        appBody.SelectedLighting.Add(lighting);
+
                 }
-                else if (appBody.SelectedLighting.Count == 1)
+                if (selectedItem.Count == 1)
                 {
-                    appBody.ShowDetailPage(typeof(LightingPropertiesPage), appBody);
+                    if (appBody.SelectedEntities.Count == 1)
+                    {
+                        appBody.ShowDetailPage(typeof(EntityPropertiesPage), appBody);
+                    }
+                    else if (appBody.SelectedLighting.Count == 1)
+                    {
+                        appBody.ShowDetailPage(typeof(LightingPropertiesPage), appBody);
+                    }
                 }
-            }
-            else
-            {
-                appBody.ShowDetailPage(typeof(EmptyPropertiesPage), null);
+                else
+                {
+                    appBody.ShowDetailPage(typeof(EmptyPropertiesPage), null);
+                }
             }
             appBody.RequireRender();
         }

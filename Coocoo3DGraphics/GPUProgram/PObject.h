@@ -25,11 +25,20 @@ namespace Coocoo3DGraphics
 		postProcess = 1,
 		skinned = 2,
 	};
+	public enum struct D3D12PrimitiveTopologyType
+	{
+		UNDEFINED = 0,
+		POINT = 1,
+		LINE = 2,
+		TRIANGLE = 3,
+		PATCH = 4
+	};
 	public ref class PObject sealed
 	{
 	public:
 		property GraphicsObjectStatus Status;
 		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, eInputLayout type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat, DxgiFormat depthFormat);
+		void Reload(DeviceResources^ deviceResources, GraphicsSignature^ graphicsSignature, eInputLayout type, BlendState blendState, VertexShader^ vertexShader, GeometryShader^ geometryShader, PixelShader^ pixelShader, DxgiFormat rtvFormat, DxgiFormat depthFormat, D3D12PrimitiveTopologyType primitiveTopologyType);
 		//使用Upload上传GPU
 		void ReloadDepthOnly(VertexShader^ vs, PixelShader^ ps, int depthOffset, DxgiFormat depthFormat);
 		//使用Upload上传GPU
@@ -50,6 +59,7 @@ namespace Coocoo3DGraphics
 		DXGI_FORMAT m_renderTargetFormat;
 		DXGI_FORMAT m_depthFormat;
 		BlendState m_blendState;
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE m_primitiveTopologyType;
 		int m_depthBias;
 		int m_renderTargetCount;
 		Microsoft::WRL::ComPtr<ID3D12PipelineState>			m_pipelineState[6];
@@ -65,6 +75,7 @@ namespace Coocoo3DGraphics
 			m_blendState = BlendState::none;
 			m_depthBias = 0;
 			m_renderTargetCount = 0;
+			m_primitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 		}
 	};
 }

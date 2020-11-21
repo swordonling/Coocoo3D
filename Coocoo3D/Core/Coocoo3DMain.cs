@@ -33,6 +33,7 @@ namespace Coocoo3D.Core
 
         private List<MMD3DEntity> Entities { get => CurrentScene.Entities; }
         private ObservableCollection<ISceneObject> sceneObjects { get => CurrentScene.sceneObjects; }
+        public object selectedObjcetLock = new object();
         public List<MMD3DEntity> SelectedEntities = new List<MMD3DEntity>();
         public List<Lighting> SelectedLighting = new List<Lighting>();
 
@@ -239,6 +240,14 @@ namespace Coocoo3D.Core
                     }
                 }
                 RPContext.dynamicContext1.selectedEntity = SelectedEntities.FirstOrDefault();
+
+                lock (selectedObjcetLock)
+                {
+                    for (int i = 0; i < SelectedLighting.Count; i++)
+                    {
+                        RPContext.dynamicContext1.selectedLightings.Add(SelectedLighting[i].GetLightingData());
+                    }
+                }
 
                 var entities = RPContext.dynamicContext1.entities;
                 for (int i = 0; i < entities.Count; i++)

@@ -49,9 +49,6 @@ namespace Coocoo3D.RenderPipeline
                 CameraDataBuffers[i] = new ConstantBufferStatic();
             }
         }
-        ~RayTracingRenderPipeline1()
-        {
-        }
 
         public void Reload(DeviceResources deviceResources)
         {
@@ -107,7 +104,7 @@ namespace Coocoo3D.RenderPipeline
             HasMainLight = false;
             if (lightings.Count > 0 && lightings[0].LightingType == LightingType.Directional)
             {
-                lightCameraMatrix = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(256, camera.LookAtPoint, camera.Distance));
+                lightCameraMatrix = Matrix4x4.Transpose(lightings[0].GetLightingMatrix(256, camera.LookAtPoint - camera.Pos, camera.Distance));
                 Marshal.StructureToPtr(lightCameraMatrix, pBufferData, true);
                 graphicsContext.UpdateResource(LightCameraDataBuffer, context.bigBuffer, c_lightCameraDataSize, 0);
                 HasMainLight = true;
@@ -135,7 +132,7 @@ namespace Coocoo3D.RenderPipeline
                 int lightCount1 = 0;
                 for (int j = 0; j < lightings1.Count; j++)
                 {
-                    Marshal.StructureToPtr(lightings1[j].GetPositionOrDirection(), pBufferData1, true);
+                    Marshal.StructureToPtr(lightings1[j].GetPositionOrDirection(camera.Pos), pBufferData1, true);
                     Marshal.StructureToPtr((uint)lightings1[j].LightingType, pBufferData1 + 12, true);
                     Marshal.StructureToPtr(lightings1[j].Color, pBufferData1 + 16, true);
                     lightCount1++;
@@ -297,7 +294,7 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetRootSignatureRayTracing(RayTracingScene);
                 graphicsContext.SetComputeUAVT(context.outputRTV, 0);
                 graphicsContext.SetComputeCBVR(CameraDataBuffers[cameraIndex], 2);
-                graphicsContext.SetComputeSRVT(context.EnvCubeMap, 3);
+                graphicsContext.SetComputeSRVT(context.SkyBox, 3);
                 graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
                 graphicsContext.SetComputeSRVT(context.BRDFLut, 5);
                 graphicsContext.SetComputeSRVT(context.ShadowMap0, 6);
@@ -321,7 +318,7 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetRTVDSV(context.outputRTV, context.ScreenSizeDSVs[0], Vector4.Zero, true, true);
                 graphicsContext.SetCBVR(CameraDataBuffers[cameraIndex], 2);
                 graphicsContext.SetSRVT(context.ShadowMap0, 5);
-                graphicsContext.SetSRVT(context.EnvCubeMap, 6);
+                graphicsContext.SetSRVT(context.SkyBox, 6);
                 graphicsContext.SetSRVT(context.IrradianceMap, 7);
                 graphicsContext.SetSRVT(context.BRDFLut, 8);
                 graphicsContext.SetPObject(context.RPAssetsManager.PObjectSkyBox, CullMode.back);

@@ -23,8 +23,10 @@ namespace Coocoo3D.RenderPipeline
         public VertexShader VSPostProcess = new VertexShader();
         public VertexShader VSWidgetUI1 = new VertexShader();
         public VertexShader VSWidgetUI2 = new VertexShader();
+        public VertexShader VSWidgetUILight = new VertexShader();
         public VertexShader VSDeferredRenderPointLight = new VertexShader();
         public PixelShader PSMMD = new PixelShader();
+        public PixelShader PSMMDTransparent = new PixelShader();
         public PixelShader PSMMD_DisneyBrdf = new PixelShader();
         public PixelShader PSMMD_Toon1 = new PixelShader();
         public PixelShader PSMMDLoading = new PixelShader();
@@ -39,8 +41,10 @@ namespace Coocoo3D.RenderPipeline
         public PixelShader PSPostProcess = new PixelShader();
         public PixelShader PSWidgetUI1 = new PixelShader();
         public PixelShader PSWidgetUI2 = new PixelShader();
+        public PixelShader PSWidgetUILight = new PixelShader();
         public PObject PObjectMMDSkinning = new PObject();
         public PObject PObjectMMD = new PObject();
+        public PObject PObjectMMDTransparent = new PObject();
         public PObject PObjectMMD_DisneyBrdf = new PObject();
         public PObject PObjectMMD_Toon1 = new PObject();
         public PObject PObjectMMDShadowDepth = new PObject();
@@ -55,6 +59,7 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectPostProcess = new PObject();
         public PObject PObjectWidgetUI1 = new PObject();
         public PObject PObjectWidgetUI2 = new PObject();
+        public PObject PObjectWidgetUILight = new PObject();
         public DxgiFormat middleFormat;
         public DxgiFormat depthFormat;
         public bool Ready;
@@ -71,6 +76,7 @@ namespace Coocoo3D.RenderPipeline
             await ReloadVertexShader(VSMMDTransform, "ms-appx:///Coocoo3DGraphics/VSMMDTransform.cso");
             await ReloadVertexShader(VSSkyBox, "ms-appx:///Coocoo3DGraphics/VSSkyBox.cso");
             await ReloadPixelShader(PSMMD, "ms-appx:///Coocoo3DGraphics/PSMMD.cso");
+            await ReloadPixelShader(PSMMDTransparent, "ms-appx:///Coocoo3DGraphics/PSMMDTransparent.cso");
             await ReloadPixelShader(PSMMD_DisneyBrdf, "ms-appx:///Coocoo3DGraphics/PSMMD_DisneyBRDF.cso");
             await ReloadPixelShader(PSMMD_Toon1, "ms-appx:///Coocoo3DGraphics/PSMMD_Toon1.cso");
             await ReloadPixelShader(PSMMDLoading, "ms-appx:///Coocoo3DGraphics/PSMMDLoading.cso");
@@ -90,8 +96,10 @@ namespace Coocoo3D.RenderPipeline
 
             await ReloadVertexShader(VSWidgetUI1, "ms-appx:///Coocoo3DGraphics/VSWidgetUI1.cso");
             await ReloadVertexShader(VSWidgetUI2, "ms-appx:///Coocoo3DGraphics/VSWidgetUI2.cso");
+            await ReloadVertexShader(VSWidgetUILight, "ms-appx:///Coocoo3DGraphics/VSWidgetUILight.cso");
             await ReloadPixelShader(PSWidgetUI1, "ms-appx:///Coocoo3DGraphics/PSWidgetUI1.cso");
             await ReloadPixelShader(PSWidgetUI2, "ms-appx:///Coocoo3DGraphics/PSWidgetUI2.cso");
+            await ReloadPixelShader(PSWidgetUILight, "ms-appx:///Coocoo3DGraphics/PSWidgetUILight.cso");
         }
         public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat swapChainFormat, DxgiFormat depthFormat)
         {
@@ -103,11 +111,13 @@ namespace Coocoo3D.RenderPipeline
             uploadProcess.UL(PObjectMMDSkinning, 1);
 
             PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format, depthFormat);
+            PObjectMMDTransparent.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDTransparent, format, depthFormat);
             PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format, depthFormat);
             PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format, depthFormat);
             PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format, depthFormat);
             PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format, depthFormat);
             uploadProcess.UL(PObjectMMD, 0);
+            uploadProcess.UL(PObjectMMDTransparent, 0);
             uploadProcess.UL(PObjectMMD_DisneyBrdf, 0);
             uploadProcess.UL(PObjectMMD_Toon1, 0);
             uploadProcess.UL(PObjectMMDLoading, 0);
@@ -122,8 +132,8 @@ namespace Coocoo3D.RenderPipeline
             uploadProcess.UL(PObjectDeferredRenderDirectLight, 0);
             uploadProcess.UL(PObjectDeferredRenderPointLight, 0);
 
-            //PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
-            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, null, 2500, depthFormat);
+            //PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 3000);
+            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, null, 3000, depthFormat);
             PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0, depthFormat);
             uploadProcess.UL(PObjectMMDShadowDepth, 0);
             uploadProcess.UL(PObjectMMDDepth, 0);
@@ -133,6 +143,7 @@ namespace Coocoo3D.RenderPipeline
             PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             PObjectWidgetUI1.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI1, null, PSWidgetUI1, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             PObjectWidgetUI2.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI2, null, PSWidgetUI2, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectWidgetUILight.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUILight, null, PSWidgetUILight, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN, D3D12PrimitiveTopologyType.LINE);
             Ready = true;
         }
         protected async Task ReloadPixelShader(PixelShader pixelShader, string uri)
