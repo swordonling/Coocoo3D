@@ -43,18 +43,6 @@ namespace Coocoo3D.Core
         public GameDriver GameDriver;
         public GeneralGameDriver _GeneralGameDriver = new GeneralGameDriver();
         public RecorderGameDriver _RecorderGameDriver = new RecorderGameDriver();
-        public GameDriverContext GameDriverContext = new GameDriverContext()
-        {
-            FrameInterval = TimeSpan.FromSeconds(1 / 240.0),
-            recordSettings = new RecordSettings()
-            {
-                FPS = 60,
-                Width = 1920,
-                Height = 1080,
-                StartTime = 0,
-                StopTime = 9999,
-            },
-        };
         #region Time
         ThreadPoolTimer threadPoolTimer;
 
@@ -104,13 +92,14 @@ namespace Coocoo3D.Core
         public Physics3D physics3D = new Physics3D();
         public Physics3DScene physics3DScene = new Physics3DScene();
         IAsyncAction RenderLoop;
+        public GameDriverContext GameDriverContext { get => RPContext.gameDriverContext; }
         public Coocoo3DMain()
         {
             RPContext.Reload();
             GameDriver = _GeneralGameDriver;
-            GameDriverContext.DeviceResources = deviceResources;
-            GameDriverContext.ProcessingList = ProcessingList;
-            GameDriverContext.WICFactory = wicFactory;
+            RPContext.gameDriverContext.DeviceResources = deviceResources;
+            RPContext.gameDriverContext.ProcessingList = ProcessingList;
+            RPContext.gameDriverContext.WICFactory = wicFactory;
             _currentRenderPipeline = forwardRenderPipeline1;
             RPContext.LoadTask = Task.Run(async () =>
             {
@@ -125,7 +114,7 @@ namespace Coocoo3D.Core
                 if (deviceResources.IsRayTracingSupport())
                     rayTracingRenderPipeline1.Reload(deviceResources);
 
-                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, RPContext.middleFormat, RPContext.swapChainFormat, RPContext.depthFormat);
+                RPAssetsManager.ChangeRenderTargetFormat(deviceResources, ProcessingList, RPContext.outputFormat, RPContext.middleFormat, RPContext.swapChainFormat, RPContext.depthFormat);
 
                 await miscProcess.ReloadAssets(deviceResources);
                 if (deviceResources.IsRayTracingSupport())
@@ -146,7 +135,7 @@ namespace Coocoo3D.Core
                   while (action.Status == AsyncStatus.Started)
                   {
                       DateTime now = DateTime.Now;
-                      if (now - LatestRenderTime < GameDriverContext.FrameInterval) continue;
+                      if (now - LatestRenderTime < RPContext.gameDriverContext.FrameInterval) continue;
                       bool actualRender = RenderFrame();
                       if (performaceSettings.SaveCpuPower && (!performaceSettings.VSync || !actualRender))//开启VSync下不需要sleep，以免帧生成不均匀
                           System.Threading.Thread.Sleep(1);
@@ -199,12 +188,12 @@ namespace Coocoo3D.Core
         }
         public void RequireRender(bool updateEntities)
         {
-            GameDriverContext.NeedUpdateEntities |= updateEntities;
-            GameDriverContext.NeedRender = true;
+            RPContext.gameDriverContext.NeedUpdateEntities |= updateEntities;
+            RPContext.gameDriverContext.NeedRender = true;
         }
         public void RequireRender()
         {
-            GameDriverContext.NeedRender = true;
+            RPContext.gameDriverContext.NeedRender = true;
         }
 
         public ProcessingList ProcessingList = new ProcessingList();
@@ -218,7 +207,7 @@ namespace Coocoo3D.Core
         Task RenderTask1;
         private bool RenderFrame()
         {
-            if (!GameDriver.Next(GameDriverContext))
+            if (!GameDriver.Next(RPContext))
             {
                 return false;
             }
@@ -226,30 +215,37 @@ namespace Coocoo3D.Core
             {
                 #region Render Preparing
 
-                RPContext.dynamicContext1.ClearCollections();
-                RPContext.dynamicContext1.frameRenderIndex = RPContext.frameRenderCount;
-                RPContext.dynamicContext1.EnableDisplay = GameDriverContext.EnableDisplay;
-                RPContext.frameRenderCount++;
+                bool needUpdateEntities = RPContext.gameDriverContext.NeedUpdateEntities;
+                RPContext.gameDriverContext.NeedUpdateEntities = false;
+
+                RPContext.BeginDynamicContext(RPContext.gameDriverContext.EnableDisplay, settings, inShaderSettings);
+                RPContext.dynamicContextWrite.Time = RPContext.gameDriverContext.PlayTime;
+                if (RPContext.gameDriverContext.Playing || needUpdateEntities)
+                    RPContext.dynamicContextWrite.DeltaTime = RPContext.gameDriverContext.DeltaTime;
+                else
+                    RPContext.dynamicContextWrite.DeltaTime = 0;
+
+
                 CurrentScene.DealProcessList(physics3DScene);
                 lock (CurrentScene)
                 {
-                    RPContext.dynamicContext1.entities.AddRange(CurrentScene.Entities);
+                    RPContext.dynamicContextWrite.entities.AddRange(CurrentScene.Entities);
                     for (int i = 0; i < CurrentScene.Lightings.Count; i++)
                     {
-                        RPContext.dynamicContext1.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
+                        RPContext.dynamicContextWrite.lightings.Add(CurrentScene.Lightings[i].GetLightingData());
                     }
                 }
-                RPContext.dynamicContext1.selectedEntity = SelectedEntities.FirstOrDefault();
+                RPContext.dynamicContextWrite.selectedEntity = SelectedEntities.FirstOrDefault();
 
                 lock (selectedObjcetLock)
                 {
                     for (int i = 0; i < SelectedLighting.Count; i++)
                     {
-                        RPContext.dynamicContext1.selectedLightings.Add(SelectedLighting[i].GetLightingData());
+                        RPContext.dynamicContextWrite.selectedLightings.Add(SelectedLighting[i].GetLightingData());
                     }
                 }
 
-                var entities = RPContext.dynamicContext1.entities;
+                var entities = RPContext.dynamicContextWrite.entities;
                 for (int i = 0; i < entities.Count; i++)
                 {
                     var entity = entities[i];
@@ -260,20 +256,15 @@ namespace Coocoo3D.Core
                         entity.Rotation = entity.RotationNextFrame;
                         entity.boneComponent.TransformToNew(physics3DScene, entity.Position, entity.Rotation);
 
-                        GameDriverContext.RequireResetPhysics = true;
+                        RPContext.gameDriverContext.RequireResetPhysics = true;
                     }
                 }
-                if (camera.CameraMotionOn) camera.SetCameraMotion((float)GameDriverContext.PlayTime);
-                camera.AspectRatio = GameDriverContext.AspectRatio;
-                camera.Update();
-                RPContext.dynamicContext1.cameras.Add(camera.GetCameraData());
-                RPContext.dynamicContext1.settings = settings;
-                RPContext.dynamicContext1.inShaderSettings = inShaderSettings;
-                RPContext.dynamicContext1.Preprocess();
+                if (camera.CameraMotionOn) camera.SetCameraMotion((float)RPContext.gameDriverContext.PlayTime);
+                camera.AspectRatio = RPContext.gameDriverContext.AspectRatio;
+                RPContext.dynamicContextWrite.cameras.Add(camera.GetCameraData());
+                RPContext.dynamicContextWrite.Preprocess();
 
 
-                bool needUpdateEntities = GameDriverContext.NeedUpdateEntities;
-                GameDriverContext.NeedUpdateEntities = false;
 
                 void _ResetPhysics()
                 {
@@ -285,10 +276,10 @@ namespace Coocoo3D.Core
                     physics3DScene.FetchResults();
                 }
 
-                double t1 = GameDriverContext.DeltaTime;
+                double t1 = RPContext.gameDriverContext.DeltaTime;
                 void _BoneUpdate()
                 {
-                    UpdateEntities((float)GameDriverContext.PlayTime);
+                    UpdateEntities((float)RPContext.gameDriverContext.PlayTime);
 
                     for (int i = 0; i < entities.Count; i++)
                     {
@@ -302,25 +293,17 @@ namespace Coocoo3D.Core
                         entities[i].boneComponent.SetPoseAfterPhysics(physics3DScene);
                     }
                 }
-                if (GameDriverContext.RequireResetPhysics)
+                if (RPContext.gameDriverContext.RequireResetPhysics)
                 {
-                    GameDriverContext.RequireResetPhysics = false;
+                    RPContext.gameDriverContext.RequireResetPhysics = false;
                     _ResetPhysics();
                     _BoneUpdate();
                     _ResetPhysics();
                 }
-                if (GameDriverContext.Playing || needUpdateEntities)
+                if (RPContext.gameDriverContext.Playing || needUpdateEntities)
                 {
                     _BoneUpdate();
-                    RPContext.dynamicContext1.Time = GameDriverContext.PlayTime;
-                    RPContext.dynamicContext1.DeltaTime = GameDriverContext.DeltaTime;
                 }
-                else
-                {
-                    RPContext.dynamicContext1.Time = GameDriverContext.PlayTime;
-                    RPContext.dynamicContext1.DeltaTime = 0;
-                }
-
                 for (int i = 0; i < entities.Count; i++)
                 {
                     entities[i].boneComponent.WriteMatriticesData();
@@ -328,21 +311,21 @@ namespace Coocoo3D.Core
 
                 if (RenderTask1 != null && RenderTask1.Status != TaskStatus.RanToCompletion) RenderTask1.Wait();
                 #region Render preparing
-                var temp1 = RPContext.dynamicContext1;
-                RPContext.dynamicContext1 = RPContext.dynamicContext;
-                RPContext.dynamicContext = temp1;
+                var temp1 = RPContext.dynamicContextWrite;
+                RPContext.dynamicContextWrite = RPContext.dynamicContextRead;
+                RPContext.dynamicContextRead = temp1;
 
 
                 ProcessingList.MoveToAnother(_processingList);
-                int SceneObjectVertexCount = RPContext.dynamicContext.GetSceneObjectVertexCount();
-                if (!_processingList.IsEmpty() || GameDriverContext.RequireInterruptRender || SceneObjectVertexCount > RPContext.SkinningMeshBufferSize)
+                int SceneObjectVertexCount = RPContext.dynamicContextRead.GetSceneObjectVertexCount();
+                if (!_processingList.IsEmpty() || RPContext.gameDriverContext.RequireInterruptRender || SceneObjectVertexCount > RPContext.SkinningMeshBufferSize)
                 {
-                    GameDriverContext.RequireInterruptRender = false;
+                    RPContext.gameDriverContext.RequireInterruptRender = false;
                     deviceResources.WaitForGpu();
-                    if (GameDriverContext.NeedReloadModel)
+                    if (RPContext.gameDriverContext.NeedReloadModel)
                     {
-                        GameDriverContext.NeedReloadModel = false;
-                        ModelReloader.ReloadModels(CurrentScene, mainCaches, _processingList, GameDriverContext);
+                        RPContext.gameDriverContext.NeedReloadModel = false;
+                        ModelReloader.ReloadModels(CurrentScene, mainCaches, _processingList, RPContext.gameDriverContext);
                     }
                     RPContext.ChangeShadowMapsQuality(_processingList, performaceSettings.HighResolutionShadow);
                     GraphicsContext.BeginAlloctor(deviceResources);
@@ -351,10 +334,10 @@ namespace Coocoo3D.Core
                     graphicsContext.EndCommand();
                     graphicsContext.Execute();
                     deviceResources.WaitForGpu();
-                    if (GameDriverContext.RequireResize)
+                    if (RPContext.gameDriverContext.RequireResize)
                     {
-                        GameDriverContext.RequireResize = false;
-                        deviceResources.SetLogicalSize(GameDriverContext.NewSize);
+                        RPContext.gameDriverContext.RequireResize = false;
+                        deviceResources.SetLogicalSize(RPContext.gameDriverContext.NewSize);
 
                         RPContext.ReloadTextureSizeResources(_processingList);
                     }
@@ -370,7 +353,7 @@ namespace Coocoo3D.Core
                     }
                 }
                 #endregion
-                if (!RPContext.dynamicContext.EnableDisplay)
+                if (!RPContext.dynamicContextRead.EnableDisplay)
                 {
                     VirtualRenderCount++;
                     return true;
@@ -385,8 +368,6 @@ namespace Coocoo3D.Core
                 {
                     graphicsContext.BeginCommand();
                     graphicsContext.SetDescriptorHeapDefault();
-
-                    var entities1 = RPContext.dynamicContext.entities;
 
                     var currentRenderPipeline = _currentRenderPipeline;//避免在渲染时切换
 
@@ -403,10 +384,10 @@ namespace Coocoo3D.Core
                     void _RenderFunction()
                     {
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._PRESENT, D3D12ResourceStates._RENDER_TARGET);
-                        currentRenderPipeline.RenderCamera(RPContext, 1);
-                        postProcess.RenderCamera(RPContext, 1);
-                        GameDriver.AfterRender(RPContext, GameDriverContext);
-                        widgetRenderer.RenderCamera(RPContext, 1);
+                        currentRenderPipeline.RenderCamera(RPContext);
+                        postProcess.RenderCamera(RPContext);
+                        GameDriver.AfterRender(RPContext);
+                        widgetRenderer.RenderCamera(RPContext);
                         graphicsContext.ResourceBarrierScreen(D3D12ResourceStates._RENDER_TARGET, D3D12ResourceStates._PRESENT);
                         graphicsContext.EndCommand();
                         graphicsContext.Execute();

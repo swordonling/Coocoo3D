@@ -43,7 +43,6 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="MMDMesh.cpp" />
     <ClCompile Include="Texture2D.cpp" />
-    <ClCompile Include="Material.cpp" />
     <ClCompile Include="ConstantBuffer.cpp" />
     <ClCompile Include="DeviceResources.cpp">
       <Filter>Device</Filter>
@@ -154,7 +153,6 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="MMDMesh.h" />
     <ClInclude Include="Texture2D.h" />
-    <ClInclude Include="Material.h" />
     <ClInclude Include="ConstantBuffer.h" />
     <ClInclude Include="DeviceResources.h">
       <Filter>Device</Filter>

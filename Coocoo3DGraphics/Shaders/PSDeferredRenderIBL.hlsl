@@ -5,21 +5,19 @@ cbuffer cb2 : register(b2)
 };
 Texture2D texture0 :register(t0);
 Texture2D texture1 :register(t1);
+Texture2D gbufferDepth : register (t2);
 
 TextureCube EnvCube : register (t3);
 TextureCube IrradianceCube : register (t4);
 Texture2D BRDFLut : register(t5);
 SamplerState s0 : register(s0);
-
-half3 NormalDecode(half2 enc)
+float3 NormalDecode(float2 enc)
 {
-	half2 fenc = enc * 4 - 2;
-	half f = dot(fenc, fenc);
-	half g = sqrt(1 - f / 4);
-	half3 n;
-	n.xy = fenc * g;
-	n.z = 1 - f / 2;
-	return n;
+	float4 nn = float4(enc * 2, 0, 0) + float4(-1, -1, 1, -1);
+	float l = dot(nn.xyz, -nn.xyw);
+	nn.z = l;
+	nn.xy *= sqrt(max(l, 1e-6));
+	return nn.xyz * 2 + float3(0, 0, -1);
 }
 
 struct PSIn
@@ -30,21 +28,21 @@ struct PSIn
 float4 main(PSIn input) : SV_TARGET
 {
 	float4 vx = mul(float4(input.uv,0,1),g_mProjToWorld);
-	float3 V1 = vx.xyz / vx.w - g_vCamPos;
-	float3 V = normalize(-V1);
+	float3 V = normalize(g_vCamPos - vx.xyz / vx.w);
 	float2 uv = input.uv * 0.5 + 0.5;
 	uv.y = 1 - uv.y;
 
+	float depth1 = gbufferDepth.SampleLevel(s0, uv, 0).r;
 	float4 buffer0Color = texture0.Sample(s0, uv);
 	float4 buffer1Color = texture1.Sample(s0, uv);
 
-	if (buffer0Color.a > 0)
+	if (depth1 != 1.0)
 	{
 		float3 N = normalize(NormalDecode(buffer1Color.rg));
 		float NdotV = saturate(dot(N, V));
 		float3 albedo = buffer0Color.rgb;
+		float metallic = buffer0Color.a;
 		float roughness = buffer1Color.b;
-		float metallic = buffer1Color.a;
 		float3 c_diffuse = lerp(albedo * (1 - 0.04), 0, metallic);
 		float3 c_specular = lerp(0.04f, albedo, metallic);
 		float2 AB = BRDFLut.SampleLevel(s0, float2(NdotV, 1 - roughness), 0).rg;
@@ -57,7 +55,7 @@ float4 main(PSIn input) : SV_TARGET
 	}
 	else
 	{
-		float3 EnvColor = EnvCube.Sample(s0, V1).rgb * g_skyBoxMultiple;
+		float3 EnvColor = EnvCube.Sample(s0, -V).rgb * g_skyBoxMultiple;
 		return float4(EnvColor, 0);
 	}
 }

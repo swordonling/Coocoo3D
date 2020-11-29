@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Coocoo3D.RenderPipeline;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,13 +9,14 @@ namespace Coocoo3D.Core
 {
     public class GeneralGameDriver : GameDriver
     {
-        public override bool Next(GameDriverContext context)
+        public override bool Next(RenderPipelineContext rpContext)
         {
+            ref GameDriverContext context = ref rpContext.gameDriverContext;
             if (!(context.NeedRender || context.Playing))
             {
                 return false;
             }
-            if (DateTime.Now - LatestRenderTime < context.FrameInterval)
+            if (DateTime.Now - context.LatestRenderTime < context.FrameInterval)
             {
                 context.NeedRender = true;
                 return false;
@@ -27,8 +29,8 @@ namespace Coocoo3D.Core
                 context.RequireInterruptRender = true;
 
             DateTime now = DateTime.Now;
-            context.DeltaTime = Math.Clamp((now - LatestRenderTime).TotalSeconds * context.PlaySpeed, -0.17f, 0.17f);
-            LatestRenderTime = now;
+            context.DeltaTime = Math.Clamp((now - context.LatestRenderTime).TotalSeconds * context.PlaySpeed, -0.17f, 0.17f);
+            context.LatestRenderTime = now;
             if (context.Playing)
                 context.PlayTime += context.DeltaTime;
             return true;

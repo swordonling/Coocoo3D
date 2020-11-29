@@ -1,7 +1,6 @@
 #pragma once
 #include "DeviceResources.h"
 #include "MMDMesh.h"
-#include "Material.h"
 #include "Texture2D.h"
 #include "TextureCube.h"
 #include "RenderTexture2D.h"
@@ -55,7 +54,7 @@ namespace Coocoo3DGraphics
 	public:
 		static GraphicsContext^ Load(DeviceResources^ deviceResources);
 		void Reload(DeviceResources^ deviceResources);
-		void SetMaterial(Material^ material);
+		void ClearTextureRTV(RenderTextureCube^ texture);
 		void SetPObject(PObject^ pObject, CullMode cullMode);
 		void SetPObject(PObject^ pObject, CullMode cullMode, bool wireframe);
 		void SetPObject(PObject^ pObject, int index);
@@ -73,6 +72,8 @@ namespace Coocoo3DGraphics
 		void SetSRVT(TextureCube^ texture, int index);
 		void SetSRVT(RenderTexture2D^ texture, int index);
 		void SetSRVT(RenderTextureCube^ texture, int index);
+		void SetSRVTFace(RenderTextureCube^ texture,int face, int index);
+		void SetSRVTArray(RenderTextureCube^ texture, int index);
 		void SetCBVR(ConstantBuffer^ buffer, int index);
 		void SetCBVR(ConstantBufferStatic^ buffer, int index);
 		void SetUAVT(RenderTexture2D^ texture, int index);
@@ -115,6 +116,7 @@ namespace Coocoo3DGraphics
 		void SetMeshIndex(MMDMesh^ mesh);
 		void SetMesh(MeshBuffer^ mesh);
 		void SetDSV(RenderTexture2D^ texture, bool clear);
+		void SetDSV(RenderTextureCube^ texture,int face, bool clear);
 		void SetRTV(RenderTexture2D^ RTV, Windows::Foundation::Numerics::float4 color, bool clear);
 		void SetRTVDSV(RenderTexture2D^ RTV, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV);
 		void SetRTVDSV(const Platform::Array <RenderTexture2D^>^ RTVs, RenderTexture2D^ DSV, Windows::Foundation::Numerics::float4 color, bool clearRTV, bool clearDSV);

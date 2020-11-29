@@ -54,7 +54,7 @@ namespace Coocoo3D.RenderPipeline
         int indexOfSelectedEntity;
         public override void PrepareRenderData(RenderPipelineContext context)
         {
-            if (!context.dynamicContext.settings.ViewerUI) return;
+            if (!context.dynamicContextRead.settings.ViewerUI) return;
             var graphicsContext = context.graphicsContext;
             IntPtr pData = Marshal.UnsafeAddrOfPinnedArrayElement(context.bigBuffer, 0);
             Vector2 screenSize = new Vector2(context.screenWidth, context.screenHeight) / context.logicScale;
@@ -116,12 +116,12 @@ namespace Coocoo3D.RenderPipeline
 
             graphicsContext.UpdateResource(constantBuffers[0], context.bigBuffer, c_bufferSize, 0);
 
-            var cam = context.dynamicContext.cameras[0];
+            var cam = context.dynamicContextRead.cameras[0];
 
-            var selectedEntity = context.dynamicContext.selectedEntity;
+            var selectedEntity = context.dynamicContextRead.selectedEntity;
             if (selectedEntity != null)
             {
-                indexOfSelectedEntity = context.dynamicContext.entities.IndexOf(selectedEntity);
+                indexOfSelectedEntity = context.dynamicContextRead.entities.IndexOf(selectedEntity);
                 Matrix4x4.Invert(cam.pMatrix, out Matrix4x4 mat1);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(cam.vpMatrix), pData, true);
                 Marshal.StructureToPtr(Matrix4x4.Transpose(mat1), pData + 64, true);
@@ -140,7 +140,7 @@ namespace Coocoo3D.RenderPipeline
                 }
                 graphicsContext.UpdateResource(bgConstantBuffers[0], context.bigBuffer, c_bgBufferSize, 0);
             }
-            var selectedLight = context.dynamicContext.selectedLightings;
+            var selectedLight = context.dynamicContextRead.selectedLightings;
             for (int i = 0; i < selectedLight.Count; i++)
             {
                 Marshal.StructureToPtr(Matrix4x4.Transpose(cam.vpMatrix), pData, true);
@@ -152,9 +152,9 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.UpdateResource(bgConstantBuffers[1], context.bigBuffer, c_bgBufferSize, 0);
         }
 
-        public override void RenderCamera(RenderPipelineContext context, int cameraCount)
+        public override void RenderCamera(RenderPipelineContext context)
         {
-            if (!context.dynamicContext.settings.ViewerUI) return;
+            if (!context.dynamicContextRead.settings.ViewerUI) return;
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetPObject(context.RPAssetsManager.PObjectWidgetUI1, CullMode.none);
             graphicsContext.SetCBVR(constantBuffers[0], 0);
@@ -162,7 +162,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.DrawIndexedInstanced(context.ndcQuadMeshIndexCount, 0, 0, allocated, 0);
 
-            var selectedEntity = context.dynamicContext.selectedEntity;
+            var selectedEntity = context.dynamicContextRead.selectedEntity;
             if (selectedEntity != null)
             {
                 graphicsContext.SetSRVT(context.ScreenSizeDSVs[0], 2);
@@ -171,7 +171,7 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetCBVR(context.CBs_Bone[indexOfSelectedEntity], 3);
                 graphicsContext.DrawIndexedInstanced(context.ndcQuadMeshIndexCount, 0, 0, selectedEntity.boneComponent.bones.Count, 0);
             }
-            var selectedLight = context.dynamicContext.selectedLightings;
+            var selectedLight = context.dynamicContextRead.selectedLightings;
             if (selectedLight.Count > 0)
             {
                 graphicsContext.SetMesh(context.cubeWireMesh);

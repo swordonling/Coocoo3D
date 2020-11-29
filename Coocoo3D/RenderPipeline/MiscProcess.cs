@@ -129,6 +129,8 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.Dispatch((int)(texture2.m_width + 7) / 8 / pow2a, (int)(texture2.m_height + 7) / 8 / pow2a, 6);
                     pow2a *= 2;
                 }
+                //graphicsContext.ClearTextureRTV(texture1);
+                //graphicsContext.ClearTextureRTV(texture2);
                 graphicsContext.SetPObject(IrradianceMap0);
 
                 pow2a = 1;

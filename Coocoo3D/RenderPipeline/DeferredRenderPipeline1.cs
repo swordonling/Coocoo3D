@@ -32,6 +32,7 @@ namespace Coocoo3D.RenderPipeline
         }
 
         public List<ConstantBuffer> lightingBuffers = new List<ConstantBuffer>();
+        public List<ConstantBuffer> lightingBuffers2 = new List<ConstantBuffer>();
 
         private void DesireLightingBuffers(DeviceResources deviceResources, int count)
         {
@@ -40,6 +41,9 @@ namespace Coocoo3D.RenderPipeline
                 ConstantBuffer constantBuffer = new ConstantBuffer();
                 constantBuffer.Reload(deviceResources, c_lightingDataSize);
                 lightingBuffers.Add(constantBuffer);
+                ConstantBuffer constantBuffer2 = new ConstantBuffer();
+                constantBuffer2.Reload(deviceResources, c_lightingDataSize);
+                lightingBuffers2.Add(constantBuffer2);
             }
         }
 
@@ -64,12 +68,12 @@ namespace Coocoo3D.RenderPipeline
         public override void PrepareRenderData(RenderPipelineContext context)
         {
             var deviceResources = context.deviceResources;
-            var cameras = context.dynamicContext.cameras;
+            var cameras = context.dynamicContextRead.cameras;
             var graphicsContext = context.graphicsContext;
-            ref var settings = ref context.dynamicContext.settings;
-            ref var inShaderSettings = ref context.dynamicContext.inShaderSettings;
-            var Entities = context.dynamicContext.entities;
-            var lightings = context.dynamicContext.lightings;
+            ref var settings = ref context.dynamicContextRead.settings;
+            ref var inShaderSettings = ref context.dynamicContextRead.inShaderSettings;
+            var Entities = context.dynamicContextRead.entities;
+            var lightings = context.dynamicContextRead.lightings;
 
             int countMaterials = 0;
             for (int i = 0; i < Entities.Count; i++)
@@ -78,7 +82,7 @@ namespace Coocoo3D.RenderPipeline
             }
             context.DesireMaterialBuffers(countMaterials);
             DesireLightingBuffers(context.deviceResources, lightings.Count);
-            var camera = context.dynamicContext.cameras[0];
+            var camera = context.dynamicContextRead.cameras[0];
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(context.bigBuffer, 0);
             #region forward lighting
             int lightCount = 0;
@@ -135,8 +139,8 @@ namespace Coocoo3D.RenderPipeline
 
             for (int i = 0; i < cameras.Count; i++)
             {
-                cameraPresentDatas[i].PlayTime = (float)context.dynamicContext.Time;
-                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContext.DeltaTime;
+                cameraPresentDatas[i].PlayTime = (float)context.dynamicContextRead.Time;
+                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContextRead.DeltaTime;
 
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
@@ -156,19 +160,27 @@ namespace Coocoo3D.RenderPipeline
                 };
                 if (lightings[i].LightingType == LightingType.Directional)
                 {
-                    _struct1.x1 = Matrix4x4.Transpose(lightings[i].GetLightingMatrix(32, camera.LookAtPoint - camera.Pos, camera.Angle, camera.Distance));
+                    _struct1.x1 = Matrix4x4.Transpose(lightings[i].GetLightingMatrix(2, camera.LookAtPoint - camera.Pos, camera.Distance));
+                    _struct1.x2 = Matrix4x4.Transpose(lightings[i].GetLightingMatrix(64, camera.LookAtPoint - camera.Pos, camera.Angle, camera.Distance));
                 }
                 Marshal.StructureToPtr(_struct1, pBufferData, true);
                 graphicsContext.UpdateResource(lightingBuffers[i], context.bigBuffer, c_lightingDataSize, 0);
+
+                if (lightings[i].LightingType == LightingType.Directional)
+                {
+                    _struct1.x1 = _struct1.x2;
+                    Marshal.StructureToPtr(_struct1, pBufferData, true);
+                    graphicsContext.UpdateResource(lightingBuffers2[i], context.bigBuffer, c_lightingDataSize, 0);
+                }
             }
         }
 
-        public override void RenderCamera(RenderPipelineContext context, int cameraCount)
+        public override void RenderCamera(RenderPipelineContext context)
         {
-            var Entities = context.dynamicContext.entities;
+            var Entities = context.dynamicContextRead.entities;
             var graphicsContext = context.graphicsContext;
-            ref var settings = ref context.dynamicContext.settings;
-            ref var inShaderSettings = ref context.dynamicContext.inShaderSettings;
+            ref var settings = ref context.dynamicContextRead.settings;
+            ref var inShaderSettings = ref context.dynamicContextRead.inShaderSettings;
             Texture2D textureLoading = context.TextureLoading;
             Texture2D textureError = context.TextureError;
 
@@ -231,7 +243,7 @@ namespace Coocoo3D.RenderPipeline
                     CullMode cullMode = CullMode.back;
                     if (Materials[i].DrawFlags.HasFlag(DrawFlag.DrawDoubleFace))
                         cullMode = CullMode.none;
-                    graphicsContext.SetPObject(PODraw, cullMode, context.dynamicContext.settings.Wireframe);
+                    graphicsContext.SetPObject(PODraw, cullMode, context.dynamicContextRead.settings.Wireframe);
                     graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
                     counter.material++;
                     countIndexLocal += Materials[i].indexCount;
@@ -246,6 +258,7 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetCBVR(context.CameraDataBuffers[cameraIndex], 2);
             graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[0], 3);
             graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[1], 4);
+            graphicsContext.SetSRVT(context.ScreenSizeDSVs[0], 5);
             graphicsContext.SetSRVT(context.EnvironmentMap, 6);
             graphicsContext.SetSRVT(context.IrradianceMap, 7);
             graphicsContext.SetSRVT(context.BRDFLut, 8);
@@ -254,12 +267,11 @@ namespace Coocoo3D.RenderPipeline
             graphicsContext.SetMesh(context.ndcQuadMesh);
             graphicsContext.DrawIndexed(context.ndcQuadMeshIndexCount, 0, 0);
 
-            var lightings = context.dynamicContext.lightings;
+            var lightings = context.dynamicContextRead.lightings;
             for (int i = lightings.Count - 1; i >= 0; i--)
             {
                 if (lightings[i].LightingType == LightingType.Directional)
                 {
-                    graphicsContext.SetDSV(context.ShadowMap0, true);
                     graphicsContext.SetPObject(context.RPAssetsManager.PObjectMMDShadowDepth, CullMode.none);
                     graphicsContext.SetMesh(context.SkinningMeshBuffer);
 
@@ -290,9 +302,15 @@ namespace Coocoo3D.RenderPipeline
                         counter.vertex += rendererComponent.meshVertexCount;
                     }
 
+                    graphicsContext.SetDSV(context.ShadowMapCube, 0, true);
                     _Counters counterShadow0 = new _Counters();
                     for (int j = 0; j < Entities.Count; j++)
                         _RenderEntityShadow(Entities[j].rendererComponent, lightingBuffers[i], context.CBs_Bone[j], ref counterShadow0);
+
+                    graphicsContext.SetDSV(context.ShadowMapCube, 1, true);
+                    _Counters counterShadow1 = new _Counters();
+                    for (int j = 0; j < Entities.Count; j++)
+                        _RenderEntityShadow(Entities[j].rendererComponent, lightingBuffers2[i], context.CBs_Bone[j], ref counterShadow1);
 
 
                     graphicsContext.SetPObject(context.RPAssetsManager.PObjectDeferredRenderDirectLight, CullMode.back);
@@ -301,8 +319,9 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetCBVR(context.CameraDataBuffers[cameraIndex], 2);
                     graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[0], 3);
                     graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[1], 4);
+                    graphicsContext.SetSRVTArray(context.ShadowMapCube, 5);
                     graphicsContext.SetSRVT(context.ScreenSizeDSVs[0], 6);
-                    graphicsContext.SetSRVT(context.ShadowMap0, 7);
+
                     graphicsContext.SetMesh(context.ndcQuadMesh);
                     graphicsContext.DrawIndexed(context.ndcQuadMeshIndexCount, 0, 0);
                 }
@@ -314,8 +333,8 @@ namespace Coocoo3D.RenderPipeline
                     graphicsContext.SetCBVR(context.CameraDataBuffers[cameraIndex], 2);
                     graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[0], 3);
                     graphicsContext.SetSRVT(context.ScreenSizeRenderTextures[1], 4);
+                    graphicsContext.SetSRVT(context.ShadowMapCube, 5);
                     graphicsContext.SetSRVT(context.ScreenSizeDSVs[0], 6);
-                    graphicsContext.SetSRVT(context.ShadowMap0, 7);
                     graphicsContext.SetMesh(context.cubeMesh);
                     graphicsContext.DrawIndexed(context.cubeMeshIndexCount, 0, 0);
                 }
@@ -356,21 +375,21 @@ namespace Coocoo3D.RenderPipeline
 
                 graphicsContext.SetMesh(context.SkinningMeshBuffer);
                 graphicsContext.SetPObject(context.RPAssetsManager.PObjectMMDShadowDepth, CullMode.none);
-                graphicsContext.SetDSV(context.ShadowMap0, true);
+
+                graphicsContext.SetDSV(context.ShadowMapCube, 0, true);
                 _Counters counterShadow0 = new _Counters();
                 var LightCameraDataBuffers = context.LightCameraDataBuffers;
                 for (int i = 0; i < Entities.Count; i++)
                     _RenderEntityShadow(Entities[i].rendererComponent, LightCameraDataBuffers[0], context.CBs_Bone[i], ref counterShadow0);
-                graphicsContext.SetDSV(context.ShadowMap1, true);
+                graphicsContext.SetDSV(context.ShadowMapCube, 1, true);
                 _Counters counterShadow1 = new _Counters();
                 for (int i = 0; i < Entities.Count; i++)
                     _RenderEntityShadow(Entities[i].rendererComponent, LightCameraDataBuffers[1], context.CBs_Bone[i], ref counterShadow1);
             }
-            graphicsContext.SetSRVT(context.ShadowMap0, 5);
+            graphicsContext.SetSRVTArray(context.ShadowMapCube, 5);
             graphicsContext.SetSRVT(context.EnvironmentMap, 6);
             graphicsContext.SetSRVT(context.IrradianceMap, 7);
             graphicsContext.SetSRVT(context.BRDFLut, 8);
-            graphicsContext.SetSRVT(context.ShadowMap1, 9);
 
             graphicsContext.SetRTVDSV(context.outputRTV, context.ScreenSizeDSVs[0], Vector4.Zero, false, false);
             void _RenderEntity2(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ConstantBuffer entityBoneDataBuffer, ref _Counters counter)
@@ -404,7 +423,7 @@ namespace Coocoo3D.RenderPipeline
                     CullMode cullMode = CullMode.back;
                     if (Materials[i].DrawFlags.HasFlag(DrawFlag.DrawDoubleFace))
                         cullMode = CullMode.none;
-                    graphicsContext.SetPObject(PODraw, cullMode, context.dynamicContext.settings.Wireframe);
+                    graphicsContext.SetPObject(PODraw, cullMode, context.dynamicContextRead.settings.Wireframe);
                     graphicsContext.DrawIndexed(Materials[i].indexCount, countIndexLocal, counter.vertex);
                     counter.material++;
                     countIndexLocal += Materials[i].indexCount;

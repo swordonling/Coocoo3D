@@ -60,6 +60,7 @@ namespace Coocoo3D.RenderPipeline
         public PObject PObjectWidgetUI1 = new PObject();
         public PObject PObjectWidgetUI2 = new PObject();
         public PObject PObjectWidgetUILight = new PObject();
+        public DxgiFormat outputFormat;
         public DxgiFormat middleFormat;
         public DxgiFormat depthFormat;
         public bool Ready;
@@ -101,21 +102,22 @@ namespace Coocoo3D.RenderPipeline
             await ReloadPixelShader(PSWidgetUI2, "ms-appx:///Coocoo3DGraphics/PSWidgetUI2.cso");
             await ReloadPixelShader(PSWidgetUILight, "ms-appx:///Coocoo3DGraphics/PSWidgetUILight.cso");
         }
-        public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat format, DxgiFormat swapChainFormat, DxgiFormat depthFormat)
+        public void ChangeRenderTargetFormat(DeviceResources deviceResources, ProcessingList uploadProcess, DxgiFormat outputFormat, DxgiFormat middleFormat, DxgiFormat swapChainFormat, DxgiFormat depthFormat)
         {
             Ready = false;
-            middleFormat = format;
+            this.outputFormat = outputFormat;
+            this.middleFormat = middleFormat;
             this.depthFormat = depthFormat;
 
             PObjectMMDSkinning.ReloadSkinning(VSMMDSkinning2, null);
             uploadProcess.UL(PObjectMMDSkinning, 1);
 
-            PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, format, depthFormat);
-            PObjectMMDTransparent.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDTransparent, format, depthFormat);
-            PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, format, depthFormat);
-            PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, format, depthFormat);
-            PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, format, depthFormat);
-            PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, format, depthFormat);
+            PObjectMMD.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD, outputFormat, depthFormat);
+            PObjectMMDTransparent.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDTransparent, outputFormat, depthFormat);
+            PObjectMMD_DisneyBrdf.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_DisneyBrdf, outputFormat, depthFormat);
+            PObjectMMD_Toon1.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMD_Toon1, outputFormat, depthFormat);
+            PObjectMMDLoading.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDLoading, outputFormat, depthFormat);
+            PObjectMMDError.ReloadDrawing(BlendState.alpha, VSMMDTransform, null, PSMMDError, outputFormat, depthFormat);
             uploadProcess.UL(PObjectMMD, 0);
             uploadProcess.UL(PObjectMMDTransparent, 0);
             uploadProcess.UL(PObjectMMD_DisneyBrdf, 0);
@@ -123,23 +125,23 @@ namespace Coocoo3D.RenderPipeline
             uploadProcess.UL(PObjectMMDLoading, 0);
             uploadProcess.UL(PObjectMMDError, 0);
 
-            PObjectDeferredRenderGBuffer.ReloadDrawing(BlendState.none, VSMMDTransform, null, PSDeferredRenderGBuffer, format, depthFormat, 3);
-            PObjectDeferredRenderIBL.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderIBL, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
-            PObjectDeferredRenderDirectLight.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderDirectLight, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
-            PObjectDeferredRenderPointLight.ReloadDrawing(BlendState.add, VSDeferredRenderPointLight, null, PSDeferredRenderPointLight, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectDeferredRenderGBuffer.ReloadDrawing(BlendState.none, VSMMDTransform, null, PSDeferredRenderGBuffer, middleFormat, depthFormat, 3);
+            PObjectDeferredRenderIBL.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderIBL, outputFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectDeferredRenderDirectLight.ReloadDrawing(BlendState.add, VSSkyBox, null, PSDeferredRenderDirectLight, outputFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectDeferredRenderPointLight.ReloadDrawing(BlendState.add, VSDeferredRenderPointLight, null, PSDeferredRenderPointLight, outputFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             uploadProcess.UL(PObjectDeferredRenderGBuffer, 0);
             uploadProcess.UL(PObjectDeferredRenderIBL, 0);
             uploadProcess.UL(PObjectDeferredRenderDirectLight, 0);
             uploadProcess.UL(PObjectDeferredRenderPointLight, 0);
 
-            //PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 3000);
-            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, null, 3000, depthFormat);
+            //PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip, 2500);
+            PObjectMMDShadowDepth.ReloadDepthOnly(VSMMDTransform, null, 2500, depthFormat);
             PObjectMMDDepth.ReloadDepthOnly(VSMMDTransform, PSMMDAlphaClip1, 0, depthFormat);
             uploadProcess.UL(PObjectMMDShadowDepth, 0);
             uploadProcess.UL(PObjectMMDDepth, 0);
 
 
-            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, format, DxgiFormat.DXGI_FORMAT_UNKNOWN);
+            PObjectSkyBox.Reload(deviceResources, rootSignature, eInputLayout.postProcess, BlendState.none, VSSkyBox, null, PSSkyBox, outputFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             PObjectPostProcess.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.none, VSPostProcess, null, PSPostProcess, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             PObjectWidgetUI1.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI1, null, PSWidgetUI1, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);
             PObjectWidgetUI2.Reload(deviceResources, rootSignaturePostProcess, eInputLayout.postProcess, BlendState.alpha, VSWidgetUI2, null, PSWidgetUI2, swapChainFormat, DxgiFormat.DXGI_FORMAT_UNKNOWN);

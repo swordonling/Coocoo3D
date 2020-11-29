@@ -1,5 +1,4 @@
-﻿
-using Coocoo3D.Components;
+﻿using Coocoo3D.Components;
 using Coocoo3D.Present;
 using Coocoo3DGraphics;
 using System;
@@ -84,7 +83,7 @@ namespace Coocoo3D.RenderPipeline
         int renderMatCount = 0;
         public override void PrepareRenderData(RenderPipelineContext context)
         {
-            var Entities = context.dynamicContext.entities;
+            var Entities = context.dynamicContextRead.entities;
             var deviceResources = context.deviceResources;
             int countMaterials = 0;
             for (int i = 0; i < Entities.Count; i++)
@@ -93,11 +92,11 @@ namespace Coocoo3D.RenderPipeline
             }
             DesireMaterialBuffers(deviceResources, countMaterials);
             var graphicsContext = context.graphicsContext;
-            var cameras = context.dynamicContext.cameras;
-            var camera = context.dynamicContext.cameras[0];
-            ref var settings = ref context.dynamicContext.settings;
-            ref var inShaderSettings = ref context.dynamicContext.inShaderSettings;
-            var lightings = context.dynamicContext.lightings;
+            var cameras = context.dynamicContextRead.cameras;
+            var camera = context.dynamicContextRead.cameras[0];
+            ref var settings = ref context.dynamicContextRead.settings;
+            ref var inShaderSettings = ref context.dynamicContextRead.inShaderSettings;
+            var lightings = context.dynamicContextRead.lightings;
 
             IntPtr pBufferData = Marshal.UnsafeAddrOfPinnedArrayElement(context.bigBuffer, 0);
             Matrix4x4 lightCameraMatrix = Matrix4x4.Identity;
@@ -112,8 +111,8 @@ namespace Coocoo3D.RenderPipeline
 
             for (int i = 0; i < cameras.Count; i++)
             {
-                cameraPresentDatas[i].PlayTime = (float)context.dynamicContext.Time;
-                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContext.DeltaTime;
+                cameraPresentDatas[i].PlayTime = (float)context.dynamicContextRead.Time;
+                cameraPresentDatas[i].DeltaTime = (float)context.dynamicContextRead.DeltaTime;
 
                 cameraPresentDatas[i].UpdateCameraData(cameras[i]);
                 cameraPresentDatas[i].RandomValue1 = randomGenerator.Next(int.MinValue, int.MaxValue);
@@ -160,7 +159,7 @@ namespace Coocoo3D.RenderPipeline
             renderMatCount = counterMaterial.material;
         }
 
-        public override void RenderCamera(RenderPipelineContext context, int cameraCount)
+        public override void RenderCamera(RenderPipelineContext context)
         {
             var graphicsContext = context.graphicsContext;
 
@@ -168,7 +167,7 @@ namespace Coocoo3D.RenderPipeline
             RayTracingScene.NextSTIndex();
 
 
-            var entities = context.dynamicContext.entities;
+            var entities = context.dynamicContextRead.entities;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignatureSkinning);
             graphicsContext.SetSOMesh(context.SkinningMeshBuffer);
 
@@ -215,10 +214,10 @@ namespace Coocoo3D.RenderPipeline
             for (int i = 0; i < entities.Count; i++)
                 ParticleCompute(entities[i].rendererComponent, CameraDataBuffers[0], context.CBs_Bone[i], null, ref counterParticle);
 
-            if (HasMainLight && context.dynamicContext.inShaderSettings.EnableShadow)
+            if (HasMainLight && context.dynamicContextRead.inShaderSettings.EnableShadow)
             {
                 graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
-                graphicsContext.SetDSV(context.ShadowMap0, true);
+                graphicsContext.SetDSV(context.ShadowMapCube, 0, true);
                 graphicsContext.SetMesh(context.SkinningMeshBuffer);
 
                 void RenderEntityShadow(MMDRendererComponent rendererComponent, ConstantBuffer cameraPresentData, ref _Counters counter)
@@ -297,18 +296,16 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetComputeSRVT(context.SkyBox, 3);
                 graphicsContext.SetComputeSRVT(context.IrradianceMap, 4);
                 graphicsContext.SetComputeSRVT(context.BRDFLut, 5);
-                graphicsContext.SetComputeSRVT(context.ShadowMap0, 6);
+                graphicsContext.SetSRVTFace(context.ShadowMapCube, 0, 6);
                 graphicsContext.SetComputeSRVR(context.SkinningMeshBuffer, 0, 7);
-                graphicsContext.SetComputeUAVR(context.LightCacheBuffer, context.dynamicContext.frameRenderIndex % 2, 8);
-                graphicsContext.SetComputeSRVR(context.LightCacheBuffer, (context.dynamicContext.frameRenderIndex + 1) % 2, 9);
+                graphicsContext.SetComputeUAVR(context.LightCacheBuffer, context.dynamicContextRead.frameRenderIndex % 2, 8);
+                graphicsContext.SetComputeSRVR(context.LightCacheBuffer, (context.dynamicContextRead.frameRenderIndex + 1) % 2, 9);
 
-                graphicsContext.DoRayTracing(RayTracingScene, context.dynamicContext.VertexCount, 1, 1);
+                graphicsContext.DoRayTracing(RayTracingScene, context.dynamicContextRead.VertexCount, 1, 1);
 
-                graphicsContext.SetComputeUAVR(context.LightCacheBuffer, (context.dynamicContext.frameRenderIndex + 1) % 2, 8);
-                graphicsContext.SetComputeSRVR(context.LightCacheBuffer, context.dynamicContext.frameRenderIndex % 2, 9);
+                graphicsContext.SetComputeUAVR(context.LightCacheBuffer, (context.dynamicContextRead.frameRenderIndex + 1) % 2, 8);
+                graphicsContext.SetComputeSRVR(context.LightCacheBuffer, context.dynamicContextRead.frameRenderIndex % 2, 9);
                 graphicsContext.DoRayTracing(RayTracingScene, context.screenWidth, context.screenHeight, 0);
-
-                //graphicsContext.SetComputeUAVT(context.outputRTV, 0);
             }
             else
             {
@@ -317,7 +314,6 @@ namespace Coocoo3D.RenderPipeline
                 graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignature);
                 graphicsContext.SetRTVDSV(context.outputRTV, context.ScreenSizeDSVs[0], Vector4.Zero, true, true);
                 graphicsContext.SetCBVR(CameraDataBuffers[cameraIndex], 2);
-                graphicsContext.SetSRVT(context.ShadowMap0, 5);
                 graphicsContext.SetSRVT(context.SkyBox, 6);
                 graphicsContext.SetSRVT(context.IrradianceMap, 7);
                 graphicsContext.SetSRVT(context.BRDFLut, 8);

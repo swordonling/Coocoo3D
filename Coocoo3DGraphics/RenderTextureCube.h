@@ -7,6 +7,7 @@ namespace Coocoo3DGraphics
 	{
 	public:
 		void ReloadAsRTVUAV(int width, int height,int mipLevels, DxgiFormat format);
+		void ReloadAsDSV(int width, int height, DxgiFormat format);
 		property UINT m_width;
 		property UINT m_height;
 		property UINT m_mipLevels;

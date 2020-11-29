@@ -13,11 +13,13 @@ namespace Coocoo3D.Core
     public class RecorderGameDriver : GameDriver
     {
         const int c_frameCount = 3;
-        public override bool Next(GameDriverContext context)
+        public override bool Next(RenderPipelineContext rpContext)
         {
+            ref GameDriverContext context = ref rpContext.gameDriverContext;
+
             context.NeedRender = false;
             DateTime now = DateTime.Now;
-            LatestRenderTime = now;
+            context.LatestRenderTime = now;
 
             ref RecordSettings recordSettings = ref context.recordSettings;
             if (switchEffect)
@@ -72,8 +74,10 @@ namespace Coocoo3D.Core
             }
         }
         Pack1[] packs = new Pack1[c_frameCount];
-        public override void AfterRender(RenderPipelineContext rpContext, GameDriverContext context)
+        public override void AfterRender(RenderPipelineContext rpContext)
         {
+            ref GameDriverContext context = ref rpContext.gameDriverContext;
+
             if (context.PlayTime >= StartTime && (RenderCount - c_frameCount) * FrameIntervalF <= StopTime)
             {
                 int index1 = RecordCount % c_frameCount;

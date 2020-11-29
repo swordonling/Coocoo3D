@@ -21,16 +21,13 @@ Texture2D texture1 :register(t1);
 Texture2D gbufferDepth : register (t3);
 SamplerState s0 : register(s0);
 SamplerComparisonState sampleShadowMap0 : register(s2);
-
-half3 NormalDecode(half2 enc)
+float3 NormalDecode(float2 enc)
 {
-	half2 fenc = enc * 4 - 2;
-	half f = dot(fenc, fenc);
-	half g = sqrt(1 - f / 4);
-	half3 n;
-	n.xy = fenc * g;
-	n.z = 1 - f / 2;
-	return n;
+	float4 nn = float4(enc * 2, 0, 0) + float4(-1, -1, 1, -1);
+	float l = dot(nn.xyz, -nn.xyw);
+	nn.z = l;
+	nn.xy *= sqrt(max(l, 1e-6));
+	return nn.xyz * 2 + float3(0, 0, -1);
 }
 
 struct PSIn
@@ -45,21 +42,21 @@ float4 main(PSIn input) : SV_TARGET
 	float2 uv = pos2.xy * 0.5 + 0.5;
 	uv.y = 1 - uv.y;
 	float4 buffer0Color = texture0.Sample(s0, uv);
-	clip(buffer0Color.a - 0.99);
+	float depth1 = gbufferDepth.SampleLevel(s0, uv, 0).r;
+	clip(0.999 - depth1);
 	float4 buffer1Color = texture1.Sample(s0, uv);
 
 	float3 albedo = buffer0Color.rgb;
+	float metallic = buffer0Color.a;
 	float roughness = buffer1Color.b;
 	float alpha = roughness * roughness;
-	float metallic = buffer1Color.a;
 	float3 c_diffuse = lerp(albedo * (1 - 0.04), 0, metallic);
 	float3 c_specular = lerp(0.04f, albedo, metallic);
 
-	float depth1 = gbufferDepth.SampleLevel(s0, uv, 0).r;
 	float4 test1 = mul(float4(pos2.xy, depth1, 1), g_mProjToWorld);
 	test1 /= test1.w;
 	float4 wPos = float4(test1.xyz,1);
-	float3 V = normalize(g_vCamPos- wPos);
+	float3 V = normalize(g_vCamPos - wPos);
 	float3 N = normalize(NormalDecode(buffer1Color.rg));
 	float NdotV = saturate(dot(N, V));
 

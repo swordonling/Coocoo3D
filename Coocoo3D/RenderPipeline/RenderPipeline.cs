@@ -15,7 +15,7 @@ namespace Coocoo3D.RenderPipeline
 
         public abstract void PrepareRenderData(RenderPipelineContext context);
 
-        public abstract void RenderCamera(RenderPipelineContext context, int cameraCount);
+        public abstract void RenderCamera(RenderPipelineContext context);
 
         public volatile bool Ready;
 

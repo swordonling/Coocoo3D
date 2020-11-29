@@ -42,11 +42,10 @@ SamplerState s1 : register(s1);
 SamplerComparisonState sampleShadowMap0 : register(s2);
 Texture2D texture0 :register(t0);
 Texture2D texture1 :register(t1);
-Texture2D ShadowMap0:register(t2);
+Texture2DArray ShadowMap0:register(t2);
 TextureCube EnvCube : register (t3);
 TextureCube IrradianceCube : register (t4);
 Texture2D BRDFLut : register(t5);
-Texture2D ShadowMap1:register(t6);
 struct PSSkinnedIn
 {
 	float4 Pos	: SV_POSITION;		//Position
@@ -58,7 +57,7 @@ struct PSSkinnedIn
 float4 main(PSSkinnedIn input) : SV_TARGET
 {
 	float4 texColor = texture0.Sample(s1, input.TexCoord) * _DiffuseColor;
-	clip(0.98f - saturate(texColor.a));
+	clip(0.98f-saturate(texColor.a));
 
 	float3 V = normalize(g_vCamPos - input.wPos);
 	float3 N = normalize(input.Norm);
@@ -90,7 +89,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 				shadowTexCoords.x = 0.5f + (sPos.x * 0.5f);
 				shadowTexCoords.y = 0.5f - (sPos.y * 0.5f);
 				if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
-					inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords,sPos.z).r;
+					inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, float3(shadowTexCoords,0),sPos.z).r;
 				else
 				{
 					sPos = mul(input.wPos, LightSpaceMatrices[1]);
@@ -100,7 +99,7 @@ float4 main(PSSkinnedIn input) : SV_TARGET
 					shadowTexCoords1.y = 0.5f - (sPos.y * 0.5f);
 
 					if (sPos.x >= -1 && sPos.x <= 1 && sPos.y >= -1 && sPos.y <= 1)
-						inShadow = ShadowMap1.SampleCmpLevelZero(sampleShadowMap0, shadowTexCoords1, sPos.z).r;
+						inShadow = ShadowMap0.SampleCmpLevelZero(sampleShadowMap0, float3(shadowTexCoords1,1), sPos.z).r;
 				}
 			}
 

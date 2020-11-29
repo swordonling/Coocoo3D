@@ -57,11 +57,11 @@ namespace Coocoo3D.RenderPipeline
             }
         }
 
-        public override void RenderCamera(RenderPipelineContext context, int cameraCount)
+        public override void RenderCamera(RenderPipelineContext context)
         {
             var graphicsContext = context.graphicsContext;
             graphicsContext.SetRootSignature(context.RPAssetsManager.rootSignaturePostProcess);
-            graphicsContext.SetRenderTargetScreen(context.dynamicContext.settings.backgroundColor, context.ScreenSizeDSVs[1], true, true);
+            graphicsContext.SetRenderTargetScreen(context.dynamicContextRead.settings.backgroundColor, context.ScreenSizeDSVs[1], true, true);
             graphicsContext.SetCBVR(postProcessDataBuffer, 0);
             graphicsContext.SetSRVT(context.outputRTV, 1);
             graphicsContext.SetSRVT(context.postProcessBackground, 2);

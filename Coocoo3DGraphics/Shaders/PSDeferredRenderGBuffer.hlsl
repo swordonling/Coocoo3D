@@ -33,11 +33,11 @@ SamplerState s1 : register(s1);
 
 Texture2D texture0 :register(t0);
 Texture2D texture1 :register(t1);
-
-half2 NormalEncode(half3 n)
+float2 NormalEncode(float3 n)
 {
-	half f = sqrt(8 * n.z + 8);
-	return n.xy / f + 0.5;
+	float2 enc = normalize(n.xy) * (sqrt(-n.z * 0.5 + 0.5));
+	enc = enc * 0.5 + 0.5;
+	return enc;
 }
 
 struct PSSkinnedIn
@@ -59,12 +59,12 @@ struct MRTOutput
 MRTOutput main(PSSkinnedIn input) : SV_TARGET
 {
 	float3 N = normalize(input.Normal);
-	float2 encodedNormal= NormalEncode(N);
+	float2 encodedNormal = NormalEncode(N);
 	MRTOutput output;
 	float4 color = texture0.Sample(s1, input.uv) * _DiffuseColor;
 	clip(color.a - 0.98f);
-	output.color0 = color;
-	output.color1 = float4(encodedNormal, _Roughness, _Metallic);
+	output.color0 = float4(color.rgb, _Metallic);
+	output.color1 = float4(encodedNormal, _Roughness, 1);
 	output.color2 = float4(1, 0, 0, 1);
 	return output;
 }
